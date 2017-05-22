@@ -1,0 +1,4 @@
+*.c
+__pycache__/*
+checks/__pycache__/*
+checks/mario/__pycache__/*
