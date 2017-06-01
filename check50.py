@@ -18,6 +18,9 @@ from termcolor import cprint
 
 import config
 
+# TODO: pull checks directory from repo 
+checks_dir = os.path.join(os.getcwd(), "checks")
+
 def main():
 
     # parse command line arguments
@@ -46,7 +49,7 @@ def main():
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
             if m[1].__module__ == identifier] 
     if len(classes) == 0:
-        error("There are currently no checks for this problem.")
+        error("Invalid identifier.")
     test_class = classes[0]
 
     # create and run the test suite
@@ -84,6 +87,7 @@ def print_json(results):
     print(json.dumps(output))
 
 def error(err):
+    shutil.rmtree(config.tempdir)
     cprint(err, "red")
     sys.exit(1)
 
@@ -156,6 +160,48 @@ class File():
     def __init__(self, filename):
         self.filename = filename
 
+# wrapper class for pexpect child
+class Child():
+    def __init__(self, test, child):
+        self.test = test
+        self.child = child
+
+    def stdin(self, line):
+        self.child.expect(".+")
+        self.child.sendline(line)
+        return self
+
+    def stdout(self, output):
+        result = self.child.read().lstrip("\n").replace("\r\n", "\n")
+        if type(output) == File:
+            os.chdir(checks_dir)
+            correct = open(output.filename, "r").read()
+            self.test.assertTrue(result == correct)
+        else: # regex
+            r = re.compile(output)
+            self.test.assertTrue(r.match(result))
+        return self
+
+    def reject(self):
+        try:
+            self.child.expect(".+")
+            self.child.sendline("")
+        except OSError:
+            self.test.fail()
+        return self
+
+    def exit(self, code=None):
+        self.child.wait()
+        self.exitstatus, self.output = self.child.exitstatus, self.child.read()
+        self.child.close()
+        if code != None:
+            self.test.assertTrue(self.exitstatus == code)
+        return self
+
+    def kill(self):
+        self.child.close(force=True)
+        return self
+
 class Test(unittest2.TestCase):
     PASS = 1
     FAIL = 0
@@ -173,67 +219,9 @@ class Test(unittest2.TestCase):
 
     def spawn(self, cmd, status=0):
         """asserts that cmd returns with code status (0 by default)"""
-        result, _ = self.execute(cmd)
-        self.assertTrue(result == status)
-
-    def check_output(self, cmd, text, output):
-        """
-        asserts that cmd, when passed text as input, produces output
-
-        Parameters:
-            text - string input or list of string inputs
-            output - string, regex, or File indicating desired output
-        """
-        child = self.spawnProcess(cmd)
-
-        # if there's input, provide it
-        if text != None:
-            if type(text) != list:
-                text = [text]
-            # if multiple inputs, ensure prompts for all 
-            for item in text:
-                child.expect(".+")
-                child.sendline(item)
-        result = self.output(child)
-
-        # check output depending on if regex, file, or string
-        if type(output) == re._pattern_type:
-            self.assertTrue(output.match(result) != None)
-        elif type(output) == File:
-            correct = open(output.filename, "r").read()
-            self.assertTrue(result == correct)
-        else:
-            self.assertTrue(result == output)
-    
-    # TODO: figure out how to reject on waiting for stdin
-    def check_reject(self, cmd, text):
-        """asserts that cmd rejects input text"""
-        child = self.spawnProcess(cmd)
-        child.expect(".+")
-        child.sendline(text)
-        child.expect(".+")
-        try:
-            child.sendline("")
-        except OSError:
-            self.fail()
-    
-    # TODO: handle timeouts
-    def execute(self, cmd):
-        """runs cmd and returns a tuple of (exit status, output)"""
         os.chdir(config.tempdir)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
-        child.wait()
-        return child.exitstatus, child.read()
-
-    def output(self, child):
-        """reads output from a spawned pexpect, stripping starting newlines"""
-        return child.read().lstrip("\n").replace("\r\n", "\n")
-
-    def spawnProcess(self, cmd):
-        """spawns a child application"""
-        os.chdir(config.tempdir)
-        child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
-        return child
+        return Child(self, child)
 
 if __name__ == "__main__":
     config.tempdir = tempfile.mkdtemp()

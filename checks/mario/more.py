@@ -5,7 +5,7 @@ sys.path.append(os.getcwd())
 from check50 import File, Test, check
 
 class MarioMore(Test):
-
+    
     @check()
     def exists(self):
         """mario.c exists."""
@@ -14,45 +14,45 @@ class MarioMore(Test):
     @check("exists")
     def compiles(self):
         """mario.c compiles."""
-        self.spawn("clang -o mario mario.c -lcs50")
+        self.spawn("clang -o mario mario.c -lcs50").exit(0)
 
     @check("exists", "compiles")
     def test_reject_negative(self):
         """rejects a height of -1"""
-        self.check_reject("./mario", "-1")
+        self.spawn("./mario").stdin("-1").reject().kill()
 
     @check("exists", "compiles")
     def test0(self):
         """handles a height of 0 correctly"""
-        self.check_output("./mario", "0", File("outputs/mario-more/0.txt"))
+        self.spawn("./mario").stdin("0").stdout(File("outputs/mario/more/0.txt")).exit(0)
 
     @check("exists", "compiles")
     def test1(self):
         """handles a height of 1 correctly"""
-        self.check_output("./mario", "1", File("outputs/mario-more/1.txt"))
+        self.spawn("./mario").stdin("1").stdout(File("outputs/mario/more/1.txt")).exit(0)
 
     @check("exists", "compiles")
     def test2(self):
         """handles a height of 2 correctly"""
-        self.check_output("./mario", "2", File("outputs/mario-more/2.txt"))
+        self.spawn("./mario").stdin("2").stdout(File("outputs/mario/more/2.txt")).exit(0)
 
     @check("exists", "compiles")
     def test23(self):
         """handles a height of 23 correctly"""
-        self.check_output("./mario", "23", File("outputs/mario-more/23.txt"))
+        self.spawn("./mario").stdin("23").stdout(File("outputs/mario/more/23.txt")).exit(0)
 
     @check("exists", "compiles")
     def test24(self):
         """rejects a height of 24, and then accepts a height of 2"""
-        self.check_output("./mario", ["24", "2"], File("outputs/mario-more/2.txt"))
-
+        self.spawn("./mario").stdin("24").reject()\
+            .stdin("2").stdout(File("outputs/mario/more/2.txt")).exit(0)
+    
     @check("exists", "compiles")
     def test_reject_foo(self):
         """rejects a non-numeric height of "foo" """
-        self.check_reject("./mario", "foo")
+        self.spawn("./mario").stdin("foo").reject().kill()
 
     @check("exists", "compiles")
     def test_reject_empty(self):
         """rejects a non-numeric height of "" """
-        self.check_reject("./mario", "")
-
+        self.spawn("./mario").stdin("").reject().kill()
