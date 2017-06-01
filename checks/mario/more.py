@@ -1,113 +1,60 @@
-import unittest
 import os
-import pexpect
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import Test
+from check50 import File, Test, check
 
 class MarioMore(Test):
 
-    @classmethod
-    def tearDownClass(self):
-        if os.path.isfile("mario"):
-            pexpect.run("rm mario")
-
+    @check()
     def exists(self):
         """mario.c exists."""
         self.check_exists("mario.c")
     
+    @check("exists")
     def compiles(self):
         """mario.c compiles."""
-        self.assert_exists()
         self.check_compiles("clang -o mario mario.c -lcs50")
 
+    @check("exists", "compiles")
     def test_reject_negative(self):
         """rejects a height of -1"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        self.check_reject(child, "-1")
+        self.check_reject("./mario", "-1")
 
+    @check("exists", "compiles")
     def test0(self):
         """handles a height of 0 correctly"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        child.sendline("0")
-        output = self.output(child)
-        self.assert_matches(output, "outputs/mario-more/0.txt")
+        self.check_output("./mario", "0", File("outputs/mario-more/0.txt"))
 
+    @check("exists", "compiles")
     def test1(self):
         """handles a height of 1 correctly"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        child.sendline("1")
-        output = self.output(child)
-        self.assert_matches(output, "outputs/mario-more/1.txt")
+        self.check_output("./mario", "1", File("outputs/mario-more/1.txt"))
 
+    @check("exists", "compiles")
     def test2(self):
         """handles a height of 2 correctly"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        child.sendline("2")
-        output = self.output(child)
-        self.assert_matches(output, "outputs/mario-more/2.txt")
+        self.check_output("./mario", "2", File("outputs/mario-more/2.txt"))
 
+    @check("exists", "compiles")
     def test23(self):
         """handles a height of 23 correctly"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        child.sendline("23")
-        output = self.output(child)
-        self.assert_matches(output, "outputs/mario-more/23.txt")
+        self.check_output("./mario", "23", File("outputs/mario-more/23.txt"))
 
+    @check("exists", "compiles")
     def test24(self):
         """rejects a height of 24, and then accepts a height of 2"""
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        self.check_reject(child, "24")
-        child.expect(".+")
-        child.sendline("2")
-        output = self.output(child)
-        self.assert_matches(output, "outputs/mario-more/2.txt")
+        self.check_output("./mario", ["24", "2"], File("outputs/mario-more/2.txt"))
 
+    @check("exists", "compiles")
     def test_reject_foo(self):
         """rejects a non-numeric height of "foo" """
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        self.check_reject(child, "foo")
+        self.check_reject("./mario", "foo")
 
+    @check("exists", "compiles")
     def test_reject_empty(self):
         """rejects a non-numeric height of "" """
-        self.assert_exists()
-        self.assert_compiles()
-        child = self.spawn("./mario")
-        child.expect(".+")
-        self.check_reject(child, "")
+        self.check_reject("./mario", "")
 
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(MarioMore("exists"))
-    suite.addTest(MarioMore("compiles"))
-    suite.addTest(MarioMore("test_reject_negative"))
-    suite.addTest(MarioMore("test0"))
-    suite.addTest(MarioMore("test1"))
-    suite.addTest(MarioMore("test2"))
-    suite.addTest(MarioMore("test23"))
-    suite.addTest(MarioMore("test24"))
-    suite.addTest(MarioMore("test_reject_foo"))
-    suite.addTest(MarioMore("test_reject_empty"))
-    return suite
+test_cases = Test.test_cases
+remove = ["mario"]
