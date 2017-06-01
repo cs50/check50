@@ -9,12 +9,12 @@ class Greedy(Test):
     @check()
     def exists(self):
         """greedy.c exists."""
-        self.check_exists("greedy.c")
+        super().exists("greedy.c")
     
     @check("exists")
     def compiles(self):
         """greedy.c compiles."""
-        self.check_compiles("clang -o greedy greedy.c -lcs50")
+        self.spawn("clang -o greedy greedy.c -lcs50")
 
     @check("exists", "compiles")
     def test1(self):
@@ -61,5 +61,3 @@ class Greedy(Test):
         """rejects a non-numeric input of "" """
         self.check_reject("./greedy", "")
 
-test_cases = Test.test_cases
-remove = ["greedy"]

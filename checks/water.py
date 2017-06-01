@@ -10,12 +10,12 @@ class Water(Test):
     @check()
     def exists(self):
         """water.c exists."""
-        self.check_exists("water.c")
+        super().exists("water.c")
     
     @check("exists")
     def compiles(self):
         """water.c compiles."""
-        self.check_compiles("clang -o water water.c -lcs50")
+        self.spawn("clang -o water water.c -lcs50")
 
     @check("exists", "compiles")
     def test1(self):
@@ -52,5 +52,3 @@ class Water(Test):
         """rejects "123abc" minutes"""
         self.check_reject("./water", "123abc")
 
-test_cases = Test.test_cases
-remove = ["water"]

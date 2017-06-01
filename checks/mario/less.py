@@ -9,12 +9,12 @@ class MarioLess(Test):
     @check()
     def exists(self):
         """mario.c exists."""
-        self.check_exists("mario.c")
+        super().exists("mario.c")
     
     @check("exists")
     def compiles(self):
         """mario.c compiles."""
-        self.check_compiles("clang -o mario mario.c -lcs50")
+        self.spawn("clang -o mario mario.c -lcs50")
 
     @check("exists", "compiles")
     def test_reject_negative(self):
@@ -56,5 +56,3 @@ class MarioLess(Test):
         """rejects a non-numeric height of "" """
         self.check_reject("./mario", "")
 
-test_cases = Test.test_cases
-remove = ["mario"]

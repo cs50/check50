@@ -9,12 +9,12 @@ class Credit(Test):
     @check()
     def exists(self):
         """credit.c exists."""
-        self.check_exists("credit.c")
+        super().exists("credit.c")
     
     @check("exists")
     def compiles(self):
         """credit.c compiles."""
-        self.check_compiles("clang -o credit credit.c -lcs50")
+        self.spawn("clang -o credit credit.c -lcs50")
     
     @check("exists", "compiles")
     def test1(self):
@@ -61,5 +61,3 @@ class Credit(Test):
         """rejects a non-numeric input of "" """
         self.check_reject("./credit", "")
 
-test_cases = Test.test_cases
-remove = ["credit"]
