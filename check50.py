@@ -11,7 +11,7 @@ import shutil
 import sys
 import tempfile
 import traceback
-import unittest2
+import unittest
 
 from functools import wraps
 from termcolor import cprint
@@ -53,7 +53,7 @@ def main():
     test_class = classes[0]
 
     # create and run the test suite
-    suite = unittest2.TestSuite()
+    suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(test_class(case))
     results = TestResult()
