@@ -28,17 +28,18 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-l", "--log", action="store_true")
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
 
     # move all files to temporary directory
+    config.tempdir = tempfile.mkdtemp()
     for filename in files:
         if os.path.isfile(filename):
             shutil.copy(filename, config.tempdir)
         else:
             error("File {} not found.".format(filename))
-            sys.exit(1)
 
     # import the checks and identify check class
     identifier = "checks.{}".format(identifier)
@@ -66,9 +67,9 @@ def main():
     if args.debug:
         print_json(results)
     else:
-        print_results(results)
+        print_results(results, log=args.log)
 
-def print_results(results):
+def print_results(results, log=False):
     for result in results.results:
         if result["status"] == Test.PASS:
             cprint(":) {}".format(result["description"]), "green")
@@ -79,6 +80,10 @@ def print_results(results):
         elif result["status"] == Test.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
+
+        if log:
+            for line in result["test"].log:
+                print("    {}".format(line))
 
 def print_json(results):
     output = {}
@@ -167,15 +172,16 @@ class Child():
         self.child = child
 
     def stdin(self, line):
+        self.test.log.append("Sending input {}...".format(line))
         self.child.expect(".+")
         self.child.sendline(line)
         return self
 
     def stdout(self, output):
-        result = self.child.read().lstrip("\n").replace("\r\n", "\n")
+        self.test.log.append("Checking that output matches...")
+        result = self.child.read().replace("\r\n", "\n").lstrip("\n")
         if type(output) == File:
-            os.chdir(checks_dir)
-            correct = open(output.filename, "r").read()
+            correct = open(os.path.join(checks_dir, output.filename), "r").read()
             self.test.assertTrue(result == correct)
         else: # regex
             r = re.compile(output)
@@ -183,6 +189,7 @@ class Child():
         return self
 
     def reject(self):
+        self.test.log.append("Checking that input was rejected...")
         try:
             self.child.expect(".+")
             self.child.sendline("")
@@ -195,6 +202,7 @@ class Child():
         self.exitstatus, self.output = self.child.exitstatus, self.child.read()
         self.child.close()
         if code != None:
+            self.test.log.append("Checking that program exited with status {}...".format(code))
             self.test.assertTrue(self.exitstatus == code)
         return self
 
@@ -211,18 +219,20 @@ class Test(unittest2.TestCase):
         super().__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
+        self.log = []
 
     def exists(self, filename):
         """asserts that filename exists"""
+        self.log.append("Checking that {} exists...".format(filename))
         os.chdir(config.tempdir)
         self.assertTrue(os.path.isfile(filename))
 
     def spawn(self, cmd, status=0):
         """asserts that cmd returns with code status (0 by default)"""
+        self.log.append("Running {}...".format(cmd))
         os.chdir(config.tempdir)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
         return Child(self, child)
 
 if __name__ == "__main__":
-    config.tempdir = tempfile.mkdtemp()
     main()
