@@ -18,7 +18,7 @@ from termcolor import cprint
 
 import config
 
-# TODO: pull checks directory from repo 
+# TODO: pull checks directory from repo?
 checks_dir = os.path.join(os.getcwd(), "checks")
 
 def main():
@@ -35,9 +35,11 @@ def main():
 
     # move all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
+    src_dir = os.path.join(config.tempdir, "_")
+    os.mkdir(src_dir)
     for filename in files:
         if os.path.isfile(filename):
-            shutil.copy(filename, config.tempdir)
+            shutil.copy(filename, src_dir)
         else:
             error("File {} not found.".format(filename))
 
@@ -59,9 +61,7 @@ def main():
         suite.addTest(test_class(case))
     results = TestResult()
     suite.run(results)
-
-    # remove temporary files at end of test
-    shutil.rmtree(config.tempdir)
+    cleanup()
 
     # print the results
     if args.debug:
@@ -75,8 +75,10 @@ def print_results(results, log=False):
             cprint(":) {}".format(result["description"]), "green")
         elif result["status"] == Test.FAIL:
             cprint(":( {}".format(result["description"]), "red")
-            if result["error"] != None:
-                cprint("    {}".format(result["error"]), "red")
+            if result["rationale"] != None:
+                cprint("    {}".format(result["rationale"]), "red")
+            if result["helpers"] != None:
+                cprint("    {}".format(result["helpers"]), "red")
         elif result["status"] == Test.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
@@ -92,9 +94,13 @@ def print_json(results):
     print(json.dumps(output))
 
 def error(err):
-    shutil.rmtree(config.tempdir)
+    cleanup()
     cprint(err, "red")
     sys.exit(1)
+
+def cleanup():
+    """Remove temporary files at end of test."""
+    shutil.rmtree(config.tempdir)
 
 class TestResult(unittest2.TestResult):
     results = []
@@ -103,55 +109,49 @@ class TestResult(unittest2.TestResult):
         super().__init__(self)
 
     def addSuccess(self, test):
+        """Handle completion of test, regardless of outcome."""
         self.results.append({
             "status": test.result,
             "test": test,
-            "description": test.shortDescription()
-        })
-
-    def addFailure(self, test, err):
-        super().addFailure(test, err)
-        self.results.append({
-            "status": test.result, 
-            "test": test,
             "description": test.shortDescription(),
-            "error": test.rationale
+            "rationale": test.rationale,
+            "helpers": test.helpers,
+            "log": test.log
         })
 
     def addError(self, test, err):
-        print("Error {}".format(err))
-        print("{}".format(traceback.print_tb(err[2])))
-        super().addFailure(test, err)
-        self.results.append({
-            "status": test.result,
-            "test": test,
-            "description": test.shortDescription(),
-            "error": test.rationale
-        })
+        cprint("check50 ran into an error while running checks.", "red")
+        print(err[1])
+        traceback.print_tb(err[2])
+        sys.exit(1)
 
 # decorator for checks
-def check(*args):
+def check(dependency=None):
     def decorator(func):
         config.test_cases.append(func.__name__)
         @wraps(func)
         def wrapper(self):
 
-            # check over all dependencies
-            for dependency in args:
-                if config.test_results.get(dependency) != Test.PASS:
-                    self.result = config.test_results[func.__name__] = Test.SKIP
-                    return
-            
-            # override assert method
-            unittest_assert = self.assertTrue
-            def assertTrue(expr):
-                if expr == False:
-                    self.result = config.test_results[func.__name__] = Test.FAIL
-                unittest_assert(expr)
-            self.assertTrue = assertTrue
+            # check  if dependency failed
+            if dependency and config.test_results.get(dependency) != Test.PASS:
+                self.result = config.test_results[func.__name__] = Test.SKIP
+                return
 
-            # run the test
-            func(self)
+            # move files into this check's directory 
+            self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
+            if dependency:
+                src_dir = os.path.join(config.tempdir, dependency)
+            else:
+                src_dir = os.path.join(config.tempdir, "_") 
+            shutil.copytree(src_dir, dst_dir)
+
+            # run the test, catch failures
+            try:
+                func(self)
+            except Error as e:
+                self.rationale = e.rationale
+                self.helpers = e.helpers
+                return
 
             # if test didn't fail, then it passed
             if config.test_results.get(func.__name__) == None:
@@ -165,6 +165,20 @@ class File():
     def __init__(self, filename):
         self.filename = filename
 
+# class to wrap errors
+class Error(Exception):
+    def __init__(self, rationale=None, helpers=None):
+        def raw(s):
+            s = repr(s)  # get raw representation of string
+            s = s[1:len(s) - 1]  # strip away quotation marks
+            if len(s) > 15:
+                s = s[:15] + "..."  # truncate if too long
+            return s
+        if type(rationale) == tuple:
+            rationale = "Expected \"{}\", not \"{}\".".format(raw(rationale[1]), raw(rationale[0]))
+        self.rationale = rationale 
+        self.helpers = helpers
+
 # wrapper class for pexpect child
 class Child():
     def __init__(self, test, child):
@@ -177,15 +191,19 @@ class Child():
         self.child.sendline(line)
         return self
 
-    def stdout(self, output):
+    def stdout(self, output=None, str_output=None):
         self.test.log.append("Checking that output matches...")
         result = self.child.read().replace("\r\n", "\n").lstrip("\n")
+        if output == None:
+            return result
         if type(output) == File:
             correct = open(os.path.join(checks_dir, output.filename), "r").read()
-            self.test.assertTrue(result == correct)
+            if result != correct:
+                raise Error((result, correct))
         else: # regex
             r = re.compile(output)
-            self.test.assertTrue(r.match(result))
+            if not r.match(result):
+                raise Error((result, str_output))
         return self
 
     def reject(self):
@@ -203,7 +221,8 @@ class Child():
         self.child.close()
         if code != None:
             self.test.log.append("Checking that program exited with status {}...".format(code))
-            self.test.assertTrue(self.exitstatus == code)
+            if self.exitstatus != code:
+                raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
     def kill(self):
@@ -219,20 +238,32 @@ class Test(unittest2.TestCase):
         super().__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
+        self.helpers = None
         self.log = []
+
+    def checkfile(self, filename):
+        """gets contents of a check file"""
+        contents = open(os.path.join(checks_dir, filename)).read()
+        return contents
 
     def exists(self, filename):
         """asserts that filename exists"""
         self.log.append("Checking that {} exists...".format(filename))
-        os.chdir(config.tempdir)
-        self.assertTrue(os.path.isfile(filename))
+        os.chdir(self.dir)
+        if not os.path.isfile(filename):
+            raise Error("File {} not found.".format(filename))
 
     def spawn(self, cmd, status=0):
         """asserts that cmd returns with code status (0 by default)"""
         self.log.append("Running {}...".format(cmd))
-        os.chdir(config.tempdir)
+        os.chdir(self.dir)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
         return Child(self, child)
+
+    def fail(self, rationale):
+        self.result = self.FAIL
+        self.rationale = rationale
+        super().fail()
 
 if __name__ == "__main__":
     main()
