@@ -185,14 +185,15 @@ class Child():
         self.test = test
         self.child = child
 
-    def stdin(self, line):
+    def stdin(self, line, prompt=True):
         self.test.log.append("Sending input {}...".format(line))
-        self.child.expect(".+")
+        if prompt:
+            self.child.expect(".+")
         self.child.sendline(line)
         return self
 
     def stdout(self, output=None, str_output=None):
-        self.test.log.append("Checking that output matches...")
+        self.test.log.append("Checking for output {}...".format(str_output))
         result = self.child.read().replace("\r\n", "\n").lstrip("\n")
         if output == None:
             return result
