@@ -40,7 +40,7 @@ class Water(Test):
     @check("compiles")
     def test_reject_foo(self):
         """rejects "foo" minutes"""
-        self.spawn("./water").stdin("-1").reject()
+        self.spawn("./water").stdin("foo").reject()
 
     @check("compiles")
     def test_reject_empty(self):
