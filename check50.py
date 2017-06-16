@@ -269,6 +269,10 @@ class Test(unittest2.TestCase):
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
         return Child(self, child)
 
+    def include(self, path):
+        """copies a file to the temporary directory"""
+        shutil.copy(os.path.join(checks_dir, path), self.dir)
+
     def fail(self, rationale):
         self.result = self.FAIL
         self.rationale = rationale
