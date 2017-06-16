@@ -186,10 +186,18 @@ class Child():
         self.child = child
 
     def stdin(self, line, prompt=True):
-        self.test.log.append("Sending input {}...".format(line))
+        if line != None:
+            self.test.log.append("Sending input {}...".format(line))
+        else:
+            self.test.log.append("Sending Ctrl-D...")
+
         if prompt:
             self.child.expect(".+")
-        self.child.sendline(line)
+
+        if line != None:
+            self.child.sendline(line)
+        else:
+            self.child.sendcontrol('d')
         return self
 
     def stdout(self, output=None, str_output=None):
