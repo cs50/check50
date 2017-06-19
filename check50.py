@@ -11,7 +11,7 @@ import shutil
 import sys
 import tempfile
 import traceback
-import unittest2
+import unittest
 
 from functools import wraps
 from termcolor import cprint
@@ -24,7 +24,7 @@ checks_dir = os.path.join(os.getcwd(), "checks")
 def main():
 
     # parse command line arguments
-    parser = argparse.ArgumentParser(description="This is check50.")
+    parser = argparse.ArgumentParser()
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
@@ -33,30 +33,35 @@ def main():
     identifier = args.identifier[0]
     files = args.files
 
-    # move all files to temporary directory
+    # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
     src_dir = os.path.join(config.tempdir, "_")
     os.mkdir(src_dir)
     for filename in files:
-        if os.path.isfile(filename):
-            shutil.copy(filename, src_dir)
+        if os.path.exists(filename):
+            if os.path.isfile(filename):
+                shutil.copy(filename, src_dir)
+            else:
+                shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
-            error("File {} not found.".format(filename))
+            err("File {} not found.".format(filename))
 
     # import the checks and identify check class
     identifier = "checks.{}".format(identifier)
     try:
         checks = importlib.import_module(identifier)
     except ImportError:
-        error("Invalid identifier.")
+        err("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
             if m[1].__module__ == identifier] 
+
+    # ensure test module has a class of test cases
     if len(classes) == 0:
-        error("Invalid identifier.")
+        err("Invalid identifier.")
     test_class = classes[0]
 
     # create and run the test suite
-    suite = unittest2.TestSuite()
+    suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(test_class(case))
     results = TestResult()
@@ -71,15 +76,15 @@ def main():
 
 def print_results(results, log=False):
     for result in results.results:
-        if result["status"] == Test.PASS:
+        if result["status"] == TestCase.PASS:
             cprint(":) {}".format(result["description"]), "green")
-        elif result["status"] == Test.FAIL:
+        elif result["status"] == TestCase.FAIL:
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] != None:
                 cprint("    {}".format(result["rationale"]), "red")
             if result["helpers"] != None:
                 cprint("    {}".format(result["helpers"]), "red")
-        elif result["status"] == Test.SKIP:
+        elif result["status"] == TestCase.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
 
@@ -93,7 +98,7 @@ def print_json(results):
         output.update({result["test"]._testMethodName : result["status"]})
     print(json.dumps(output))
 
-def error(err):
+def err(err):
     cleanup()
     cprint(err, "red")
     sys.exit(1)
@@ -102,7 +107,7 @@ def cleanup():
     """Remove temporary files at end of test."""
     shutil.rmtree(config.tempdir)
 
-class TestResult(unittest2.TestResult):
+class TestResult(unittest.TestResult):
     results = []
     
     def __init__(self):
@@ -111,12 +116,12 @@ class TestResult(unittest2.TestResult):
     def addSuccess(self, test):
         """Handle completion of test, regardless of outcome."""
         self.results.append({
-            "status": test.result,
-            "test": test,
             "description": test.shortDescription(),
-            "rationale": test.rationale,
             "helpers": test.helpers,
-            "log": test.log
+            "log": test.log,
+            "rationale": test.rationale,
+            "status": test.result,
+            "test": test
         })
 
     def addError(self, test, err):
@@ -128,13 +133,15 @@ class TestResult(unittest2.TestResult):
 # decorator for checks
 def check(dependency=None):
     def decorator(func):
+
+        # add test to list of test, in order of declaration
         config.test_cases.append(func.__name__)
         @wraps(func)
         def wrapper(self):
 
-            # check  if dependency failed
-            if dependency and config.test_results.get(dependency) != Test.PASS:
-                self.result = config.test_results[func.__name__] = Test.SKIP
+            # check if dependency failed
+            if dependency and config.test_results.get(dependency) != TestCase.PASS:
+                self.result = config.test_results[func.__name__] = TestCase.SKIP
                 return
 
             # move files into this check's directory 
@@ -155,7 +162,7 @@ def check(dependency=None):
 
             # if test didn't fail, then it passed
             if config.test_results.get(func.__name__) == None:
-                self.result = config.test_results[func.__name__] = Test.PASS
+                self.result = config.test_results[func.__name__] = TestCase.PASS
 
         return wrapper 
     return decorator 
@@ -238,10 +245,10 @@ class Child():
         self.child.close(force=True)
         return self
 
-class Test(unittest2.TestCase):
-    PASS = 1
-    FAIL = 0
-    SKIP = -1
+class TestCase(unittest.TestCase):
+    PASS = True
+    FAIL = False 
+    SKIP = None
 
     def __init__(self, method_name):
         super().__init__(method_name)
@@ -251,26 +258,26 @@ class Test(unittest2.TestCase):
         self.log = []
 
     def checkfile(self, filename):
-        """gets contents of a check file"""
+        """Gets the contents of a check file."""
         contents = open(os.path.join(checks_dir, filename)).read()
         return contents
 
     def exists(self, filename):
-        """asserts that filename exists"""
+        """Asserts that filename exists."""
         self.log.append("Checking that {} exists...".format(filename))
         os.chdir(self.dir)
         if not os.path.isfile(filename):
             raise Error("File {} not found.".format(filename))
 
     def spawn(self, cmd, status=0):
-        """asserts that cmd returns with code status (0 by default)"""
+        """Asserts that cmd returns with code status (0 by default)."""
         self.log.append("Running {}...".format(cmd))
         os.chdir(self.dir)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
         return Child(self, child)
 
     def include(self, path):
-        """copies a file to the temporary directory"""
+        """Copies a file to the temporary directory."""
         shutil.copy(os.path.join(checks_dir, path), self.dir)
 
     def fail(self, rationale):
