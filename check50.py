@@ -186,10 +186,18 @@ class Child():
         self.child = child
 
     def stdin(self, line, prompt=True):
-        self.test.log.append("Sending input {}...".format(line))
+        if line != None:
+            self.test.log.append("Sending input {}...".format(line))
+        else:
+            self.test.log.append("Sending Ctrl-D...")
+
         if prompt:
             self.child.expect(".+")
-        self.child.sendline(line)
+
+        if line != None:
+            self.child.sendline(line)
+        else:
+            self.child.sendcontrol('d')
         return self
 
     def stdout(self, output=None, str_output=None):
@@ -260,6 +268,10 @@ class Test(unittest2.TestCase):
         os.chdir(self.dir)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
         return Child(self, child)
+
+    def include(self, path):
+        """copies a file to the temporary directory"""
+        shutil.copy(os.path.join(checks_dir, path), self.dir)
 
     def fail(self, rationale):
         self.result = self.FAIL
