@@ -22,25 +22,25 @@ class Recover(Test):
         """handles lack of forensic image"""
         self.spawn("./recover").exit(1)
 
-    @check("compiles")
-    def test_000(self):
-        """init initializes 3x3 board correctly"""
-        #self.spawn("./fifteen 3")
-        import pexpect
-        child = pexpect.spawn("./fifteen 3")
-        child.expect(".+")
-        import time
-        print(os.getcwd(), file=sys.stderr)
-        self.include("outputs/fifteen/init-3x3.txt")
-        # child  = subprocess.Popen("./fifteen 3", shell=True)
-        # time.sleep(3)
-        # child.kill()
-        subprocess.Popen("bash", shell=True).wait()
-
-        # .stdin(None).exit(0)
-        # subprocess.Popen("cat log.txt", shell = True).wait()
-        self.spawn("diff log.txt init-3x3.txt").stdout("", "").exit(0)
-
+    # @check("compiles")
+    # def test_000(self):
+    #     """init initializes 3x3 board correctly"""
+    #     #self.spawn("./fifteen 3")
+    #     import pexpect
+    #     child = pexpect.spawn("./fifteen 3")
+    #     child.expect(".+")
+    #     import time
+    #     print(os.getcwd(), file=sys.stderr)
+    #     self.include("outputs/fifteen/init-3x3.txt")
+    #     # child  = subprocess.Popen("./fifteen 3", shell=True)
+    #     # time.sleep(3)
+    #     # child.kill()
+    #     subprocess.Popen("bash", shell=True).wait()
+    #
+    #     # .stdin(None).exit(0)
+    #     # subprocess.Popen("cat log.txt", shell = True).wait()
+    #     self.spawn("diff log.txt init-3x3.txt").stdout("", "").exit(0)
+    #
     #
     # @check("compiles")
     # def test_secondamongthree(self):
