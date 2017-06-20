@@ -2,9 +2,9 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import File, Test, Error, check
+from check50 import File, TestCase, Error, check
 
-class MarioLess(Test):
+class MarioLess(TestCase):
     
     def check_pyramid(self, output, correct):
         if output == correct:

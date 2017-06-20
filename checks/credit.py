@@ -2,9 +2,9 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import Test, check
+from check50 import TestCase, check
 
-class Credit(Test):
+class Credit(TestCase):
     
     @check()
     def exists(self):
