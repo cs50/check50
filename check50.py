@@ -278,6 +278,8 @@ class TestCase(unittest.TestCase):
         """Asserts that cmd returns with code status (0 by default)."""
         self.log.append("Running {}...".format(cmd))
         os.chdir(self.dir)
+        if env == None:
+            env = {}
         env = os.environ.update(env)
         child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
