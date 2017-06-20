@@ -19,7 +19,7 @@ from termcolor import cprint
 import config
 
 # TODO: pull checks directory from repo?
-checks_dir = os.path.join(os.getcwd(), "checks")
+checks_dir = os.path.join(os.getcwd().split("check50")[0] + "check50", "checks")
 
 def main():
 
@@ -37,6 +37,8 @@ def main():
     config.tempdir = tempfile.mkdtemp()
     src_dir = os.path.join(config.tempdir, "_")
     os.mkdir(src_dir)
+    if len(files) == 0:
+        files = os.listdir()
     for filename in files:
         if os.path.exists(filename):
             if os.path.isfile(filename):
@@ -126,6 +128,7 @@ class TestResult(unittest.TestResult):
 
     def addError(self, test, err):
         cprint("check50 ran into an error while running checks.", "red")
+        cleanup()
         print(err[1])
         traceback.print_tb(err[2])
         sys.exit(1)
@@ -176,13 +179,15 @@ class File():
 class Error(Exception):
     def __init__(self, rationale=None, helpers=None):
         def raw(s):
+            if type(s) != str:
+                return s
             s = repr(s)  # get raw representation of string
             s = s[1:len(s) - 1]  # strip away quotation marks
             if len(s) > 15:
                 s = s[:15] + "..."  # truncate if too long
-            return s
+            return "\"{}\"".format(s)
         if type(rationale) == tuple:
-            rationale = "Expected \"{}\", not \"{}\".".format(raw(rationale[1]), raw(rationale[0]))
+            rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
         self.rationale = rationale 
         self.helpers = helpers
 
@@ -269,16 +274,25 @@ class TestCase(unittest.TestCase):
         if not os.path.isfile(filename):
             raise Error("File {} not found.".format(filename))
 
-    def spawn(self, cmd, status=0):
+    def spawn(self, cmd, status=0, env=None):
         """Asserts that cmd returns with code status (0 by default)."""
         self.log.append("Running {}...".format(cmd))
         os.chdir(self.dir)
-        child = pexpect.spawn(cmd, encoding="utf-8", echo=False)
+        env = os.environ.update(env)
+        child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
     def include(self, path):
         """Copies a file to the temporary directory."""
         shutil.copy(os.path.join(checks_dir, path), self.dir)
+
+    def append_code(self, filename, codefile):
+        code = open(os.path.join(checks_dir, codefile.filename), "r")
+        contents = code.read()
+        code.close()
+        f = open(os.path.join(self.dir, filename), "a")
+        f.write(contents)
+        f.close()
 
     def fail(self, rationale):
         self.result = self.FAIL
