@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.getcwd())
 from check50 import File, TestCase, Error, check
 
-class Resize(TestCase):
+class Resize_Less(TestCase):
 
     @check()
     def resize_bmp_exist(self):
