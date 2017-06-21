@@ -6,6 +6,7 @@ import inspect
 import json
 import os
 import pexpect
+import pypijson
 import re
 import shutil
 import sys
@@ -13,10 +14,13 @@ import tempfile
 import traceback
 import unittest
 
+from distutils.version import StrictVersion
 from functools import wraps
 from termcolor import cprint
 
 import config
+
+VERSION = StrictVersion("2.0.0")
 
 # TODO: pull checks directory from repo?
 checks_dir = os.path.join(os.getcwd().split("check50")[0] + "check50", "checks")
@@ -29,12 +33,18 @@ def main():
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
+    parser.add_argument("-f", "--force", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
+
+    # check for newer version on PyPi
+    pypi = pypijson.get("check50")
+    if pypi and not args.force and StrictVersion(pypi["info"]["version"]) > VERSION:
+        err("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
 
     if not args.local:
         try:
