@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import importlib
 import inspect
 import json
@@ -321,6 +322,20 @@ class TestCase(unittest.TestCase):
         os.chdir(self.dir)
         if not os.path.isfile(filename):
             raise Error("File {} not found.".format(filename))
+
+    def hash(self, filename):
+        """Hashes a file using SHA-256."""
+        if type(filename) == File:
+            filename = filename.filename
+        # https://stackoverflow.com/a/22058673
+        sha256 = hashlib.sha256()
+        with open(filename, "rb") as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                sha256.update(data)
+        return sha256.hexdigest()
 
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
