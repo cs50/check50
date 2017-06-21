@@ -41,7 +41,7 @@ def main():
     # check for newer version on PyPi
     pypi = pypijson.get("check50")
     if pypi and not args.force and StrictVersion(pypi["info"]["version"]) > VERSION:
-        err("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
+        raise RuntimeError("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
 
     if not args.local:
         try:
@@ -50,7 +50,7 @@ def main():
             submit50.submit("check50", identifier)
             sys.exit(0)
         except ImportError:
-            err("submit50 not installed. Install submit50 and run check50 again.")
+            raise RuntimeError("submit50 not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -65,7 +65,7 @@ def main():
             else:
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
-            err("File {} not found.".format(filename))
+            raise RuntimeError("File {} not found.".format(filename))
     
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
@@ -79,13 +79,13 @@ def main():
     try:
         checks = importlib.import_module(identifier)
     except ImportError:
-        err("Invalid identifier.")
+        raise RuntimeError("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
             if m[1].__module__ == identifier] 
 
     # ensure test module has a class of test cases
     if len(classes) == 0:
-        err("Invalid identifier.")
+        raise RuntimeError("Invalid identifier.")
     test_class = classes[0]
 
     # create and run the test suite
@@ -126,11 +126,6 @@ def print_json(results):
         output.update({result["test"]._testMethodName : result["status"]})
     print(json.dumps(output))
 
-def err(err):
-    cleanup()
-    cprint(err, "red")
-    sys.exit(1)
-
 def cleanup():
     """Remove temporary files at end of test."""
     if config.tempdir:
@@ -154,11 +149,17 @@ class TestResult(unittest.TestResult):
         })
 
     def addError(self, test, err):
+        self.results.append({
+            "description": test.shortDescription(),
+            "helpers": test.helpers,
+            "log": test.log,
+            "rationale": err[1],
+            "status": TestCase.FAIL,
+            "test": test
+        })
         cprint("check50 ran into an error while running checks.", "red")
-        cleanup()
         print(err[1])
         traceback.print_tb(err[2])
-        sys.exit(1)
 
 # decorator for checks
 def check(dependency=None):
@@ -197,15 +198,17 @@ def check(dependency=None):
         return wrapper 
     return decorator 
 
-# generic class to represent a file
 class File():
+    """Generic class to represent file in check directory."""
     def __init__(self, filename):
-        self.filename = filename
+        self.filename = os.path.join(config.check_dir, filename)
 
-# class to wrap errors
 class Error(Exception):
+    """Class to wrap errors in students' checks."""
     def __init__(self, rationale=None, helpers=None):
         def raw(s):
+            if type(s) == list:
+                s = "\n".join(s)
             if type(s) != str:
                 return s
             s = repr(s)  # get raw representation of string
@@ -217,6 +220,13 @@ class Error(Exception):
             rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
         self.rationale = rationale 
         self.helpers = helpers
+
+class RuntimeError(RuntimeError):
+    """Error during execution of check50."""
+    def __init__(self, msg):
+        cleanup()
+        cprint(msg, "red")
+        sys.exit(1)
 
 # wrapper class for pexpect child
 class Child():
@@ -245,7 +255,7 @@ class Child():
         if output == None:
             return result
         if type(output) == File:
-            correct = open(os.path.join(config.check_dir, output.filename), "r").read()
+            correct = open(output.filename, "r").read()
             if result != correct:
                 raise Error((result, correct))
         else: # regex
@@ -319,7 +329,7 @@ class TestCase(unittest.TestCase):
         shutil.copy(os.path.join(config.check_dir, path), self.dir)
 
     def append_code(self, filename, codefile):
-        code = open(os.path.join(config.check_dir, codefile.filename), "r")
+        code = open(codefile.filename, "r")
         contents = code.read()
         code.close()
         f = open(os.path.join(self.dir, filename), "a")
