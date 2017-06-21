@@ -25,7 +25,7 @@ class MarioMore(TestCase):
     @check()
     def exists(self):
         """mario.c exists."""
-        super().exists("mario.c")
+        super(MarioMore, self).exists("mario.c")
     
     @check("exists")
     def compiles(self):

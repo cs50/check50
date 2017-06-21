@@ -128,7 +128,7 @@ class TestResult(unittest.TestResult):
     results = []
     
     def __init__(self):
-        super().__init__(self)
+        super(TestResult, self).__init__(self)
 
     def addSuccess(self, test):
         """Handle completion of test, regardless of outcome."""
@@ -271,7 +271,7 @@ class TestCase(unittest.TestCase):
     SKIP = None
 
     def __init__(self, method_name):
-        super().__init__(method_name)
+        super(TestCase, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
@@ -296,7 +296,10 @@ class TestCase(unittest.TestCase):
         if env == None:
             env = {}
         env = os.environ.update(env)
-        child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
+        if sys.version_info < (3, 0):
+            child = pexpect.spawn(cmd, echo=False, env=env)
+        else:
+            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
     def include(self, path):
