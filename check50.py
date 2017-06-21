@@ -22,9 +22,6 @@ import config
 
 VERSION = StrictVersion("2.0.0")
 
-# TODO: pull checks directory from repo?
-checks_dir = os.path.join(os.getcwd().split("check50")[0] + "check50", "checks")
-
 def main():
 
     # parse command line arguments
@@ -69,10 +66,15 @@ def main():
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
             err("File {} not found.".format(filename))
-
-    # import the checks and identify check class
+    
+    # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
         identifier = os.path.join("cs50", identifier)
+
+    # get checks directory
+    config.check_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "checks", identifier)
+
+    # import the checks and identify check class
     identifier = "checks.{}.checks".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
@@ -243,7 +245,7 @@ class Child():
         if output == None:
             return result
         if type(output) == File:
-            correct = open(os.path.join(checks_dir, output.filename), "r").read()
+            correct = open(os.path.join(config.check_dir, output.filename), "r").read()
             if result != correct:
                 raise Error((result, correct))
         else: # regex
@@ -289,7 +291,7 @@ class TestCase(unittest.TestCase):
 
     def checkfile(self, filename):
         """Gets the contents of a check file."""
-        contents = open(os.path.join(checks_dir, filename)).read()
+        contents = open(os.path.join(config.check_dir, filename)).read()
         return contents
 
     def exists(self, filename):
@@ -314,10 +316,10 @@ class TestCase(unittest.TestCase):
 
     def include(self, path):
         """Copies a file to the temporary directory."""
-        shutil.copy(os.path.join(checks_dir, path), self.dir)
+        shutil.copy(os.path.join(config.check_dir, path), self.dir)
 
     def append_code(self, filename, codefile):
-        code = open(os.path.join(checks_dir, codefile.filename), "r")
+        code = open(os.path.join(config.check_dir, codefile.filename), "r")
         contents = code.read()
         code.close()
         f = open(os.path.join(self.dir, filename), "a")
