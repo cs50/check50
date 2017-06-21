@@ -10,4 +10,4 @@ class Finance(TestCase):
     @check()
     def exists(self):
         """application.c exists."""
-        super().exists("application.py")
+        super(Finance, self).exists("application.py")

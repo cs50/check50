@@ -10,7 +10,7 @@ class Water(TestCase):
     @check()
     def exists(self):
         """water.c exists."""
-        super().exists("water.c")
+        super(Water, self).exists("water.c")
     
     @check("exists")
     def compiles(self):

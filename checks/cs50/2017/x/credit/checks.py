@@ -9,7 +9,7 @@ class Credit(TestCase):
     @check()
     def exists(self):
         """credit.c exists."""
-        super().exists("credit.c")
+        super(Credit, self).exists("credit.c")
     
     @check("exists")
     def compiles(self):

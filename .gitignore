@@ -1,2 +1,3 @@
 *.c
 __pycache__/
+pset7/

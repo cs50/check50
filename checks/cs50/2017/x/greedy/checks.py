@@ -10,7 +10,7 @@ class Greedy(TestCase):
     @check()
     def exists(self):
         """greedy.c exists."""
-        super().exists("greedy.c")
+        super(Greedy, self).exists("greedy.c")
     
     @check("exists")
     def compiles(self):

@@ -4,9 +4,8 @@ import sys
 sys.path.append(os.getcwd())
 from check50 import File, TestCase, Error, check
 
-
-class MarioMore(TestCase):
-
+class MarioLess(TestCase):
+    
     def check_pyramid(self, output, correct):
         if output == correct:
             return 1
@@ -25,7 +24,7 @@ class MarioMore(TestCase):
     @check()
     def exists(self):
         """mario.c exists."""
-        super().exists("mario.c")
+        super(MarioLess, self).exists("mario.c")
     
     @check("exists")
     def compiles(self):
@@ -40,34 +39,34 @@ class MarioMore(TestCase):
     @check("compiles")
     def test0(self):
         """handles a height of 0 correctly"""
-        self.spawn("./mario").stdin("0").stdout(File("outputs/mario/more/0.txt")).exit(0)
+        self.spawn("./mario").stdin("0").stdout(File("0.txt")).exit(0)
 
     @check("compiles")
     def test1(self):
         """handles a height of 1 correctly"""
         out = self.spawn("./mario").stdin("1").stdout().split("\n")
-        correct = self.checkfile("outputs/mario/more/1.txt").split("\n")
+        correct = self.checkfile("1.txt").split("\n")
         self.check_pyramid(out, correct)
 
     @check("compiles")
     def test2(self):
         """handles a height of 2 correctly"""
         out = self.spawn("./mario").stdin("2").stdout().split("\n")
-        correct = self.checkfile("outputs/mario/more/2.txt").split("\n")
+        correct = self.checkfile("2.txt").split("\n")
         self.check_pyramid(out, correct)
 
     @check("compiles")
     def test23(self):
         """handles a height of 23 correctly"""
         out = self.spawn("./mario").stdin("23").stdout().split("\n")
-        correct = self.checkfile("outputs/mario/more/23.txt").split("\n")
+        correct = self.checkfile("23.txt").split("\n")
         self.check_pyramid(out, correct)
 
     @check("compiles")
     def test24(self):
         """rejects a height of 24, and then accepts a height of 2"""
         self.spawn("./mario").stdin("24").reject()\
-            .stdin("2").stdout(File("outputs/mario/more/2.txt")).exit(0)
+            .stdin("2").stdout(File("2.txt")).exit(0)
     
     @check("compiles")
     def test_reject_foo(self):

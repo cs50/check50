@@ -9,7 +9,7 @@ class Hello(TestCase):
     @check()
     def exists(self):
         """hello.c exists."""
-        super().exists("hello.c")
+        super(Hello, self).exists("hello.c")
     
     @check("exists")
     def compiles(self):

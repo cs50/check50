@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import importlib
 import inspect
 import json
 import os
 import pexpect
+import pypijson
 import re
+import shlex
 import shutil
 import sys
 import tempfile
 import traceback
 import unittest
 
+from distutils.version import StrictVersion
 from functools import wraps
 from termcolor import cprint
 
 import config
 
-# TODO: pull checks directory from repo?
-checks_dir = os.path.join(os.getcwd().split("check50")[0] + "check50", "checks")
+VERSION = StrictVersion("2.0.0")
 
 def main():
 
@@ -28,10 +31,28 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-l", "--log", action="store_true")
+    parser.add_argument("-l", "--local", action="store_true")
+    parser.add_argument("-f", "--force", action="store_true")
+    parser.add_argument("--log", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
+
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
+
+    # check for newer version on PyPi
+    pypi = pypijson.get("check50")
+    if pypi and not args.force and StrictVersion(pypi["info"]["version"]) > VERSION:
+        raise RuntimeError("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
+
+    if not args.local:
+        try:
+            import submit50
+            submit50.run.verbose = args.verbose
+            submit50.submit("check50", identifier)
+            sys.exit(0)
+        except ImportError:
+            raise RuntimeError("submit50 not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -46,20 +67,27 @@ def main():
             else:
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
-            err("File {} not found.".format(filename))
+            raise RuntimeError("File {} not found.".format(filename))
+    
+    # prepend cs50/ directory by default
+    if identifier.split("/")[0].isdigit():
+        identifier = os.path.join("cs50", identifier)
+
+    # get checks directory
+    config.check_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "checks", identifier)
 
     # import the checks and identify check class
-    identifier = "checks.{}".format(identifier)
+    identifier = "checks.{}.checks".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
     except ImportError:
-        err("Invalid identifier.")
+        raise RuntimeError("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
             if m[1].__module__ == identifier] 
 
     # ensure test module has a class of test cases
     if len(classes) == 0:
-        err("Invalid identifier.")
+        raise RuntimeError("Invalid identifier.")
     test_class = classes[0]
 
     # create and run the test suite
@@ -100,20 +128,16 @@ def print_json(results):
         output.update({result["test"]._testMethodName : result["status"]})
     print(json.dumps(output))
 
-def err(err):
-    cleanup()
-    cprint(err, "red")
-    sys.exit(1)
-
 def cleanup():
     """Remove temporary files at end of test."""
-    shutil.rmtree(config.tempdir)
+    if config.tempdir:
+        shutil.rmtree(config.tempdir)
 
 class TestResult(unittest.TestResult):
     results = []
     
     def __init__(self):
-        super().__init__(self)
+        super(TestResult, self).__init__(self)
 
     def addSuccess(self, test):
         """Handle completion of test, regardless of outcome."""
@@ -127,11 +151,17 @@ class TestResult(unittest.TestResult):
         })
 
     def addError(self, test, err):
+        self.results.append({
+            "description": test.shortDescription(),
+            "helpers": test.helpers,
+            "log": test.log,
+            "rationale": err[1],
+            "status": TestCase.FAIL,
+            "test": test
+        })
         cprint("check50 ran into an error while running checks.", "red")
-        cleanup()
         print(err[1])
         traceback.print_tb(err[2])
-        sys.exit(1)
 
 # decorator for checks
 def check(dependency=None):
@@ -170,15 +200,17 @@ def check(dependency=None):
         return wrapper 
     return decorator 
 
-# generic class to represent a file
 class File():
+    """Generic class to represent file in check directory."""
     def __init__(self, filename):
-        self.filename = filename
+        self.filename = os.path.join(config.check_dir, filename)
 
-# class to wrap errors
 class Error(Exception):
+    """Class to wrap errors in students' checks."""
     def __init__(self, rationale=None, helpers=None):
         def raw(s):
+            if type(s) == list:
+                s = "\n".join(s)
             if type(s) != str:
                 return s
             s = repr(s)  # get raw representation of string
@@ -190,6 +222,13 @@ class Error(Exception):
             rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
         self.rationale = rationale 
         self.helpers = helpers
+
+class RuntimeError(RuntimeError):
+    """Error during execution of check50."""
+    def __init__(self, msg):
+        cleanup()
+        cprint(msg, "red")
+        sys.exit(1)
 
 # wrapper class for pexpect child
 class Child():
@@ -218,7 +257,7 @@ class Child():
         if output == None:
             return result
         if type(output) == File:
-            correct = open(os.path.join(checks_dir, output.filename), "r").read()
+            correct = open(output.filename, "r").read()
             if result != correct:
                 raise Error((result, correct))
         else: # regex
@@ -256,7 +295,7 @@ class TestCase(unittest.TestCase):
     SKIP = None
 
     def __init__(self, method_name):
-        super().__init__(method_name)
+        super(TestCase, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
@@ -264,8 +303,18 @@ class TestCase(unittest.TestCase):
 
     def checkfile(self, filename):
         """Gets the contents of a check file."""
-        contents = open(os.path.join(checks_dir, filename)).read()
+        contents = open(os.path.join(config.check_dir, filename)).read()
         return contents
+
+    def diff(self, f1, f2):
+        """Returns 0 if files are the same, nonzero otherwise."""
+        if type(f1) == File:
+            f1 = f1.filename
+        if type(f2) == File:
+            f2 = f2.filename
+        child = self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
+        child.child.wait()
+        return child.child.exitstatus
 
     def exists(self, filename):
         """Asserts that filename exists."""
@@ -274,22 +323,39 @@ class TestCase(unittest.TestCase):
         if not os.path.isfile(filename):
             raise Error("File {} not found.".format(filename))
 
-    def spawn(self, cmd, status=0, env=None):
-        """Asserts that cmd returns with code status (0 by default)."""
+    def hash(self, filename):
+        """Hashes a file using SHA-256."""
+        if type(filename) == File:
+            filename = filename.filename
+        # https://stackoverflow.com/a/22058673
+        sha256 = hashlib.sha256()
+        with open(filename, "rb") as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                sha256.update(data)
+        return sha256.hexdigest()
+
+    def spawn(self, cmd, env=None):
+        """Spawns a new child process."""
         self.log.append("Running {}...".format(cmd))
         os.chdir(self.dir)
         if env == None:
             env = {}
         env = os.environ.update(env)
-        child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
+        if sys.version_info < (3, 0):
+            child = pexpect.spawn(cmd, echo=False, env=env)
+        else:
+            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
     def include(self, path):
         """Copies a file to the temporary directory."""
-        shutil.copy(os.path.join(checks_dir, path), self.dir)
+        shutil.copy(os.path.join(config.check_dir, path), self.dir)
 
     def append_code(self, filename, codefile):
-        code = open(os.path.join(checks_dir, codefile.filename), "r")
+        code = open(codefile.filename, "r")
         contents = code.read()
         code.close()
         f = open(os.path.join(self.dir, filename), "a")
