@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env pythan3
 
 import argparse
 import importlib
@@ -28,10 +28,22 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-l", "--log", action="store_true")
+    parser.add_argument("-l", "--local", action="store_true")
+    parser.add_argument("--log", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
+
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
+
+    if not args.local:
+        try:
+            import submit50
+            submit50.run.verbose = args.verbose
+            submit50.submit("check50", identifier)
+            sys.exit(0)
+        except ImportError:
+            err("submit50 not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -49,7 +61,9 @@ def main():
             err("File {} not found.".format(filename))
 
     # import the checks and identify check class
-    identifier = "checks.{}".format(identifier)
+    if identifier.split("/")[0].isdigit():
+        identifier = os.path.join("cs50", identifier)
+    identifier = "checks.{}.checks".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
     except ImportError:
@@ -107,7 +121,8 @@ def err(err):
 
 def cleanup():
     """Remove temporary files at end of test."""
-    shutil.rmtree(config.tempdir)
+    if config.tempdir:
+        shutil.rmtree(config.tempdir)
 
 class TestResult(unittest.TestResult):
     results = []
