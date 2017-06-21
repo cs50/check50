@@ -8,6 +8,7 @@ import os
 import pexpect
 import pypijson
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -304,6 +305,16 @@ class TestCase(unittest.TestCase):
         contents = open(os.path.join(config.check_dir, filename)).read()
         return contents
 
+    def diff(self, f1, f2):
+        """Returns 0 if files are the same, nonzero otherwise."""
+        if type(f1) == File:
+            f1 = f1.filename
+        if type(f2) == File:
+            f2 = f2.filename
+        child = self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
+        child.child.wait()
+        return child.child.exitstatus
+
     def exists(self, filename):
         """Asserts that filename exists."""
         self.log.append("Checking that {} exists...".format(filename))
@@ -311,8 +322,8 @@ class TestCase(unittest.TestCase):
         if not os.path.isfile(filename):
             raise Error("File {} not found.".format(filename))
 
-    def spawn(self, cmd, status=0, env=None):
-        """Asserts that cmd returns with code status (0 by default)."""
+    def spawn(self, cmd, env=None):
+        """Spawns a new child process."""
         self.log.append("Running {}...".format(cmd))
         os.chdir(self.dir)
         if env == None:
