@@ -68,7 +68,7 @@ def main():
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
             raise RuntimeError("File {} not found.".format(filename))
-    
+
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
         identifier = os.path.join("cs50", identifier)
@@ -83,7 +83,7 @@ def main():
     except ImportError:
         raise RuntimeError("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
-            if m[1].__module__ == identifier] 
+            if m[1].__module__ == identifier]
 
     # ensure test module has a class of test cases
     if len(classes) == 0:
@@ -135,7 +135,7 @@ def cleanup():
 
 class TestResult(unittest.TestResult):
     results = []
-    
+
     def __init__(self):
         super(TestResult, self).__init__(self)
 
@@ -177,12 +177,12 @@ def check(dependency=None):
                 self.result = config.test_results[func.__name__] = TestCase.SKIP
                 return
 
-            # move files into this check's directory 
+            # move files into this check's directory
             self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
             if dependency:
                 src_dir = os.path.join(config.tempdir, dependency)
             else:
-                src_dir = os.path.join(config.tempdir, "_") 
+                src_dir = os.path.join(config.tempdir, "_")
             shutil.copytree(src_dir, dst_dir)
 
             # run the test, catch failures
@@ -197,8 +197,8 @@ def check(dependency=None):
             if config.test_results.get(func.__name__) == None:
                 self.result = config.test_results[func.__name__] = TestCase.PASS
 
-        return wrapper 
-    return decorator 
+        return wrapper
+    return decorator
 
 class File():
     """Generic class to represent file in check directory."""
@@ -220,7 +220,7 @@ class Error(Exception):
             return "\"{}\"".format(s)
         if type(rationale) == tuple:
             rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
-        self.rationale = rationale 
+        self.rationale = rationale
         self.helpers = helpers
 
 class RuntimeError(RuntimeError):
@@ -251,8 +251,14 @@ class Child():
             self.child.sendcontrol('d')
         return self
 
+    def expect(self, pattern, str_output=None):
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\"...".format(str_output))
+        return self.child.expect(pattern)
+
     def stdout(self, output=None, str_output=None):
-        self.test.log.append("Checking for output {}...".format(str_output))
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\" + EOF...".format(str_output))
         result = self.child.read().replace("\r\n", "\n").lstrip("\n")
         if output == None:
             return result
@@ -291,7 +297,7 @@ class Child():
 
 class TestCase(unittest.TestCase):
     PASS = True
-    FAIL = False 
+    FAIL = False
     SKIP = None
 
     def __init__(self, method_name):
