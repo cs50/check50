@@ -3,9 +3,10 @@ import sys
 import subprocess
 
 sys.path.append(os.getcwd())
-from check50 import *
+from check50 import File, TestCase, Error, check
 
-class MarioLessPython(TestCase):
+
+class MarioMorePython(TestCase):
 
     def check_pyramid(self, output, correct):
         if output == correct:
@@ -25,19 +26,19 @@ class MarioLessPython(TestCase):
     @check()
     def exists(self):
         """mario.py exists."""
-        super(MarioLessPython, self).exists("mario.py")
+        super(MarioMorePython, self).exists("mario.py")
 
     @check("exists")
     def test_reject_negative(self):
         """rejects a height of -1"""
         self.include("cs50.py")
+        # subprocess.call("bash", shell=True)
         self.spawn("python3 mario.py").stdin("-1").reject().kill()
 
     @check("exists")
     def test0(self):
         """handles a height of 0 correctly"""
         self.include("cs50.py")
-        # subprocess.call("bash", shell=True)
         self.spawn("python3 mario.py").stdin("0").stdout(File("0.txt")).exit(0)
 
     @check("exists")
