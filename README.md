@@ -11,10 +11,10 @@ python check50.py identifier [files to check]
 For example, to check `greedy`, assuming you have a file called `greedy.c` in the same directory as `check50.py`, run:
 
 ```
-python check50.py greedy greedy.c
+python check50.py 2017/x/greedy greedy.c
 ```
 
-Identifier names are given by the filenames in the `checks` directory, with subdirectories specified by the `.` symbol (e.g. `mario.less` or `mario.more`).
+Identifier names are given by the filenames in the `checks` directory, with subdirectories specified by the `/` symbol.
 To check multiple files, separate each filename with a space. Alternatively, not specifying any files will by default use all files
 in the current directory (TODO: change this to use the `exclude` files).
 
