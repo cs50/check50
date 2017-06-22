@@ -37,7 +37,6 @@ class MarioLessPython(TestCase):
     def test0(self):
         """handles a height of 0 correctly"""
         self.include("cs50.py")
-        # subprocess.call("bash", shell=True)
         self.spawn("python3 mario.py").stdin("0").stdout(File("0.txt")).exit(0)
 
     @check("exists")

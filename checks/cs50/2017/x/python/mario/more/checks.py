@@ -3,7 +3,7 @@ import sys
 import subprocess
 
 sys.path.append(os.getcwd())
-from check50 import File, TestCase, Error, check
+from check50 import *
 
 
 class MarioMorePython(TestCase):

@@ -4,7 +4,7 @@ import sys
 import subprocess
 
 sys.path.append(os.getcwd())
-from check50 import TestCase, Error, check
+from check50 import *
 
 class GreedyPython(TestCase):
 
