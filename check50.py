@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
 import hashlib
 import importlib
 import inspect
@@ -15,14 +16,18 @@ import sys
 import tempfile
 import traceback
 import unittest
+import xml.etree.cElementTree as ET
 
 from distutils.version import StrictVersion
 from functools import wraps
+from pexpect.exceptions import EOF, TIMEOUT
 from termcolor import cprint
 
 import config
 
 VERSION = StrictVersion("2.0.0")
+
+__all__ = ["check", "EOF", "Error", "TestCase", "valgrind"]
 
 def main():
 
@@ -68,7 +73,7 @@ def main():
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
             raise RuntimeError("File {} not found.".format(filename))
-    
+
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
         identifier = os.path.join("cs50", identifier)
@@ -83,7 +88,7 @@ def main():
     except ImportError:
         raise RuntimeError("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
-            if m[1].__module__ == identifier] 
+            if m[1].__module__ == identifier]
 
     # ensure test module has a class of test cases
     if len(classes) == 0:
@@ -135,7 +140,7 @@ def cleanup():
 
 class TestResult(unittest.TestResult):
     results = []
-    
+
     def __init__(self):
         super(TestResult, self).__init__(self)
 
@@ -163,6 +168,23 @@ class TestResult(unittest.TestResult):
         print(err[1])
         traceback.print_tb(err[2])
 
+def valgrind(func):
+    if config.test_cases[-1] == func.__name__:
+        frame = traceback.extract_stack(limit=2)[0]
+        raise RuntimeError("Invalid check in {0} on line {1} of {2}:\n"
+                           "@valgrind must be placed below @check"\
+                            .format(frame.name, frame.lineno, frame.filename))
+    @wraps(func)
+    def wrapper(self):
+        self._valgrind = True
+        try:
+            func(self)
+            self._check_valgrind()
+        finally:
+            self._valgrind = False
+    return wrapper
+
+
 # decorator for checks
 def check(dependency=None):
     def decorator(func):
@@ -177,12 +199,12 @@ def check(dependency=None):
                 self.result = config.test_results[func.__name__] = TestCase.SKIP
                 return
 
-            # move files into this check's directory 
+            # move files into this check's directory
             self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
             if dependency:
                 src_dir = os.path.join(config.tempdir, dependency)
             else:
-                src_dir = os.path.join(config.tempdir, "_") 
+                src_dir = os.path.join(config.tempdir, "_")
             shutil.copytree(src_dir, dst_dir)
 
             # run the test, catch failures
@@ -194,11 +216,11 @@ def check(dependency=None):
                 return
 
             # if test didn't fail, then it passed
-            if config.test_results.get(func.__name__) == None:
+            if config.test_results.get(func.__name__) is None:
                 self.result = config.test_results[func.__name__] = TestCase.PASS
 
-        return wrapper 
-    return decorator 
+        return wrapper
+    return decorator
 
 class File():
     """Generic class to represent file in check directory."""
@@ -211,7 +233,7 @@ class Error(Exception):
         def raw(s):
             if type(s) == list:
                 s = "\n".join(s)
-            if type(s) != str:
+            if type(s) != str or s == "EOF":
                 return s
             s = repr(s)  # get raw representation of string
             s = s[1:len(s) - 1]  # strip away quotation marks
@@ -220,15 +242,16 @@ class Error(Exception):
             return "\"{}\"".format(s)
         if type(rationale) == tuple:
             rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
-        self.rationale = rationale 
+        self.rationale = rationale
         self.helpers = helpers
 
 class RuntimeError(RuntimeError):
     """Error during execution of check50."""
-    def __init__(self, msg):
+    def __init__(self, msg, color="red"):
         cleanup()
-        cprint(msg, "red")
+        cprint(msg, color)
         sys.exit(1)
+
 
 # wrapper class for pexpect child
 class Child():
@@ -251,19 +274,37 @@ class Child():
             self.child.sendcontrol('d')
         return self
 
-    def stdout(self, output=None, str_output=None):
-        self.test.log.append("Checking for output {}...".format(str_output))
-        result = self.child.read().replace("\r\n", "\n").lstrip("\n")
-        if output == None:
-            return result
-        if type(output) == File:
-            correct = open(output.filename, "r").read()
-            if result != correct:
-                raise Error((result, correct))
-        else: # regex
-            r = re.compile(output)
-            if not r.match(result):
-                raise Error((result, str_output))
+    def stdout(self, output=None, str_output=None, timeout=2):
+        if output is None:
+            return self.child.read().replace("\r\n", "\n").lstrip("\n")
+
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\"...".format(str_output))
+
+        if isinstance(output, File):
+            contents = open(output.filename, "r", newline="\r\n").read()
+            if str_output is None: str_output = contents
+            output = re.escape(contents)
+        elif output == EOF:
+            if str_output is None: str_output = "EOF"
+        else:
+            if str_output is None: str_output = output
+            output = output.replace("\n", "\r\n")
+
+        try:
+            self.child.expect(output, timeout=timeout)
+        except EOF:
+            result = self.child.before + self.child.buffer
+            if self.child.after != EOF:
+                result += self.child.after
+            raise Error((result.replace("\r\n", "\n"), str_output)) from None
+        except TIMEOUT:
+            raise Error("Check timed out while waiting for {}".format(str_output)) from None
+
+        # If we expected EOF and we still got output, report an error
+        if output == EOF and self.child.before:
+            raise Error((self.child.before.replace("\r\n", "\n"), str_output))
+
         return self
 
     def reject(self):
@@ -291,14 +332,18 @@ class Child():
 
 class TestCase(unittest.TestCase):
     PASS = True
-    FAIL = False 
+    FAIL = False
     SKIP = None
+
+    _valgrind_log = "valgrind.xml"
+    _valgrind = False
 
     def __init__(self, method_name):
         super(TestCase, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
+        self.valgrind_file = None
         self.log = []
 
     def checkfile(self, filename):
@@ -339,15 +384,21 @@ class TestCase(unittest.TestCase):
 
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
-        self.log.append("Running {}...".format(cmd))
+        if self._valgrind:
+            self.log.append("Running valgrind {}...".format(cmd))
+            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={0} -- {1}" \
+                        .format(os.path.join(self.dir, self._valgrind_log), cmd)
+        else:
+            self.log.append("Running {}...".format(cmd))
+
         os.chdir(self.dir)
-        if env == None:
+        if env is None:
             env = {}
         env = os.environ.update(env)
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
-            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
+            child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
     def include(self, path):
@@ -366,6 +417,49 @@ class TestCase(unittest.TestCase):
         self.result = self.FAIL
         self.rationale = rationale
         super().fail()
+
+    def replace_fn(self, old_fn, new_fn, file):
+        self.spawn("sed -i='' -e 's/callq\t_{0}/callq\t_{1}/g' {2}", old_fn, new_fn, file).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t{0}/callq\t{1}/g' {2}", old_fn, new_fn, file).exit(0)
+
+    def _check_valgrind(self):
+        """Log and report any errors encountered by valgrind"""
+        # Load XML file created by valgrind
+        xml = ET.ElementTree(file=os.path.join(self.dir, self._valgrind_log))
+
+        self.log.append("Checking for valgrind errors... ")
+
+        # Ensure that we don't get duplicate error messages
+        reported = set()
+        for error in xml.iterfind("error"):
+            # Type of error valgrind encountered
+            kind = error.find("kind").text
+
+            # Valgrind's error message
+            what = error.find("xwhat/text" if kind.startswith("Leak_") else "what").text
+
+            # Error message that we will report
+            msg = ["\t", what]
+
+            # Find first stack frame within student's code
+            for frame in error.iterfind("stack/frame"):
+                obj = frame.find("obj")
+                if obj is not None and os.path.dirname(obj.text) == self.dir:
+                    location = frame.find("file"), frame.find("line")
+                    if None not in location:
+                        msg.append(": (file: {0}, line: {1})".format(location[0].text, location[1].text))
+                    break
+
+            msg = "".join(msg)
+            if msg not in reported:
+                self.log.append(msg)
+                reported.add(msg)
+
+        # Only raise exception if we encountered errors
+        if reported:
+            raise Error("Valgrind check failed. "
+                        "Rerun with --log for more information.")
+
 
 if __name__ == "__main__":
     main()
