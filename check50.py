@@ -43,8 +43,7 @@ def main():
 
     # check for newer version on PyPi
     pypi = pypijson.get("check50")
-    pypi_version = StrictVersion(pypi["info"]["version"])
-    if pypi and not args.no_autoupdate and pypi_version > VERSION:
+    if pypi and not args.no_autoupdate and StrictVersion(pypi["info"]["version"]) > VERSION:
 
         # updade check50
         pip = "pip3" if sys.version_info >= (3, 0) else "pip"
