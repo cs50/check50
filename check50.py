@@ -11,6 +11,7 @@ import pypijson
 import re
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -32,8 +33,8 @@ def main():
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
-    parser.add_argument("-f", "--force", action="store_true")
     parser.add_argument("--log", action="store_true")
+    parser.add_argument("--no-autoupdate", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args()
@@ -42,8 +43,15 @@ def main():
 
     # check for newer version on PyPi
     pypi = pypijson.get("check50")
-    if pypi and not args.force and StrictVersion(pypi["info"]["version"]) > VERSION:
-        raise RuntimeError("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
+    pypi_version = StrictVersion(pypi["info"]["version"])
+    if pypi and not args.no_autoupdate and pypi_version > VERSION:
+
+        # updade check50
+        pip = "pip3" if sys.version_info >= (3, 0) else "pip"
+        subprocess.run([pip, "install", "--upgrade", "check50"])
+        check50 = os.path.realpath(__file__)
+        os.execv(check50, sys.argv + ["--no-autoupdate"])
+        raise RuntimeError("Impossible.")
 
     if not args.local:
         try:
