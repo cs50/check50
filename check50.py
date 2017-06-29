@@ -34,7 +34,7 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
     parser.add_argument("--log", action="store_true")
-    parser.add_argument("--no-autoupdate", action="store_true")
+    parser.add_argument("--update", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args()
@@ -43,14 +43,14 @@ def main():
 
     # check for newer version on PyPi
     pypi = pypijson.get("check50")
-    if pypi and not args.no_autoupdate and StrictVersion(pypi["info"]["version"]) > VERSION:
+    if pypi and args.update and StrictVersion(pypi["info"]["version"]) > VERSION:
 
         # updade check50
         pip = "pip3" if sys.version_info >= (3, 0) else "pip"
         subprocess.run([pip, "install", "--upgrade", "check50"])
         check50 = os.path.realpath(__file__)
-        os.execv(check50, sys.argv + ["--no-autoupdate"])
-        raise RuntimeError("Impossible.")
+        sys.argv.remove("--update")
+        os.execv(check50, sys.argv)
 
     if not args.local:
         try:
