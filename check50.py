@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import print_function
+
 import argparse
 import hashlib
 import importlib
@@ -11,6 +13,7 @@ import pypijson
 import re
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -18,11 +21,10 @@ import unittest
 
 from distutils.version import StrictVersion
 from functools import wraps
+from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from termcolor import cprint
 
 import config
-
-VERSION = StrictVersion("2.0.0")
 
 def main():
 
@@ -32,18 +34,36 @@ def main():
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
-    parser.add_argument("-f", "--force", action="store_true")
     parser.add_argument("--log", action="store_true")
+    parser.add_argument("--no-autoupdate", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
-
+    
+    # check if installed as package
+    try:
+        distribution = get_distribution("check50")
+    except DistributionNotFound:
+        distribution = None
+    
     # check for newer version on PyPi
-    pypi = pypijson.get("check50")
-    if pypi and not args.force and StrictVersion(pypi["info"]["version"]) > VERSION:
-        raise RuntimeError("You are running an old version of check50. Run pip install check50 --upgrade, and then run check50 again!")
+    if distribution:
+        pypi = pypijson.get("check50")
+        version = StrictVersion(distribution.version)
+        if pypi and not args.no_autoupdate and StrictVersion(pypi["info"]["version"]) > version:
+
+            # updade check50
+            pip = "pip3" if sys.version_info >= (3, 0) else "pip"
+            status = subprocess.call([pip, "install", "--upgrade", "check50"])
+
+            # if update succeeded, re-run check50
+            if status == 0:
+                check50 = os.path.realpath(__file__)
+                os.execv(check50, sys.argv + ["--no-autoupdate"])
+            else:
+                print("Warning: Could not update check50.", file=sys.stderr)
 
     if not args.local:
         try:
