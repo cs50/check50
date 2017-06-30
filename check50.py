@@ -35,24 +35,24 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
     parser.add_argument("--log", action="store_true")
-    parser.add_argument("--no-autoupdate", action="store_true")
+    parser.add_argument("--no-upgrade", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     args = parser.parse_args()
     identifier = args.identifier[0]
     files = args.files
-    
+
     # check if installed as package
     try:
         distribution = get_distribution("check50")
     except DistributionNotFound:
         distribution = None
-    
+
     # check for newer version on PyPi
     if distribution:
         pypi = pypijson.get("check50")
         version = StrictVersion(distribution.version)
-        if pypi and not args.no_autoupdate and StrictVersion(pypi["info"]["version"]) > version:
+        if pypi and not args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
 
             # updade check50
             pip = "pip3" if sys.version_info >= (3, 0) else "pip"
@@ -61,9 +61,9 @@ def main():
             # if update succeeded, re-run check50
             if status == 0:
                 check50 = os.path.realpath(__file__)
-                os.execv(check50, sys.argv + ["--no-autoupdate"])
+                os.execv(check50, sys.argv + ["--no-update"])
             else:
-                print("Warning: Could not update check50.", file=sys.stderr)
+                print("Could not update check50.", file=sys.stderr)
 
     if not args.local:
         try:
@@ -72,7 +72,7 @@ def main():
             submit50.submit("check50", identifier)
             sys.exit(0)
         except ImportError:
-            raise RuntimeError("submit50 not installed. Install submit50 and run check50 again.")
+            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -88,7 +88,7 @@ def main():
                 shutil.copytree(filename, os.path.join(src_dir, filename))
         else:
             raise RuntimeError("File {} not found.".format(filename))
-    
+
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
         identifier = os.path.join("cs50", identifier)
@@ -103,7 +103,7 @@ def main():
     except ImportError:
         raise RuntimeError("Invalid identifier.")
     classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
-            if m[1].__module__ == identifier] 
+            if m[1].__module__ == identifier]
 
     # ensure test module has a class of test cases
     if len(classes) == 0:
@@ -155,7 +155,7 @@ def cleanup():
 
 class TestResult(unittest.TestResult):
     results = []
-    
+
     def __init__(self):
         super(TestResult, self).__init__(self)
 
@@ -197,12 +197,12 @@ def check(dependency=None):
                 self.result = config.test_results[func.__name__] = TestCase.SKIP
                 return
 
-            # move files into this check's directory 
+            # move files into this check's directory
             self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
             if dependency:
                 src_dir = os.path.join(config.tempdir, dependency)
             else:
-                src_dir = os.path.join(config.tempdir, "_") 
+                src_dir = os.path.join(config.tempdir, "_")
             shutil.copytree(src_dir, dst_dir)
 
             # run the test, catch failures
@@ -217,8 +217,8 @@ def check(dependency=None):
             if config.test_results.get(func.__name__) == None:
                 self.result = config.test_results[func.__name__] = TestCase.PASS
 
-        return wrapper 
-    return decorator 
+        return wrapper
+    return decorator
 
 class File():
     """Generic class to represent file in check directory."""
@@ -240,7 +240,7 @@ class Error(Exception):
             return "\"{}\"".format(s)
         if type(rationale) == tuple:
             rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
-        self.rationale = rationale 
+        self.rationale = rationale
         self.helpers = helpers
 
 class RuntimeError(RuntimeError):
@@ -311,7 +311,7 @@ class Child():
 
 class TestCase(unittest.TestCase):
     PASS = True
-    FAIL = False 
+    FAIL = False
     SKIP = None
 
     def __init__(self, method_name):
