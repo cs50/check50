@@ -21,7 +21,7 @@ import unittest
 
 from distutils.version import StrictVersion
 from functools import wraps
-from pkg_resources import get_distribution, parse_version
+from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from termcolor import cprint
 
 import config
