@@ -273,8 +273,14 @@ class Child():
             self.child.sendcontrol('d')
         return self
 
+    def expect(self, pattern, str_output=None, timeout=2):
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\"...".format(str_output))
+        return self.child.expect(pattern, timeout=timeout)
+
     def stdout(self, output=None, str_output=None):
-        self.test.log.append("Checking for output {}...".format(str_output))
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\" + EOF...".format(str_output))
         result = self.child.read().replace("\r\n", "\n").lstrip("\n")
         if output == None:
             return result
