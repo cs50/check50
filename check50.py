@@ -74,11 +74,12 @@ def main():
     if not args.local:
         try:
             import submit50
+        except ImportError:
+            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
+        else:
             submit50.run.verbose = args.verbose
             submit50.submit("check50", identifier)
             sys.exit(0)
-        except ImportError:
-            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -305,7 +306,10 @@ class Child():
             self.test.log.append("Checking for output \"{}\"...".format(str_output))
 
         if isinstance(output, File):
-            contents = open(output.filename, "r", newline="\r\n").read()
+            if sys.version_info < (3,0):
+                contents = open(output.filename, "rU").read().replace("\n", "\r\n")
+            else:
+                contents = open(output.filename, "r", newline="\r\n").read()
             if str_output is None: str_output = contents
             output = re.escape(contents)
         elif output == EOF:
