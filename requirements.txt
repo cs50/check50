@@ -1,5 +1,4 @@
 argparse
 pexpect
 requests
-unittest
 termcolor
