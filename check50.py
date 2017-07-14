@@ -346,8 +346,12 @@ class TestCase(unittest.TestCase):
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
+
+        # Assert that file exists.
         if type(filename) == File:
             filename = filename.filename
+        self.exists(filename)
+
         # https://stackoverflow.com/a/22058673
         sha256 = hashlib.sha256()
         with open(filename, "rb") as f:
