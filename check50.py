@@ -34,6 +34,7 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--full", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--no-upgrade", action="store_true")
@@ -71,7 +72,14 @@ def main():
         try:
             import submit50
             submit50.run.verbose = args.verbose
-            username, commit_hash = submit50.submit("check50", identifier)
+            prompts = {
+                "confirmation": "Are you sure you want to check these files?",
+                "submitting": "Uploading",
+                "files_submit": "Files that will be checked:",
+                "files_no_submit": "Files that won't be checked:",
+                "print_success": False
+            }
+            username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
             
             print("Running checks...", end="")
             sys.stdout.flush()
@@ -137,7 +145,13 @@ def main():
     cleanup()
 
     # print the results
-    if args.debug:
+    if args.full:  # both JSON and results
+        sentinel = "\x1c" * 10
+        print(sentinel)
+        print_json(results)
+        print(sentinel)
+        print_results(results, log=args.log)
+    elif args.debug:
         print_json(results)
     else:
         print_results(results, log=args.log)
@@ -161,9 +175,15 @@ def print_results(results, log=False):
                 print("    {}".format(line))
 
 def print_json(results):
-    output = {}
+    output = []
     for result in results.results:
-        output.update({result["test"]._testMethodName : result["status"]})
+        output.append({
+            "name": result["test"]._testMethodName,
+            "status": result["status"],
+            "description": result["description"],
+            "helpers": result["helpers"],
+            "log": result["test"].log
+        })
     print(json.dumps(output))
 
 def cleanup():
