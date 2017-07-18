@@ -102,6 +102,7 @@ def main():
             results = lambda: None
             results.results = payload["checks"]
             print_results(results, args.log)
+            print("Detailed Results: https://cs50.me/chceck50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
         except ImportError:
             raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
