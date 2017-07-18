@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 import unittest
 
@@ -33,6 +34,7 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--full", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--no-upgrade", action="store_true")
@@ -68,9 +70,39 @@ def main():
 
     if not args.local:
         try:
+
+            # Submit to check50 repo.
             import submit50
             submit50.run.verbose = args.verbose
-            submit50.submit("check50", identifier)
+            prompts = {
+                "confirmation": "Are you sure you want to check these files?",
+                "submitting": "Uploading",
+                "files_submit": "Files that will be checked:",
+                "files_no_submit": "Files that won't be checked:",
+                "print_success": False
+            }
+            username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
+            
+            # Wait until payload comes back with check data.
+            print("Running checks...", end="")
+            sys.stdout.flush()
+            while True:
+                res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
+                if res.status_code != 200:
+                    continue
+                payload = res.json()
+                if payload["complete"] and payload["checks"] != []:
+                    break
+                print(".", end="")
+                sys.stdout.flush()
+                time.sleep(2)
+            print()
+
+            # Print results.
+            results = lambda: None
+            results.results = payload["checks"]
+            print_results(results, args.log)
+            print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
         except ImportError:
             raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
@@ -120,7 +152,13 @@ def main():
     cleanup()
 
     # print the results
-    if args.debug:
+    if args.full:  # both JSON and results
+        sentinel = "\x1c" * 10
+        print(sentinel)
+        print_json(results)
+        print(sentinel)
+        print_results(results, log=args.log)
+    elif args.debug:
         print_json(results)
     else:
         print_results(results, log=args.log)
@@ -133,8 +171,6 @@ def print_results(results, log=False):
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] != None:
                 cprint("    {}".format(result["rationale"]), "red")
-            if result["helpers"] != None:
-                cprint("    {}".format(result["helpers"]), "red")
         elif result["status"] == TestCase.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
@@ -144,9 +180,16 @@ def print_results(results, log=False):
                 print("    {}".format(line))
 
 def print_json(results):
-    output = {}
+    output = []
     for result in results.results:
-        output.update({result["test"]._testMethodName : result["status"]})
+        output.append({
+            "name": result["test"]._testMethodName,
+            "status": result["status"],
+            "rationale": result["rationale"],
+            "description": result["description"],
+            "helpers": result["helpers"],
+            "log": result["test"].log
+        })
     print(json.dumps(output))
 
 def cleanup():
