@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 import unittest
 
@@ -70,7 +71,23 @@ def main():
         try:
             import submit50
             submit50.run.verbose = args.verbose
-            submit50.submit("check50", identifier)
+            username, commit_hash = submit50.submit("check50", identifier)
+            
+            print("Running checks...", end="")
+            sys.stdout.flush()
+            while True:
+                res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
+                if res.status_code != 200:
+                    continue
+                payload = res.json()
+                if payload["complete"]:
+                    break
+                print(".", end="")
+                sys.stdout.flush()
+                time.sleep(2)
+            print()
+            print("Build complete!")
+            print(payload)
             sys.exit(0)
         except ImportError:
             raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
