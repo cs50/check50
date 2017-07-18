@@ -70,6 +70,8 @@ def main():
 
     if not args.local:
         try:
+
+            # Submit to check50 repo.
             import submit50
             submit50.run.verbose = args.verbose
             prompts = {
@@ -81,6 +83,7 @@ def main():
             }
             username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
             
+            # Wait until payload comes back with check data.
             print("Running checks...", end="")
             sys.stdout.flush()
             while True:
@@ -94,8 +97,8 @@ def main():
                 sys.stdout.flush()
                 time.sleep(2)
             print()
-            print("Build complete!")
-            print(payload)
+
+            # Print results.
             results = lambda: None
             results.results = payload["checks"]
             print_results(results, args.log)
@@ -167,8 +170,6 @@ def print_results(results, log=False):
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] != None:
                 cprint("    {}".format(result["rationale"]), "red")
-            if result["helpers"] != None:
-                cprint("    {}".format(result["helpers"]), "red")
         elif result["status"] == TestCase.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
