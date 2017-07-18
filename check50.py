@@ -88,7 +88,7 @@ def main():
                 if res.status_code != 200:
                     continue
                 payload = res.json()
-                if payload["complete"]:
+                if payload["complete"] and payload["checks"] != []:
                     break
                 print(".", end="")
                 sys.stdout.flush()
@@ -96,6 +96,9 @@ def main():
             print()
             print("Build complete!")
             print(payload)
+            results = lambda: None
+            results.results = payload["checks"]
+            print_results(results, args.log)
             sys.exit(0)
         except ImportError:
             raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
@@ -180,6 +183,7 @@ def print_json(results):
         output.append({
             "name": result["test"]._testMethodName,
             "status": result["status"],
+            "rationale": result["rationale"],
             "description": result["description"],
             "helpers": result["helpers"],
             "log": result["test"].log
