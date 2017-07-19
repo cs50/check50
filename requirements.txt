@@ -1,4 +1,0 @@
-argparse
-pexpect
-requests
-termcolor
