@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     author="CS50",
@@ -15,6 +15,7 @@ setup(
     keywords=["check", "check50"],
     name="check50",
     py_modules=["check50", "config"],
+    packages=find_packages(),
     entry_points={
         "console_scripts": ["check50=check50:main"]
     },
