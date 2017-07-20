@@ -165,13 +165,13 @@ def main():
 
 def print_results(results, log=False):
     for result in results.results:
-        if result["status"] == TestCase.PASS:
+        if result["status"] == Checks.PASS:
             cprint(":) {}".format(result["description"]), "green")
-        elif result["status"] == TestCase.FAIL:
+        elif result["status"] == Checks.FAIL:
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] != None:
                 cprint("    {}".format(result["rationale"]), "red")
-        elif result["status"] == TestCase.SKIP:
+        elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
 
@@ -220,7 +220,7 @@ class TestResult(unittest.TestResult):
             "helpers": test.helpers,
             "log": test.log,
             "rationale": err[1],
-            "status": TestCase.FAIL,
+            "status": Checks.FAIL,
             "test": test
         })
         cprint("check50 ran into an error while running checks.", "red")
@@ -237,8 +237,8 @@ def check(dependency=None):
         def wrapper(self):
 
             # check if dependency failed
-            if dependency and config.test_results.get(dependency) != TestCase.PASS:
-                self.result = config.test_results[func.__name__] = TestCase.SKIP
+            if dependency and config.test_results.get(dependency) != Checks.PASS:
+                self.result = config.test_results[func.__name__] = Checks.SKIP
                 return
 
             # move files into this check's directory
@@ -259,7 +259,7 @@ def check(dependency=None):
 
             # if test didn't fail, then it passed
             if config.test_results.get(func.__name__) == None:
-                self.result = config.test_results[func.__name__] = TestCase.PASS
+                self.result = config.test_results[func.__name__] = Checks.PASS
 
         return wrapper
     return decorator
@@ -353,13 +353,13 @@ class Child():
         self.child.close(force=True)
         return self
 
-class TestCase(unittest.TestCase):
+class Checks(unittest.TestCase):
     PASS = True
     FAIL = False
     SKIP = None
 
     def __init__(self, method_name):
-        super(TestCase, self).__init__(method_name)
+        super(Checks, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
