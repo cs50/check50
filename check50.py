@@ -29,7 +29,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "EOF", "Error", "Checks", "valgrind"]
+__all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
 
 def main():
 
