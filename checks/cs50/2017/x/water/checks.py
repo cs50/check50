@@ -3,9 +3,9 @@ import re
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import TestCase, check
+from check50 import Checks, check
 
-class Water(TestCase):
+class Water(Checks):
 
     @check()
     def exists(self):

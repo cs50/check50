@@ -9,7 +9,6 @@ import inspect
 import json
 import os
 import pexpect
-import pypijson
 import re
 import requests
 import shlex
@@ -17,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import traceback
 import unittest
 import xml.etree.cElementTree as ET
@@ -29,7 +29,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "EOF", "Error", "TestCase", "valgrind"]
+__all__ = ["check", "EOF", "Error", "Checks", "valgrind"]
 
 def main():
 
@@ -38,6 +38,7 @@ def main():
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--full", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--no-upgrade", action="store_true")
@@ -73,12 +74,42 @@ def main():
 
     if not args.local:
         try:
+
+            # Submit to check50 repo.
             import submit50
         except ImportError:
             raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
         else:
             submit50.run.verbose = args.verbose
-            submit50.submit("check50", identifier)
+            prompts = {
+                "confirmation": "Are you sure you want to check these files?",
+                "submitting": "Uploading",
+                "files_submit": "Files that will be checked:",
+                "files_no_submit": "Files that won't be checked:",
+                "print_success": False
+            }
+            username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
+            
+            # Wait until payload comes back with check data.
+            print("Running checks...", end="")
+            sys.stdout.flush()
+            while True:
+                res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
+                if res.status_code != 200:
+                    continue
+                payload = res.json()
+                if payload["complete"] and payload["checks"] != []:
+                    break
+                print(".", end="")
+                sys.stdout.flush()
+                time.sleep(2)
+            print()
+
+            # Print results.
+            results = lambda: None
+            results.results = payload["checks"]
+            print_results(results, args.log)
+            print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
     # copy all files to temporary directory
@@ -126,22 +157,26 @@ def main():
     cleanup()
 
     # print the results
-    if args.debug:
+    if args.full:  # both JSON and results
+        sentinel = "\x1c" * 10
+        print(sentinel)
+        print_json(results)
+        print(sentinel)
+        print_results(results, log=args.log)
+    elif args.debug:
         print_json(results)
     else:
         print_results(results, log=args.log)
 
 def print_results(results, log=False):
     for result in results.results:
-        if result["status"] == TestCase.PASS:
+        if result["status"] == Checks.PASS:
             cprint(":) {}".format(result["description"]), "green")
-        elif result["status"] == TestCase.FAIL:
+        elif result["status"] == Checks.FAIL:
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] != None:
                 cprint("    {}".format(result["rationale"]), "red")
-            if result["helpers"] != None:
-                cprint("    {}".format(result["helpers"]), "red")
-        elif result["status"] == TestCase.SKIP:
+        elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    test skipped", "yellow")
 
@@ -150,9 +185,16 @@ def print_results(results, log=False):
                 print("    {}".format(line))
 
 def print_json(results):
-    output = {}
+    output = []
     for result in results.results:
-        output.update({result["test"]._testMethodName : result["status"]})
+        output.append({
+            "name": result["test"]._testMethodName,
+            "status": result["status"],
+            "rationale": result["rationale"],
+            "description": result["description"],
+            "helpers": result["helpers"],
+            "log": result["test"].log
+        })
     print(json.dumps(output))
 
 def cleanup():
@@ -183,7 +225,7 @@ class TestResult(unittest.TestResult):
             "helpers": test.helpers,
             "log": test.log,
             "rationale": err[1],
-            "status": TestCase.FAIL,
+            "status": Checks.FAIL,
             "test": test
         })
         cprint("check50 ran into an error while running checks.", "red")
@@ -217,8 +259,8 @@ def check(dependency=None):
         def wrapper(self):
 
             # check if dependency failed
-            if dependency and config.test_results.get(dependency) != TestCase.PASS:
-                self.result = config.test_results[func.__name__] = TestCase.SKIP
+            if dependency and config.test_results.get(dependency) != Checks.PASS:
+                self.result = config.test_results[func.__name__] = Checks.SKIP
                 return
 
             # move files into this check's directory
@@ -239,7 +281,7 @@ def check(dependency=None):
 
             # if test didn't fail, then it passed
             if config.test_results.get(func.__name__) is None:
-                self.result = config.test_results[func.__name__] = TestCase.PASS
+                self.result = config.test_results[func.__name__] = Checks.PASS
 
         return wrapper
     return decorator
@@ -357,7 +399,7 @@ class Child():
         self.child.close(force=True)
         return self
 
-class TestCase(unittest.TestCase):
+class Checks(unittest.TestCase):
     PASS = True
     FAIL = False
     SKIP = None
@@ -366,7 +408,7 @@ class TestCase(unittest.TestCase):
     _valgrind = False
 
     def __init__(self, method_name):
-        super(TestCase, self).__init__(method_name)
+        super(Checks, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
@@ -387,17 +429,24 @@ class TestCase(unittest.TestCase):
         child.child.wait()
         return child.child.exitstatus
 
-    def exists(self, filename):
-        """Asserts that filename exists."""
-        self.log.append("Checking that {} exists...".format(filename))
-        os.chdir(self.dir)
-        if not os.path.isfile(filename):
-            raise Error("File {} not found.".format(filename))
+    def exists(self, filenames):
+        """Asserts that filename (or all filenames) exists."""
+        if type(filenames) != list:
+            filenames  = [filenames]
+        for filename in filenames:
+            self.log.append("Checking that {} exists...".format(filename))
+            os.chdir(self.dir)
+            if not os.path.isfile(filename):
+                raise Error("File {} not found.".format(filename))
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
+
+        # Assert that file exists.
         if type(filename) == File:
             filename = filename.filename
+        self.exists(filename)
+
         # https://stackoverflow.com/a/22058673
         sha256 = hashlib.sha256()
         with open(filename, "rb") as f:

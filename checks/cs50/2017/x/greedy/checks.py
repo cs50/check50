@@ -3,9 +3,10 @@ import re
 import sys
 
 sys.path.append(os.getcwd())
+
 from check50 import *
 
-class Greedy(TestCase):
+class Greedy(Checks):
 
     @check()
     def exists(self):

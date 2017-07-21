@@ -30,7 +30,7 @@ To contribute to `check50`:
 
 All checks are located in a subdirectory of the `checks` directory.
 Each problem which requires checks has its own `checks.py` file.
-`checks.py` should contain a single class, named after the problem, which is a sublcass of `check50.TestCase`.
+`checks.py` should contain a single class, named after the problem, which is a sublcass of `check50.Checks`.
 Individual checks are methods defined within the class. 
 Check functions must be decorated with the `@check` decorator, and must have a one-line docstring which
 describes what the method is checking. The `@check` decorator may optionally take a single parameter:
@@ -41,7 +41,7 @@ working directory.
 ### Check Successes and Failures
 
 To indicate that a check has failed, the exception `check50.Error` must be raised.
-This can be raised directly by the check method, or indirectly via a method of `check50.TestCase`
+This can be raised directly by the check method, or indirectly via a method of `check50.Checks`
 which is called by the check method.
 
 `check50.Error` takes a single parameter. If the parameter is a string, it represents the 
@@ -63,7 +63,7 @@ may have failed. Check functions may optionally choose to add to `self.helpers` 
 a particular `check50.Error` was raised.
 
 `self.log` is a list of strings, representing what steps took place during the check function.
-Check functions may optionally add to `self.log`, and methods in `check50.TestCase` will also
+Check functions may optionally add to `self.log`, and methods in `check50.Checks` will also
 add to `self.log`.
 
 ### Sample Check and Explanation
@@ -95,7 +95,7 @@ If this is not the case, a `check50.Error` will be raised.
 
 Finally, we assert that the exit status of the program is `0`.
 
-### `check50.TestCase` 
+### `check50.Checks` 
 
 #### `checkfile(self, filename)`
 

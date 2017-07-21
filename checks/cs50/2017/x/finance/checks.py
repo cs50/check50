@@ -3,9 +3,9 @@ import re
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import TestCase, Error, check
+from check50 import Checks, Error, check
 
-class Finance(TestCase):
+class Finance(Checks):
     
     @check()
     def exists(self):
