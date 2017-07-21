@@ -89,7 +89,7 @@ def main():
                 "print_success": False
             }
             username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
-            
+
             # Wait until payload comes back with check data.
             print("Running checks...", end="")
             sys.stdout.flush()
@@ -473,7 +473,7 @@ class Checks(unittest.TestCase):
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
-            child = pexpect.spawn(cmd, encoding="utf-8", echo=False, env=env)
+            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
     def include(self, path):
