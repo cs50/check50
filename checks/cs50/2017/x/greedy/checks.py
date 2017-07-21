@@ -3,44 +3,45 @@ import re
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import Checks, Error, check
+
+from check50 import *
 
 class Greedy(Checks):
-    
+
     @check()
     def exists(self):
         """greedy.c exists."""
         super(Greedy, self).exists("greedy.c")
-    
+
     @check("exists")
     def compiles(self):
         """greedy.c compiles."""
-        self.spawn("clang -o greedy greedy.c -lcs50").exit(0)
+        self.spawn("clang -ggdb3 -o greedy greedy.c -lcs50 -lm").exit(0)
 
     @check("compiles")
     def test041(self):
         """input of 0.41 yields output of 4"""
-        self.spawn("./greedy").stdin("0.41").stdout("^4\n$", 4).exit(0)
+        self.spawn("./greedy").stdin("0.41").stdout("^4\n", 4).stdout(EOF).exit(0)
 
     @check("compiles")
     def test001(self):
         """input of 0.01 yields output of 1"""
-        self.spawn("./greedy").stdin("0.01").stdout("^1\n$", 1).exit(0)
+        self.spawn("./greedy").stdin("0.01").stdout("^1\n", 1).stdout(EOF).exit(0)
 
     @check("compiles")
     def test015(self):
         """input of 0.15 yields output of 2"""
-        self.spawn("./greedy").stdin("0.15").stdout("^2\n$", 2).exit(0)
+        self.spawn("./greedy").stdin("0.15").stdout("^2\n", 2).stdout(EOF).exit(0)
 
     @check("compiles")
     def test160(self):
         """input of 1.6 yields output of 7"""
-        self.spawn("./greedy").stdin("1.6").stdout("^7\n$", 7).exit(0)
+        self.spawn("./greedy").stdin("1.6").stdout("^7\n", 7).stdout(EOF).exit(0)
 
     @check("compiles")
     def test230(self):
         """input of 23 yields output of 92"""
-        self.spawn("./greedy").stdin("23").stdout("^92\n$", 92).exit(0)
+        self.spawn("./greedy").stdin("23").stdout("^92\n", 92).stdout(EOF).exit(0)
 
     @check("compiles")
     def test420(self):

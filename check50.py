@@ -19,13 +19,17 @@ import tempfile
 import time
 import traceback
 import unittest
+import xml.etree.cElementTree as ET
 
 from distutils.version import StrictVersion
 from functools import wraps
+from pexpect.exceptions import EOF, TIMEOUT
 from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from termcolor import cprint
 
 import config
+
+__all__ = ["check", "EOF", "Error", "Checks", "valgrind"]
 
 def main():
 
@@ -73,6 +77,9 @@ def main():
 
             # Submit to check50 repo.
             import submit50
+        except ImportError:
+            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
+        else:
             submit50.run.verbose = args.verbose
             prompts = {
                 "confirmation": "Are you sure you want to check these files?",
@@ -82,7 +89,7 @@ def main():
                 "print_success": False
             }
             username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
-            
+
             # Wait until payload comes back with check data.
             print("Running checks...", end="")
             sys.stdout.flush()
@@ -104,8 +111,6 @@ def main():
             print_results(results, args.log)
             print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
-        except ImportError:
-            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
 
     # copy all files to temporary directory
     config.tempdir = tempfile.mkdtemp()
@@ -227,6 +232,23 @@ class TestResult(unittest.TestResult):
         print(err[1])
         traceback.print_tb(err[2])
 
+def valgrind(func):
+    if config.test_cases[-1] == func.__name__:
+        frame = traceback.extract_stack(limit=2)[0]
+        raise RuntimeError("Invalid check in {0} on line {1} of {2}:\n"
+                           "@valgrind must be placed below @check"\
+                            .format(frame.name, frame.lineno, frame.filename))
+    @wraps(func)
+    def wrapper(self):
+        self._valgrind = True
+        try:
+            func(self)
+            self._check_valgrind()
+        finally:
+            self._valgrind = False
+    return wrapper
+
+
 # decorator for checks
 def check(dependency=None):
     def decorator(func):
@@ -258,7 +280,7 @@ def check(dependency=None):
                 return
 
             # if test didn't fail, then it passed
-            if config.test_results.get(func.__name__) == None:
+            if config.test_results.get(func.__name__) is None:
                 self.result = config.test_results[func.__name__] = Checks.PASS
 
         return wrapper
@@ -275,7 +297,9 @@ class Error(Exception):
         def raw(s):
             if type(s) == list:
                 s = "\n".join(s)
-            if type(s) != str:
+            if s == EOF:
+                return "EOF"
+            elif type(s) != str:
                 return s
             s = repr(s)  # get raw representation of string
             s = s[1:len(s) - 1]  # strip away quotation marks
@@ -293,6 +317,7 @@ class RuntimeError(RuntimeError):
         cleanup()
         cprint(msg, "red")
         sys.exit(1)
+
 
 # wrapper class for pexpect child
 class Child():
@@ -315,19 +340,40 @@ class Child():
             self.child.sendcontrol('d')
         return self
 
-    def stdout(self, output=None, str_output=None):
-        self.test.log.append("Checking for output {}...".format(str_output))
-        result = self.child.read().replace("\r\n", "\n").lstrip("\n")
-        if output == None:
-            return result
-        if type(output) == File:
-            correct = open(output.filename, "r").read()
-            if result != correct:
-                raise Error((result, correct))
-        else: # regex
-            r = re.compile(output)
-            if not r.match(result):
-                raise Error((result, str_output))
+    def stdout(self, output=None, str_output=None, timeout=2):
+        if output is None:
+            return self.child.read().replace("\r\n", "\n").lstrip("\n")
+
+        if str_output is not None:
+            self.test.log.append("Checking for output \"{}\"...".format(str_output))
+
+        if isinstance(output, File):
+            if sys.version_info < (3,0):
+                contents = open(output.filename, "rU").read().replace("\n", "\r\n")
+            else:
+                contents = open(output.filename, "r", newline="\r\n").read()
+            if str_output is None: str_output = contents
+            output = re.escape(contents)
+        elif output == EOF:
+            if str_output is None: str_output = "EOF"
+        else:
+            if str_output is None: str_output = output
+            output = output.replace("\n", "\r\n")
+
+        try:
+            self.child.expect(output, timeout=timeout)
+        except EOF:
+            result = self.child.before + self.child.buffer
+            if self.child.after != EOF:
+                result += self.child.after
+            raise Error((result.replace("\r\n", "\n"), str_output)) from None
+        except TIMEOUT:
+            raise Error("Check timed out while waiting for {}".format(str_output)) from None
+
+        # If we expected EOF and we still got output, report an error
+        if output == EOF and self.child.before:
+            raise Error((self.child.before.replace("\r\n", "\n"), EOF))
+
         return self
 
     def reject(self):
@@ -357,6 +403,9 @@ class Checks(unittest.TestCase):
     PASS = True
     FAIL = False
     SKIP = None
+
+    _valgrind_log = "valgrind.xml"
+    _valgrind = False
 
     def __init__(self, method_name):
         super(Checks, self).__init__(method_name)
@@ -410,9 +459,15 @@ class Checks(unittest.TestCase):
 
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
-        self.log.append("Running {}...".format(cmd))
+        if self._valgrind:
+            self.log.append("Running valgrind {}...".format(cmd))
+            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={0} -- {1}" \
+                        .format(os.path.join(self.dir, self._valgrind_log), cmd)
+        else:
+            self.log.append("Running {}...".format(cmd))
+
         os.chdir(self.dir)
-        if env == None:
+        if env is None:
             env = {}
         env = os.environ.update(env)
         if sys.version_info < (3, 0):
@@ -437,6 +492,49 @@ class Checks(unittest.TestCase):
         self.result = self.FAIL
         self.rationale = rationale
         super().fail()
+
+    def replace_fn(self, old_fn, new_fn, file):
+        self.spawn("sed -i='' -e 's/callq\t_{0}/callq\t_{1}/g' {2}", old_fn, new_fn, file).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t{0}/callq\t{1}/g' {2}", old_fn, new_fn, file).exit(0)
+
+    def _check_valgrind(self):
+        """Log and report any errors encountered by valgrind"""
+        # Load XML file created by valgrind
+        xml = ET.ElementTree(file=os.path.join(self.dir, self._valgrind_log))
+
+        self.log.append("Checking for valgrind errors... ")
+
+        # Ensure that we don't get duplicate error messages
+        reported = set()
+        for error in xml.iterfind("error"):
+            # Type of error valgrind encountered
+            kind = error.find("kind").text
+
+            # Valgrind's error message
+            what = error.find("xwhat/text" if kind.startswith("Leak_") else "what").text
+
+            # Error message that we will report
+            msg = ["\t", what]
+
+            # Find first stack frame within student's code
+            for frame in error.iterfind("stack/frame"):
+                obj = frame.find("obj")
+                if obj is not None and os.path.dirname(obj.text) == self.dir:
+                    location = frame.find("file"), frame.find("line")
+                    if None not in location:
+                        msg.append(": (file: {0}, line: {1})".format(location[0].text, location[1].text))
+                    break
+
+            msg = "".join(msg)
+            if msg not in reported:
+                self.log.append(msg)
+                reported.add(msg)
+
+        # Only raise exception if we encountered errors
+        if reported:
+            raise Error("Valgrind check failed. "
+                        "Rerun with --log for more information.")
+
 
 if __name__ == "__main__":
     main()
