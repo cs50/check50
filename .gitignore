@@ -1,3 +1,9 @@
 *.c
 __pycache__/
 pset7/
+.DS_Store
+.idea/
+__init__.py
+__init__0.py
+checks/.DS_Store
+problems/
