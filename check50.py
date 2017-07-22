@@ -366,9 +366,9 @@ class Child():
             result = self.child.before + self.child.buffer
             if self.child.after != EOF:
                 result += self.child.after
-            raise Error((result.replace("\r\n", "\n"), str_output)) from None
+            raise Error((result.replace("\r\n", "\n"), str_output))
         except TIMEOUT:
-            raise Error("Check timed out while waiting for {}".format(str_output)) from None
+            raise Error("Check timed out while waiting for {}".format(str_output))
 
         # If we expected EOF and we still got output, report an error
         if output == EOF and self.child.before:
