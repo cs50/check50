@@ -326,18 +326,18 @@ class Child():
         self.child = child
 
     def stdin(self, line, prompt=True):
-        if line != None:
+        if line != EOF:
             self.test.log.append("Sending input {}...".format(line))
         else:
-            self.test.log.append("Sending Ctrl-D...")
+            self.test.log.append("Sending EOF...")
 
         if prompt:
             self.child.expect(".+")
 
-        if line != None:
+        if line != EOF:
             self.child.sendline(line)
         else:
-            self.child.sendcontrol('d')
+            self.child.sendeof()
         return self
 
     def stdout(self, output=None, str_output=None, timeout=2):
@@ -494,8 +494,8 @@ class Checks(unittest.TestCase):
         super().fail()
 
     def replace_fn(self, old_fn, new_fn, file):
-        self.spawn("sed -i='' -e 's/callq\t_{0}/callq\t_{1}/g' {2}", old_fn, new_fn, file).exit(0)
-        self.spawn("sed -i='' -e 's/callq\t{0}/callq\t{1}/g' {2}", old_fn, new_fn, file).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file)).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, file)).exit(0)
 
     def _check_valgrind(self):
         """Log and report any errors encountered by valgrind"""
