@@ -445,7 +445,7 @@ class Checks(unittest.TestCase):
         # Assert that file exists.
         if type(filename) == File:
             filename = filename.filename
-        Checks.exists(filename)
+        Checks.exists(self, filename)
 
         # https://stackoverflow.com/a/22058673
         sha256 = hashlib.sha256()
