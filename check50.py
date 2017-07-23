@@ -36,7 +36,7 @@ __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
 def copy(src, dst):
     """Copy src to dst regardless, copying recursively if src is a directory"""
     try:
-        shutil.copytree(src, dst)
+        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
     except IOError as e:
         if e.errno == errno.ENOTDIR:
             shutil.copy(src, dst)
@@ -246,7 +246,7 @@ class TestResult(unittest.TestResult):
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
-        raise RuntimeError("Invalid check in {0} on line {1} of {2}:\n"
+        raise RuntimeError("Invalid check in {} on line {} of {}:\n"
                            "@valgrind must be placed below @check"\
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
@@ -472,7 +472,7 @@ class Checks(unittest.TestCase):
         """Spawns a new child process."""
         if self._valgrind:
             self.log.append("Running valgrind {}...".format(cmd))
-            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={0} -- {1}" \
+            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}" \
                         .format(os.path.join(self.dir, self._valgrind_log), cmd)
         else:
             self.log.append("Running {}...".format(cmd))
@@ -481,6 +481,10 @@ class Checks(unittest.TestCase):
         if env is None:
             env = {}
         env = os.environ.update(env)
+
+        # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
+        # Workaround from https://github.com/pexpect/pexpect/issues/373
+        cmd = "bash -c '{}'".format(shlex.quote(cmd))
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
@@ -489,7 +493,7 @@ class Checks(unittest.TestCase):
 
     def include(self, path):
         """Copies a file to the temporary directory."""
-        shutil.copy(os.path.join(config.check_dir, path), self.dir)
+        copy(os.path.join(config.check_dir, path), self.dir)
 
     def append_code(self, filename, codefile):
         code = open(codefile.filename, "r")
@@ -533,7 +537,7 @@ class Checks(unittest.TestCase):
                 if obj is not None and os.path.dirname(obj.text) == self.dir:
                     location = frame.find("file"), frame.find("line")
                     if None not in location:
-                        msg.append(": (file: {0}, line: {1})".format(location[0].text, location[1].text))
+                        msg.append(": (file: {}, line: {})".format(location[0].text, location[1].text))
                     break
 
             msg = "".join(msg)
