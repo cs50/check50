@@ -335,6 +335,8 @@ class Child():
     def __init__(self, test, child):
         self.test = test
         self.child = child
+        self.output = []
+        self.exitstatus = None
 
     def stdin(self, line, prompt=True):
         if line != EOF:
@@ -358,21 +360,23 @@ class Child():
         if str_output is not None:
             self.test.log.append("Checking for output \"{}\"...".format(str_output))
 
+        expect = self.child.expect
+
         if isinstance(output, File):
+            # File should be interpreted literally, not as regex
+            expect = self.child.expect_exact
             if sys.version_info < (3,0):
-                contents = open(output.filename, "rU").read().replace("\n", "\r\n")
+                output = open(output.filename, "rU").read()
             else:
-                contents = open(output.filename, "r", newline="\r\n").read()
-            if str_output is None: str_output = contents
-            output = re.escape(contents)
-        elif output == EOF:
-            if str_output is None: str_output = "EOF"
-        else:
-            if str_output is None: str_output = output
-            output = output.replace("\n", "\r\n")
+                output = open(output.filename, "r", newline="\n").read()
+
+        if str_output is None:
+            str_output = "EOF" if output == EOF else output
+
+        output = output.replace("\n", "\r\n")
 
         try:
-            self.child.expect(output, timeout=timeout)
+            expect(output, timeout=timeout)
         except EOF:
             result = self.child.before + self.child.buffer
             if self.child.after != EOF:
@@ -396,15 +400,42 @@ class Child():
             self.test.fail()
         return self
 
-    def exit(self, code=None):
-        self.child.wait()
-        self.exitstatus, self.output = self.child.exitstatus, self.child.read()
-        self.child.close()
-        if code != None:
+    def exit(self, code=None, timeout=3):
+        self.wait(timeout)
+        if code is not None:
             self.test.log.append("Checking that program exited with status {}...".format(code))
             if self.exitstatus != code:
                 raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
         return self
+
+    def wait(self, timeout=3):
+        end = time.time() + timeout
+        while time.time() <= end:
+            if not self.child.isalive():
+                break
+            try:
+                bytes = self.child.read_nonblocking(size=1024, timeout=0)
+            except TIMEOUT:
+                pass
+            except EOF:
+                break
+            else:
+                self.output.append(bytes)
+        else:
+            raise Error("Timed out while waiting for {} to exit".format(os.path.basename(self.child.command)))
+
+        # Read any remaining data in pipe
+        while True:
+            try:
+                bytes = self.child.read_nonblocking(size=1024, timeout=0)
+            except (TIMEOUT, EOF):
+                break
+            else:
+                self.output.append(bytes)
+
+        self.output = "".join(self.output).replace("\r\n", "\n")
+        self.child.close()
+        self.exitstatus = self.child.exitstatus
 
     def kill(self):
         self.child.close(force=True)
@@ -437,8 +468,8 @@ class Checks(unittest.TestCase):
         if type(f2) == File:
             f2 = f2.filename
         child = self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
-        child.child.wait()
-        return child.child.exitstatus
+        child.wait()
+        return child.exitstatus
 
     def exists(self, filenames):
         """Asserts that filename (or all filenames) exists."""
@@ -484,7 +515,7 @@ class Checks(unittest.TestCase):
 
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
-        cmd = "bash -c '{}'".format(shlex.quote(cmd))
+        cmd = "bash -c {}".format(shlex.quote(cmd))
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
