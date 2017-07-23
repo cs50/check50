@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import argparse
+import errno
 import hashlib
 import importlib
 import inspect
@@ -30,6 +31,17 @@ from termcolor import cprint
 import config
 
 __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
+
+
+def copy(src, dst):
+    """Copy src to dst regardless, copying recursively if src is a directory"""
+    try:
+        shutil.copytree(src, dst)
+    except IOError as e:
+        if e.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else:
+            raise
 
 def main():
 
@@ -119,13 +131,12 @@ def main():
     if len(files) == 0:
         files = os.listdir()
     for filename in files:
-        if os.path.exists(filename):
-            if os.path.isfile(filename):
-                shutil.copy(filename, src_dir)
-            else:
-                shutil.copytree(filename, os.path.join(src_dir, filename))
-        else:
-            raise RuntimeError("File {} not found.".format(filename))
+        try:
+            copy(filename, src_dir)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                e = RuntimeError("File {} not found.".format(filename))
+            raise e
 
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
