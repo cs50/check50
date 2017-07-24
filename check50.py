@@ -282,6 +282,7 @@ def check(dependency=None):
                 src_dir = os.path.join(config.tempdir, "_")
             shutil.copytree(src_dir, dst_dir)
 
+            os.chdir(self.dir)
             # run the test, catch failures
             try:
                 func(self)
@@ -508,7 +509,6 @@ class Checks(unittest.TestCase):
         else:
             self.log.append("Running {}...".format(cmd))
 
-        os.chdir(self.dir)
         if env is None:
             env = {}
         env = os.environ.update(env)
