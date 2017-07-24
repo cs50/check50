@@ -190,7 +190,7 @@ def print_results(results, log=False):
                 cprint("    {}".format(result["rationale"]), "red")
         elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
-            cprint("    test skipped", "yellow")
+            cprint("    {}".format(result.get("rationale") or "check skipped"), "yellow")
 
         if log:
             for line in result["test"].log:
@@ -253,7 +253,7 @@ def valgrind(func):
     @wraps(func)
     def wrapper(self):
         if not which("valgrind"):
-            raise Error("Valgrind not installed", result=Checks.SKIP)
+            raise Error("valgrind not installed", result=Checks.SKIP)
 
         self._valgrind = True
         try:
@@ -276,6 +276,7 @@ def check(dependency=None):
             # check if dependency failed
             if dependency and config.test_results.get(dependency) != Checks.PASS:
                 self.result = config.test_results[func.__name__] = Checks.SKIP
+                self.rationale = "can't check until a frown turns upside down"
                 return
 
             # move files into this check's directory
