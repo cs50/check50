@@ -22,6 +22,7 @@ import traceback
 import unittest
 import xml.etree.cElementTree as ET
 
+from backports.shutil_which import which
 from distutils.version import StrictVersion
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
@@ -251,6 +252,9 @@ def valgrind(func):
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
     def wrapper(self):
+        if not which("valgrind"):
+            raise Error("Valgrind not installed", result=Checks.SKIP)
+
         self._valgrind = True
         try:
             func(self)
@@ -275,11 +279,8 @@ def check(dependency=None):
                 return
 
             # move files into this check's directory
-            self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
-            if dependency:
-                src_dir = os.path.join(config.tempdir, dependency)
-            else:
-                src_dir = os.path.join(config.tempdir, "_")
+            dst_dir = os.path.join(config.tempdir, self._testMethodName)
+            src_dir = os.path.join(config.tempdir, dependency or "_")
             shutil.copytree(src_dir, dst_dir)
 
             os.chdir(self.dir)
@@ -289,11 +290,11 @@ def check(dependency=None):
             except Error as e:
                 self.rationale = e.rationale
                 self.helpers = e.helpers
-                return
+                result = e.result
+            else:
+                result = Checks.PASS
 
-            # if test didn't fail, then it passed
-            if config.test_results.get(func.__name__) is None:
-                self.result = config.test_results[func.__name__] = Checks.PASS
+            self.result = config.test_results[func.__name__] = result
 
         return wrapper
     return decorator
@@ -301,27 +302,7 @@ def check(dependency=None):
 class File():
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
-        self.filename = os.path.join(config.check_dir, filename)
-
-class Error(Exception):
-    """Class to wrap errors in students' checks."""
-    def __init__(self, rationale=None, helpers=None):
-        def raw(s):
-            if type(s) == list:
-                s = "\n".join(s)
-            if s == EOF:
-                return "EOF"
-            elif type(s) != str:
-                return s
-            s = repr(s)  # get raw representation of string
-            s = s[1:len(s) - 1]  # strip away quotation marks
-            if len(s) > 15:
-                s = s[:15] + "..."  # truncate if too long
-            return "\"{}\"".format(s)
-        if type(rationale) == tuple:
-            rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
-        self.rationale = rationale
-        self.helpers = helpers
+        self.filename = filename
 
 class RuntimeError(RuntimeError):
     """Error during execution of check50."""
@@ -435,7 +416,7 @@ class Child():
                 self.output.append(bytes)
 
         self.output = "".join(self.output).replace("\r\n", "\n")
-        self.child.close()
+        self.kill()
         self.exitstatus = self.child.exitstatus
 
     def kill(self):
@@ -457,11 +438,6 @@ class Checks(unittest.TestCase):
         self.helpers = None
         self.log = []
 
-    def checkfile(self, filename):
-        """Gets the contents of a check file."""
-        contents = open(os.path.join(config.check_dir, filename)).read()
-        return contents
-
     def diff(self, f1, f2):
         """Returns 0 if files are the same, nonzero otherwise."""
         if type(f1) == File:
@@ -478,7 +454,6 @@ class Checks(unittest.TestCase):
             filenames  = [filenames]
         for filename in filenames:
             self.log.append("Checking that {} exists...".format(filename))
-            os.chdir(self.dir)
             if not os.path.isfile(filename):
                 raise Error("File {} not found.".format(filename))
 
@@ -522,9 +497,10 @@ class Checks(unittest.TestCase):
             child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
         return Child(self, child)
 
-    def include(self, path):
+    def include(self, *paths):
         """Copies a file to the temporary directory."""
-        copy(os.path.join(config.check_dir, path), self.dir)
+        for path in paths:
+            copy(os.path.join(config.check_dir, path), self.dir)
 
     def append_code(self, filename, codefile):
         code = open(codefile.filename, "r")
@@ -533,11 +509,6 @@ class Checks(unittest.TestCase):
         f = open(os.path.join(self.dir, filename), "a")
         f.write(contents)
         f.close()
-
-    def fail(self, rationale):
-        self.result = self.FAIL
-        self.rationale = rationale
-        super().fail()
 
     def replace_fn(self, old_fn, new_fn, file):
         self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file)).exit(0)
@@ -581,6 +552,27 @@ class Checks(unittest.TestCase):
             raise Error("Valgrind check failed. "
                         "Rerun with --log for more information.")
 
+
+class Error(Exception):
+    """Class to wrap errors in students' checks."""
+    def __init__(self, rationale=None, helpers=None, result=Checks.FAIL):
+        def raw(s):
+            if type(s) == list:
+                s = "\n".join(s)
+            if s == EOF:
+                return "EOF"
+            elif type(s) != str:
+                return s
+            s = repr(s)  # get raw representation of string
+            s = s[1:len(s) - 1]  # strip away quotation marks
+            if len(s) > 15:
+                s = s[:15] + "..."  # truncate if too long
+            return "\"{}\"".format(s)
+        if type(rationale) == tuple:
+            rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
+        self.rationale = rationale
+        self.helpers = helpers
+        self.result = result
 
 if __name__ == "__main__":
     main()
