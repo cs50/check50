@@ -118,10 +118,8 @@ def main():
                 time.sleep(2)
             print()
 
-            # Print results.
-            results = lambda: None
-            results.results = payload["checks"]
-            print_results(results, args.log)
+            # Print results from payload
+            print_results(payload["checks"], args.log)
             print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
@@ -164,9 +162,12 @@ def main():
     suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(test_class(case))
-    results = TestResult()
-    suite.run(results)
+    result = TestResult()
+    suite.run(result)
     cleanup()
+
+    # Get list of results from TestResult class
+    results = result.results
 
     # print the results
     if args.full:  # both JSON and results
@@ -181,7 +182,7 @@ def main():
         print_results(results, log=args.log)
 
 def print_results(results, log=False):
-    for result in results.results:
+    for result in results:
         if result["status"] == Checks.PASS:
             cprint(":) {}".format(result["description"]), "green")
         elif result["status"] == Checks.FAIL:
@@ -198,7 +199,7 @@ def print_results(results, log=False):
 
 def print_json(results):
     output = []
-    for result in results.results:
+    for result in results:
         output.append({
             "name": result["test"]._testMethodName,
             "status": result["status"],
