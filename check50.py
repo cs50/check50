@@ -279,7 +279,7 @@ def check(dependency=None):
                 return
 
             # move files into this check's directory
-            dst_dir = os.path.join(config.tempdir, self._testMethodName)
+            self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
             src_dir = os.path.join(config.tempdir, dependency or "_")
             shutil.copytree(src_dir, dst_dir)
 
@@ -303,6 +303,27 @@ class File():
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
         self.filename = filename
+        if os.path.exists(filename):
+            return
+
+        # If file does not exist relative to the current directory,
+        # try to get it from the test directory
+        cwd = os.getcwd()
+        try:
+            os.chdir(config.check_dir)
+            copy(filename, cwd)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                e = RuntimeError("File {} not found".format(filename))
+            raise e
+        finally:
+            os.chdir(cwd)
+
+    def read(self, size=None):
+        with open(self.filename, "r") as f:
+            contents = f.read()
+        return contents
+
 
 class RuntimeError(RuntimeError):
     """Error during execution of check50."""
@@ -500,15 +521,12 @@ class Checks(unittest.TestCase):
     def include(self, *paths):
         """Copies a file to the temporary directory."""
         for path in paths:
-            copy(os.path.join(config.check_dir, path), self.dir)
+            File(path)
 
     def append_code(self, filename, codefile):
-        code = open(codefile.filename, "r")
-        contents = code.read()
-        code.close()
-        f = open(os.path.join(self.dir, filename), "a")
-        f.write(contents)
-        f.close()
+        with open(codefile.filename, "r") as code, \
+                open(os.path.join(self.dir, filename), "a") as f:
+            f.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, file):
         self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file)).exit(0)

@@ -2,30 +2,33 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
-from check50 import File, Checks, Error, check
+from check50 import *
 
 class MarioLess(Checks):
-    
+
     def check_pyramid(self, output, correct):
+        output = output.split("\n")
+        correct = correct.split("\n")
+
         if output == correct:
             return 1
         if len(output) != len(correct):
             raise Error((output, correct))
 
         # check for trailing whitespace
-        match = True 
+        match = True
         for i in range(len(output)):
             if output[i].rstrip() != correct[i]:
                 match = False
         if match:
             raise Error((output, correct), "Did you add too much trailing whitespace to the end of your pyramid?")
         raise Error((output, correct))
-    
+
     @check()
     def exists(self):
         """mario.c exists."""
         super(MarioLess, self).exists("mario.c")
-    
+
     @check("exists")
     def compiles(self):
         """mario.c compiles."""
@@ -44,22 +47,22 @@ class MarioLess(Checks):
     @check("compiles")
     def test1(self):
         """handles a height of 1 correctly"""
-        out = self.spawn("./mario").stdin("1").stdout().split("\n")
-        correct = self.checkfile("1.txt").split("\n")
+        out = self.spawn("./mario").stdin("1").stdout()
+        correct = File("1.txt").read()
         self.check_pyramid(out, correct)
 
     @check("compiles")
     def test2(self):
         """handles a height of 2 correctly"""
-        out = self.spawn("./mario").stdin("2").stdout().split("\n")
-        correct = self.checkfile("2.txt").split("\n")
+        out = self.spawn("./mario").stdin("2").stdout()
+        correct = File("2.txt").read()
         self.check_pyramid(out, correct)
 
     @check("compiles")
     def test23(self):
         """handles a height of 23 correctly"""
-        out = self.spawn("./mario").stdin("23").stdout().split("\n")
-        correct = self.checkfile("23.txt").split("\n")
+        out = self.spawn("./mario").stdin("23").stdout()
+        correct = File("23.txt").read()
         self.check_pyramid(out, correct)
 
     @check("compiles")
@@ -67,7 +70,7 @@ class MarioLess(Checks):
         """rejects a height of 24, and then accepts a height of 2"""
         self.spawn("./mario").stdin("24").reject()\
             .stdin("2").stdout(File("2.txt")).exit(0)
-    
+
     @check("compiles")
     def test_reject_foo(self):
         """rejects a non-numeric height of "foo" """
