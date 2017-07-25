@@ -523,6 +523,7 @@ class Checks(unittest.TestCase):
     def append_code(self, filename, codefile):
         with open(codefile.filename, "r") as code, \
                 open(os.path.join(self.dir, filename), "a") as f:
+            f.write("\n")
             f.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, file):
