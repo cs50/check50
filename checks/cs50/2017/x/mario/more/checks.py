@@ -7,24 +7,6 @@ from check50 import File, Checks, Error, check
 
 class MarioMore(Checks):
 
-    def check_pyramid(self, output, correct):
-        output = output.split("\n")
-        correct = correct.split("\n")
-
-        if output == correct:
-            return 1
-        if len(output) != len(correct):
-            raise Error((output, correct))
-
-        # check for trailing whitespace
-        match = True
-        for i in range(len(output)):
-            if output[i].rstrip() != correct[i]:
-                match = False
-        if match:
-            raise Error((output, correct), "Did you add too much trailing whitespace to the end of your pyramid?")
-        raise Error((output, correct))
-
     @check()
     def exists(self):
         """mario.c exists."""
@@ -50,21 +32,21 @@ class MarioMore(Checks):
         """handles a height of 1 correctly"""
         out = self.spawn("./mario").stdin("1").stdout()
         correct = File("1.txt").read()
-        self.check_pyramid(out, correct)
+        check_pyramid(out, correct)
 
     @check("compiles")
     def test2(self):
         """handles a height of 2 correctly"""
         out = self.spawn("./mario").stdin("2").stdout()
         correct = File("2.txt").read()
-        self.check_pyramid(out, correct)
+        check_pyramid(out, correct)
 
     @check("compiles")
     def test23(self):
         """handles a height of 23 correctly"""
         out = self.spawn("./mario").stdin("23").stdout()
         correct = File("23.txt").read()
-        self.check_pyramid(out, correct)
+        check_pyramid(out, correct)
 
     @check("compiles")
     def test24(self):
@@ -81,3 +63,17 @@ class MarioMore(Checks):
     def test_reject_empty(self):
         """rejects a non-numeric height of "" """
         self.spawn("./mario").stdin("").reject()
+
+
+def check_pyramid(output, correct):
+    if output == correct:
+        return
+
+    err = Error((output, correct))
+    output = output.split("\n")
+    correct = correct.split("\n")
+
+    # check for trailing whitespace
+    if len(output) == len(correct) and all(ol.rstrip() == cl for ol, cl in zip(output, correct)):
+        err.helpers = "Did you add too much trailing whitespace to the end of your pyramid?"
+    raise err
