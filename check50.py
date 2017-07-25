@@ -31,7 +31,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
+__all__ = ["check", "checks", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
 
 
 def copy(src, dst):
@@ -145,11 +145,11 @@ def main():
     config.check_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "checks", identifier)
 
     # import the checks and identify check class
-    identifier = "checks.{}.checks".format(identifier.replace("/", "."))
+    identifier = "checks.{}".format(identifier.replace("/", "."))
     try:
-        checks = importlib.import_module(identifier)
-        test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
-                if m[1].__module__ == identifier)
+        check_mod = importlib.import_module(identifier)
+        test_class = next(m[1] for m in inspect.getmembers(check_mod, inspect.isclass)
+                               if hasattr(m[1], "_{}__checks".format(m[1].__name__)))
     except (ImportError, StopIteration):
         raise RuntimeError("Invalid identifier.")
 
@@ -295,6 +295,11 @@ def check(dependency=None):
 
         return wrapper
     return decorator
+
+
+def checks(cls):
+    setattr(cls, "_{}__checks".format(cls.__name__), True)
+    return cls
 
 class File():
     """Generic class to represent file in check directory."""
