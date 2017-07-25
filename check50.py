@@ -148,15 +148,10 @@ def main():
     identifier = "checks.{}.checks".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
-    except ImportError:
+        test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
+                if m[1].__module__ == identifier)
+    except (ImportError, StopIteration):
         raise RuntimeError("Invalid identifier.")
-    classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
-            if m[1].__module__ == identifier]
-
-    # ensure test module has a class of test cases
-    if len(classes) == 0:
-        raise RuntimeError("Invalid identifier.")
-    test_class = classes[0]
 
     # create and run the test suite
     suite = unittest.TestSuite()
@@ -187,7 +182,7 @@ def print_results(results, log=False):
             cprint(":) {}".format(result["description"]), "green")
         elif result["status"] == Checks.FAIL:
             cprint(":( {}".format(result["description"]), "red")
-            if result["rationale"] != None:
+            if result["rationale"] is not None:
                 cprint("    {}".format(result["rationale"]), "red")
         elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
