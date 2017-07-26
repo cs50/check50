@@ -1,4 +1,4 @@
-from .. import Mario
+from ..mario import Mario
 
 
 class MarioLess(Mario):
