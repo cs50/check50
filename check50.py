@@ -466,13 +466,11 @@ class Checks(unittest.TestCase):
         child.wait()
         return child.exitstatus
 
-    def exists(self, filenames):
+    def exists(self, *filenames):
         """Asserts that filename (or all filenames) exists."""
-        if type(filenames) != list:
-            filenames  = [filenames]
         for filename in filenames:
             self.log.append("Checking that {} exists...".format(filename))
-            if not os.path.isfile(filename):
+            if not os.path.exists(filename):
                 raise Error("File {} not found.".format(filename))
 
     def hash(self, filename):
