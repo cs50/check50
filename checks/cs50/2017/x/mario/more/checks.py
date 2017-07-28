@@ -11,6 +11,7 @@ class MarioMore(Checks):
     def exists(self):
         """mario.c exists."""
         super(MarioMore, self).exists("mario.c")
+        self.include("0.txt", "1.txt", "2.txt", "23.txt")
 
     @check("exists")
     def compiles(self):

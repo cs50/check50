@@ -23,6 +23,7 @@ import unittest
 import xml.etree.cElementTree as ET
 
 from backports.shutil_which import which
+from contextlib import contextmanager
 from distutils.version import StrictVersion
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
@@ -43,6 +44,19 @@ def copy(src, dst):
             shutil.copy(src, dst)
         else:
             raise
+
+
+@contextmanager
+def cd(path):
+    """Temporarily change current working directory
+    """
+    start = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(start)
+
 
 def main():
 
@@ -300,26 +314,17 @@ class File():
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
         self.filename = filename
-        if os.path.exists(filename):
-            return
 
-        # If file does not exist relative to the current directory,
-        # try to get it from the test directory
-        cwd = os.getcwd()
-        try:
-            os.chdir(config.check_dir)
-            copy(filename, cwd)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
-                e = RuntimeError("File {} not found".format(filename))
-            raise e
-        finally:
-            os.chdir(cwd)
+    def read(self):
+        with File._open(self.filename) as f:
+            return f.read()
 
-    def read(self, size=None):
-        with open(self.filename, "r") as f:
-            contents = f.read()
-        return contents
+    @staticmethod
+    def _open(file, mode="r"):
+        if sys.version_info < (3, 0):
+            return open(file, mode + "U")
+        else:
+            return open(file, mode, newline="\n")
 
 
 class RuntimeError(RuntimeError):
@@ -339,41 +344,41 @@ class Child():
         self.exitstatus = None
 
     def stdin(self, line, prompt=True):
-        if line != EOF:
-            self.test.log.append("Sending input {}...".format(line))
-        else:
+        if line == EOF:
             self.test.log.append("Sending EOF...")
+        else:
+            self.test.log.append("Sending input {}...".format(line))
 
         if prompt:
             self.child.expect(".+")
 
-        if line != EOF:
-            self.child.sendline(line)
-        else:
+        if line == EOF:
             self.child.sendeof()
+        else:
+            self.child.sendline(line)
         return self
 
     def stdout(self, output=None, str_output=None, timeout=2):
         if output is None:
-            return self.child.read().replace("\r\n", "\n").lstrip("\n")
+            return self.wait(timeout).output
 
-        if str_output is not None:
-            self.test.log.append("Checking for output \"{}\"...".format(str_output))
-
-        expect = self.child.expect
-
-        if isinstance(output, File):
-            # File should be interpreted literally, not as regex
+        # Files should be interpreted literally, anything else shouldn't be
+        try:
+            output = output.read()
+        except AttributeError:
+            expect = self.child.expect
+        else:
             expect = self.child.expect_exact
-            if sys.version_info < (3,0):
-                output = open(output.filename, "rU").read()
-            else:
-                output = open(output.filename, "r", newline="\n").read()
 
-        if str_output is None:
-            str_output = "EOF" if output == EOF else output
+        if output == EOF:
+            str_output = "EOF"
+        else:
+            if str_output is None:
+                str_output = output
+            output = output.replace("\n", "\r\n")
 
-        output = output.replace("\n", "\r\n")
+
+        self.test.log.append("Checking for output \"{}\"...".format(str_output))
 
         try:
             expect(output, timeout=timeout)
@@ -400,7 +405,7 @@ class Child():
             self.test.fail()
         return self
 
-    def exit(self, code=None, timeout=3):
+    def exit(self, code=None, timeout=2):
         self.wait(timeout)
         if code is not None:
             self.test.log.append("Checking that program exited with status {}...".format(code))
@@ -408,7 +413,10 @@ class Child():
                 raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
-    def wait(self, timeout=3):
+    def wait(self, timeout=2):
+        if timeout is None:
+            timeout = float("inf")
+
         end = time.time() + timeout
         while time.time() <= end:
             if not self.child.isalive():
@@ -433,9 +441,10 @@ class Child():
             else:
                 self.output.append(bytes)
 
-        self.output = "".join(self.output).replace("\r\n", "\n")
+        self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
         self.kill()
         self.exitstatus = self.child.exitstatus
+        return self
 
     def kill(self):
         self.child.close(force=True)
@@ -457,14 +466,14 @@ class Checks(unittest.TestCase):
         self.log = []
 
     def diff(self, f1, f2):
-        """Returns 0 if files are the same, nonzero otherwise."""
+        """Returns boolean indicating whether or not the files are different"""
         if type(f1) == File:
             f1 = f1.filename
         if type(f2) == File:
             f2 = f2.filename
-        child = self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
-        child.wait()
-        return child.exitstatus
+        return bool(self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
+                        .wait(timeout=None)
+                        .exitstatus)
 
     def exists(self, *filenames):
         """Asserts that filename (or all filenames) exists."""
@@ -515,8 +524,17 @@ class Checks(unittest.TestCase):
 
     def include(self, *paths):
         """Copies a file to the temporary directory."""
-        for path in paths:
-            File(path)
+        cwd = os.getcwd()
+        try:
+            os.chdir(config.check_dir)
+            for path in paths:
+                copy(path, cwd)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                e = RuntimeError("File {} not found")
+            raise e
+        finally:
+            os.chdir(cwd)
 
     def append_code(self, filename, codefile):
         with open(codefile.filename, "r") as code, \
@@ -571,14 +589,15 @@ class Error(Exception):
     """Class to wrap errors in students' checks."""
     def __init__(self, rationale=None, helpers=None, result=Checks.FAIL):
         def raw(s):
+
             if type(s) == list:
                 s = "\n".join(s)
+
             if s == EOF:
                 return "EOF"
-            elif type(s) != str:
-                return s
+
             s = repr(s)  # get raw representation of string
-            s = s[1:len(s) - 1]  # strip away quotation marks
+            s = s[1:-1]  # strip away quotation marks
             if len(s) > 15:
                 s = s[:15] + "..."  # truncate if too long
             return "\"{}\"".format(s)
