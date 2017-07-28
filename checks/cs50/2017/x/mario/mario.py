@@ -16,7 +16,7 @@ class Mario(Checks):
     @check("compiles")
     def test_reject_negative(self):
         """rejects a height of -1"""
-        self.spawn("./mario").stdin("-1").reject().kill()
+        self.spawn("./mario").stdin("-1").reject()
 
     @check("compiles")
     def test0(self):
@@ -69,7 +69,7 @@ def check_pyramid(output, correct):
     output = output.split("\n")
     correct = correct.split("\n")
 
-    # check for trailing whitespace
+    # check if pyramids are the same height and only differ by trailing whitespace
     if len(output) == len(correct) and all(ol.rstrip() == cl for ol, cl in zip(output, correct)):
         err.helpers = "Did you add too much trailing whitespace to the end of your pyramid?"
     raise err

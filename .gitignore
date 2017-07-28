@@ -1,3 +1,6 @@
-*.c
+*.pyc
+*.egg-info
+dist
+build
 __pycache__/
 pset7/

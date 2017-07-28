@@ -58,9 +58,9 @@ def main():
     parser.add_argument("--no-upgrade", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
-    args = parser.parse_args()
-    identifier = args.identifier[0]
-    files = args.files
+    main.args = parser.parse_args()
+    identifier = main.args.identifier[0]
+    files = main.args.files
 
     # check if installed as package
     try:
@@ -73,7 +73,7 @@ def main():
         res = requests.get("https://pypi.python.org/pypi/check50/json")
         pypi = res.json() if res.status_code == 200 else None
         version = StrictVersion(distribution.version)
-        if pypi and not args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
+        if pypi and not main.args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
 
             # updade check50
             pip = "pip3" if sys.version_info >= (3, 0) else "pip"
@@ -86,15 +86,15 @@ def main():
             else:
                 print("Could not update check50.", file=sys.stderr)
 
-    if not args.local:
+    if not main.args.local:
         try:
 
             # Submit to check50 repo.
             import submit50
         except ImportError:
-            raise RuntimeError("submit50 is not installed. Install submit50 and run check50 again.")
+            raise InternalError("submit50 is not installed. Install submit50 and run check50 again.")
         else:
-            submit50.run.verbose = args.verbose
+            submit50.run.verbose = main.args.verbose
             prompts = {
                 "confirmation": "Are you sure you want to check these files?",
                 "submitting": "Uploading",
@@ -120,7 +120,7 @@ def main():
             print()
 
             # Print results from payload
-            print_results(payload["checks"], args.log)
+            print_results(payload["checks"], main.args.log)
             print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
@@ -131,12 +131,7 @@ def main():
     if len(files) == 0:
         files = os.listdir()
     for filename in files:
-        try:
-            copy(filename, src_dir)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
-                e = RuntimeError("File {} not found.".format(filename))
-            raise e
+        copy(filename, src_dir)
 
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
@@ -152,7 +147,7 @@ def main():
         test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
                 if m[1].__module__ == identifier)
     except (ImportError, StopIteration):
-        raise RuntimeError("Invalid identifier.")
+        raise InternalError("Invalid identifier.")
 
     # create and run the test suite
     suite = unittest.TestSuite()
@@ -166,16 +161,17 @@ def main():
     results = result.results
 
     # print the results
-    if args.full:  # both JSON and results
+    if main.args.full:  # both JSON and results
         sentinel = "\x1c" * 10
         print(sentinel)
         print_json(results)
         print(sentinel)
-        print_results(results, log=args.log)
-    elif args.debug:
+        print_results(results, log=main.args.log)
+    elif main.args.debug:
         print_json(results)
     else:
-        print_results(results, log=args.log)
+        print_results(results, log=main.args.log)
+
 
 def print_results(results, log=False):
     for result in results:
@@ -193,6 +189,8 @@ def print_results(results, log=False):
             for line in result["test"].log:
                 print("    {}".format(line))
 
+
+
 def print_json(results):
     output = []
     for result in results:
@@ -206,10 +204,29 @@ def print_json(results):
         })
     print(json.dumps(output))
 
+
+
 def cleanup():
     """Remove temporary files at end of test."""
     if config.tempdir:
         shutil.rmtree(config.tempdir)
+
+
+
+def excepthook(cls, exc, tb):
+    cleanup()
+    if cls is InternalError:
+        cprint(exc.msg, "red")
+    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
+        cprint("{} not found".format(exc.filename), "red")
+    else:
+        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red")
+
+    if main.args.verbose:
+        traceback.print_exception(cls, exc, tb)
+
+sys.excepthook = excepthook
+
 
 class TestResult(unittest.TestResult):
     results = []
@@ -244,7 +261,7 @@ class TestResult(unittest.TestResult):
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
-        raise RuntimeError("Invalid check in {} on line {} of {}:\n"
+        raise InternalError("Invalid check in {} on line {} of {}:\n"
                            "@valgrind must be placed below @check"\
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
@@ -314,12 +331,10 @@ class File():
             return open(file, mode, newline="\n")
 
 
-class RuntimeError(RuntimeError):
+class InternalError(Exception):
     """Error during execution of check50."""
     def __init__(self, msg):
-        cleanup()
-        cprint(msg, "red")
-        sys.exit(1)
+        self.msg = msg
 
 
 # wrapper class for pexpect child
@@ -445,12 +460,17 @@ class Checks(unittest.TestCase):
     _valgrind_log = "valgrind.xml"
     _valgrind = False
 
+    def tearDown(self):
+        while self.children:
+            self.children.pop().kill()
+
     def __init__(self, method_name):
         super(Checks, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
         self.log = []
+        self.children = []
 
     def diff(self, f1, f2):
         """Returns boolean indicating whether or not the files are different"""
@@ -507,7 +527,9 @@ class Checks(unittest.TestCase):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
             child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
-        return Child(self, child)
+
+        self.children.append(Child(self, child))
+        return self.children[-1]
 
     def include(self, *paths):
         """Copies a file to the temporary directory."""
@@ -516,10 +538,6 @@ class Checks(unittest.TestCase):
             os.chdir(config.check_dir)
             for path in paths:
                 copy(path, cwd)
-        except IOError as e:
-            if e.errno == errno.ENOENT:
-                e = RuntimeError("File {} not found")
-            raise e
         finally:
             os.chdir(cwd)
 
