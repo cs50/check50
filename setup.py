@@ -11,7 +11,7 @@ setup(
     ],
     description="This is check50, with which you can check solutions to \
         problems for CS50.",
-    install_requires=["argparse", "pexpect", "requests", "termcolor"],
+    install_requires=["argparse", "pexpect", "requests", "backports.shutil_which", "termcolor"],
     keywords=["check", "check50"],
     name="check50",
     py_modules=["check50", "config"],

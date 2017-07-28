@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import argparse
+import errno
 import hashlib
 import importlib
 import inspect
@@ -21,6 +22,7 @@ import traceback
 import unittest
 import xml.etree.cElementTree as ET
 
+from backports.shutil_which import which
 from distutils.version import StrictVersion
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
@@ -32,6 +34,18 @@ import config
 
 # Exports
 __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
+
+
+def copy(src, dst):
+    """Copy src to dst regardless, copying recursively if src is a directory"""
+    try:
+        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
+    except IOError as e:
+        if e.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else:
+            raise
+
 
 # Internationalization
 gettext.bindtextdomain("messages", os.path.join(sys.path[0], "locale"))
@@ -52,9 +66,9 @@ def main():
     parser.add_argument("--no-upgrade", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
-    args = parser.parse_args()
-    identifier = args.identifier[0]
-    files = args.files
+    main.args = parser.parse_args()
+    identifier = main.args.identifier[0]
+    files = main.args.files
 
     # check if installed as package
     try:
@@ -67,7 +81,7 @@ def main():
         res = requests.get("https://pypi.python.org/pypi/check50/json")
         pypi = res.json() if res.status_code == 200 else None
         version = StrictVersion(distribution.version)
-        if pypi and not args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
+        if pypi and not main.args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
 
             # updade check50
             pip = "pip3" if sys.version_info >= (3, 0) else "pip"
@@ -80,15 +94,15 @@ def main():
             else:
                 print(_("Could not update check50."), file=sys.stderr)
 
-    if not args.local:
+    if not main.args.local:
         try:
 
             # Submit to check50 repo.
             import submit50
         except ImportError:
-            raise RuntimeError(_("submit50 is not installed. Install submit50 and run check50 again."))
+            raise InternalError(_("submit50 is not installed. Install submit50 and run check50 again."))
         else:
-            submit50.run.verbose = args.verbose
+            submit50.run.verbose = main.args.verbose
             prompts = {
                 "confirmation": _("Are you sure you want to check these files?"),
                 "submitting": _("Uploading"),
@@ -113,12 +127,9 @@ def main():
                 time.sleep(2)
             print()
 
-            # Print results.
-            results = lambda: None
-            results.results = payload["checks"]
-            print_results(results, args.log)
-            print(_("Detailed Results:"), end=" ")
-            print("https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
+            # Print results from payload
+            print_results(payload["checks"], main.args.log)
+            print(_("Detailed Results:"), "https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
     # copy all files to temporary directory
@@ -128,13 +139,7 @@ def main():
     if len(files) == 0:
         files = os.listdir()
     for filename in files:
-        if os.path.exists(filename):
-            if os.path.isfile(filename):
-                shutil.copy(filename, src_dir)
-            else:
-                shutil.copytree(filename, os.path.join(src_dir, filename))
-        else:
-            raise RuntimeError(_("File {} not found.").format(filename))
+        copy(filename, src_dir)
 
     # prepend cs50/ directory by default
     if identifier.split("/")[0].isdigit():
@@ -147,56 +152,56 @@ def main():
     identifier = "checks.{}.checks".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
-    except ImportError:
-        raise RuntimeError(_("Invalid identifier."))
-    classes = [m[1] for m in inspect.getmembers(checks, inspect.isclass)
-            if m[1].__module__ == identifier]
-
-    # ensure test module has a class of test cases
-    if len(classes) == 0:
-        raise RuntimeError(_("Invalid identifier."))
-    test_class = classes[0]
+        test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
+                               if m[1].__module__ == identifier)
+    except (ImportError, StopIteration):
+        raise InternalError(_("Invalid identifier."))
 
     # create and run the test suite
     suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(test_class(case))
-    results = TestResult()
-    suite.run(results)
+    result = TestResult()
+    suite.run(result)
     cleanup()
 
+    # Get list of results from TestResult class
+    results = result.results
+
     # print the results
-    if args.full:  # both JSON and results
+    if main.args.full:  # both JSON and results
         sentinel = "\x1c" * 10
         print(sentinel)
         print_json(results)
         print(sentinel)
-        print_results(results, log=args.log)
-    elif args.debug:
+        print_results(results, log=main.args.log)
+    elif main.args.debug:
         print_json(results)
     else:
-        print_results(results, log=args.log)
+        print_results(results, log=main.args.log)
+
 
 def print_results(results, log=False):
-    for result in results.results:
+    for result in results:
         if result["status"] == Checks.PASS:
             cprint(":) {}".format(result["description"]), "green")
         elif result["status"] == Checks.FAIL:
             cprint(":( {}".format(result["description"]), "red")
-            if result["rationale"] != None:
+            if result["rationale"] is not None:
                 cprint("    {}".format(result["rationale"]), "red")
         elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
-            cprint("    ", end="")
-            print(_("test skipped"), "yellow")
+            cprint("    {}".format(result.get("rationale") or "check skipped"), "yellow")
 
         if log:
             for line in result["test"].log:
                 print("    {}".format(line))
 
+
+
 def print_json(results):
     output = []
-    for result in results.results:
+    for result in results:
         output.append({
             "name": result["test"]._testMethodName,
             "status": result["status"],
@@ -207,10 +212,29 @@ def print_json(results):
         })
     print(json.dumps(output))
 
+
+
 def cleanup():
     """Remove temporary files at end of test."""
     if config.tempdir:
         shutil.rmtree(config.tempdir)
+
+
+
+def excepthook(cls, exc, tb):
+    cleanup()
+    if cls is InternalError:
+        cprint(exc.msg, "red")
+    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
+        cprint(_("File {} not found".format(exc.filename)), "red")
+    else:
+        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red")
+
+    if main.args.verbose:
+        traceback.print_exception(cls, exc, tb)
+
+sys.excepthook = excepthook
+
 
 class TestResult(unittest.TestResult):
     results = []
@@ -245,11 +269,14 @@ class TestResult(unittest.TestResult):
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
-        raise RuntimeError(_("Invalid check in {0} on line {1} of {2}:\n"
-                           "@valgrind must be placed below @check")\
-                            .format(frame.name, frame.lineno, frame.filename))
+        raise InternalError(_("Invalid check in {} on line {} of {}:\n"
+                           "@valgrind must be placed below @check"\
+                            .format(frame.name, frame.lineno, frame.filename)))
     @wraps(func)
     def wrapper(self):
+        if not which("valgrind"):
+            raise Error("valgrind not installed", result=Checks.SKIP)
+
         self._valgrind = True
         try:
             func(self)
@@ -271,27 +298,26 @@ def check(dependency=None):
             # check if dependency failed
             if dependency and config.test_results.get(dependency) != Checks.PASS:
                 self.result = config.test_results[func.__name__] = Checks.SKIP
+                self.rationale = "can't check until a frown turns upside down"
                 return
 
             # move files into this check's directory
             self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
-            if dependency:
-                src_dir = os.path.join(config.tempdir, dependency)
-            else:
-                src_dir = os.path.join(config.tempdir, "_")
+            src_dir = os.path.join(config.tempdir, dependency or "_")
             shutil.copytree(src_dir, dst_dir)
 
+            os.chdir(self.dir)
             # run the test, catch failures
             try:
                 func(self)
             except Error as e:
                 self.rationale = e.rationale
                 self.helpers = e.helpers
-                return
+                result = e.result
+            else:
+                result = Checks.PASS
 
-            # if test didn't fail, then it passed
-            if config.test_results.get(func.__name__) is None:
-                self.result = config.test_results[func.__name__] = Checks.PASS
+            self.result = config.test_results[func.__name__] = result
 
         return wrapper
     return decorator
@@ -299,34 +325,24 @@ def check(dependency=None):
 class File():
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
-        self.filename = os.path.join(config.check_dir, filename)
+        self.filename = filename
 
-class Error(Exception):
-    """Class to wrap errors in students' checks."""
-    def __init__(self, rationale=None, helpers=None):
-        def raw(s):
-            if type(s) == list:
-                s = "\n".join(s)
-            if s == EOF:
-                return "EOF"
-            elif type(s) != str:
-                return s
-            s = repr(s)  # get raw representation of string
-            s = s[1:len(s) - 1]  # strip away quotation marks
-            if len(s) > 15:
-                s = s[:15] + "..."  # truncate if too long
-            return "\"{}\"".format(s)
-        if type(rationale) == tuple:
-            rationale = _("Expected {}, not {}.").format(raw(rationale[1]), raw(rationale[0]))
-        self.rationale = rationale
-        self.helpers = helpers
+    def read(self):
+        with File._open(self.filename) as f:
+            return f.read()
 
-class RuntimeError(RuntimeError):
+    @staticmethod
+    def _open(file, mode="r"):
+        if sys.version_info < (3, 0):
+            return open(file, mode + "U")
+        else:
+            return open(file, mode, newline="\n")
+
+
+class InternalError(Exception):
     """Error during execution of check50."""
     def __init__(self, msg):
-        cleanup()
-        cprint(msg, "red")
-        sys.exit(1)
+        self.msg = msg
 
 
 # wrapper class for pexpect child
@@ -334,44 +350,48 @@ class Child():
     def __init__(self, test, child):
         self.test = test
         self.child = child
+        self.output = []
+        self.exitstatus = None
 
     def stdin(self, line, prompt=True):
-        if line != None:
-            self.test.log.append(_("Sending input {}...").format(line))
+        if line == EOF:
+            self.test.log.append(_("Sending EOF..."))
         else:
-            self.test.log.append(_("Sending Ctrl-D..."))
+            self.test.log.append(_("Sending input {}...".format(line)))
 
         if prompt:
             self.child.expect(".+")
 
-        if line != None:
-            self.child.sendline(line)
+        if line == EOF:
+            self.child.sendeof()
         else:
-            self.child.sendcontrol('d')
+            self.child.sendline(line)
         return self
 
     def stdout(self, output=None, str_output=None, timeout=2):
         if output is None:
-            return self.child.read().replace("\r\n", "\n").lstrip("\n")
+            return self.wait(timeout).output
 
-        if str_output is not None:
-            self.test.log.append(_("Checking for output \"{}\"...").format(str_output))
-
-        if isinstance(output, File):
-            if sys.version_info < (3,0):
-                contents = open(output.filename, "rU").read().replace("\n", "\r\n")
-            else:
-                contents = open(output.filename, "r", newline="\r\n").read()
-            if str_output is None: str_output = contents
-            output = re.escape(contents)
-        elif output == EOF:
-            if str_output is None: str_output = "EOF"
+        # Files should be interpreted literally, anything else shouldn't be
+        try:
+            output = output.read()
+        except AttributeError:
+            expect = self.child.expect
         else:
-            if str_output is None: str_output = output
+            expect = self.child.expect_exact
+
+        if output == EOF:
+            str_output = "EOF"
+        else:
+            if str_output is None:
+                str_output = output
             output = output.replace("\n", "\r\n")
 
+
+        self.test.log.append(_("Checking for output \"{}\"...".format(str_output)))
+
         try:
-            self.child.expect(output, timeout=timeout)
+            expect(output, timeout=timeout)
         except EOF:
             result = self.child.before + self.child.buffer
             if self.child.after != EOF:
@@ -395,14 +415,48 @@ class Child():
             self.test.fail()
         return self
 
-    def exit(self, code=None):
-        self.child.wait()
-        self.exitstatus, self.output = self.child.exitstatus, self.child.read()
-        self.child.close()
-        if code != None:
-            self.test.log.append(_("Checking that program exited with status {}...").format(code))
-            if self.exitstatus != code:
-                raise Error(_("Expected exit code {}, not {}").format(code, self.exitstatus))
+    def exit(self, code=None, timeout=2):
+        self.wait(timeout)
+
+        if code is None:
+            return self.exitstatus
+
+        self.test.log.append(_("Checking that program exited with status {}...".format(code)))
+        if self.exitstatus != code:
+            raise Error(_("Expected exit code {}, not {}".format(code, self.exitstatus)))
+        return self
+
+    def wait(self, timeout=2):
+        if timeout is None:
+            timeout = float("inf")
+
+        end = time.time() + timeout
+        while time.time() <= end:
+            if not self.child.isalive():
+                break
+            try:
+                bytes = self.child.read_nonblocking(size=1024, timeout=0)
+            except TIMEOUT:
+                pass
+            except EOF:
+                break
+            else:
+                self.output.append(bytes)
+        else:
+            raise Error("Timed out while waiting for program to exit")
+
+        # Read any remaining data in pipe
+        while True:
+            try:
+                bytes = self.child.read_nonblocking(size=1024, timeout=0)
+            except (TIMEOUT, EOF):
+                break
+            else:
+                self.output.append(bytes)
+
+        self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
+        self.kill()
+        self.exitstatus = self.child.exitstatus
         return self
 
     def kill(self):
@@ -417,37 +471,34 @@ class Checks(unittest.TestCase):
     _valgrind_log = "valgrind.xml"
     _valgrind = False
 
+    def tearDown(self):
+        while self.children:
+            self.children.pop().kill()
+
     def __init__(self, method_name):
         super(Checks, self).__init__(method_name)
         self.result = self.FAIL
         self.rationale = None
         self.helpers = None
         self.log = []
-
-    def checkfile(self, filename):
-        """Gets the contents of a check file."""
-        contents = open(os.path.join(config.check_dir, filename)).read()
-        return contents
+        self.children = []
 
     def diff(self, f1, f2):
-        """Returns 0 if files are the same, nonzero otherwise."""
+        """Returns boolean indicating whether or not the files are different"""
         if type(f1) == File:
             f1 = f1.filename
         if type(f2) == File:
             f2 = f2.filename
-        child = self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
-        child.child.wait()
-        return child.child.exitstatus
+        return bool(self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
+                        .wait(timeout=None)
+                        .exitstatus)
 
-    def exists(self, filenames):
+    def exists(self, *filenames):
         """Asserts that filename (or all filenames) exists."""
-        if type(filenames) != list:
-            filenames  = [filenames]
         for filename in filenames:
-            self.log.append(_("Checking that {} exists...").format(filename))
-            os.chdir(self.dir)
-            if not os.path.isfile(filename):
-                raise Error(_("File {} not found.").format(filename))
+            self.log.append(_("Checking that {} exists...".format(filename)))
+            if not os.path.exists(filename):
+                raise Error(_("File {} not found.".format(filename))
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
@@ -470,42 +521,46 @@ class Checks(unittest.TestCase):
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
         if self._valgrind:
-            self.log.append(_("Running valgrind {}...").format(cmd))
-            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={0} -- {1}" \
+            self.log.append(_("Running valgrind {}...".format(cmd)))
+            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}" \
                         .format(os.path.join(self.dir, self._valgrind_log), cmd)
         else:
             self.log.append(_("Running {}...").format(cmd))
 
-        os.chdir(self.dir)
         if env is None:
             env = {}
         env = os.environ.update(env)
+
+        # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
+        # Workaround from https://github.com/pexpect/pexpect/issues/373
+        cmd = "bash -c {}".format(shlex.quote(cmd))
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
             child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
-        return Child(self, child)
 
-    def include(self, path):
+        self.children.append(Child(self, child))
+        return self.children[-1]
+
+    def include(self, *paths):
         """Copies a file to the temporary directory."""
-        shutil.copy(os.path.join(config.check_dir, path), self.dir)
+        cwd = os.getcwd()
+        try:
+            os.chdir(config.check_dir)
+            for path in paths:
+                copy(path, cwd)
+        finally:
+            os.chdir(cwd)
 
     def append_code(self, filename, codefile):
-        code = open(codefile.filename, "r")
-        contents = code.read()
-        code.close()
-        f = open(os.path.join(self.dir, filename), "a")
-        f.write(contents)
-        f.close()
-
-    def fail(self, rationale):
-        self.result = self.FAIL
-        self.rationale = rationale
-        super().fail()
+        with open(codefile.filename, "r") as code, \
+                open(os.path.join(self.dir, filename), "a") as f:
+            f.write("\n")
+            f.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, file):
-        self.spawn("sed -i='' -e 's/callq\t_{0}/callq\t_{1}/g' {2}", old_fn, new_fn, file).exit(0)
-        self.spawn("sed -i='' -e 's/callq\t{0}/callq\t{1}/g' {2}", old_fn, new_fn, file).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file))
+        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, file))
 
     def _check_valgrind(self):
         """Log and report any errors encountered by valgrind"""
@@ -532,7 +587,7 @@ class Checks(unittest.TestCase):
                 if obj is not None and os.path.dirname(obj.text) == self.dir:
                     location = frame.find("file"), frame.find("line")
                     if None not in location:
-                        msg.append(": (file: {0}, line: {1})".format(location[0].text, location[1].text))
+                        msg.append(": (file: {}, line: {})".format(location[0].text, location[1].text))
                     break
 
             msg = "".join(msg)
@@ -545,6 +600,28 @@ class Checks(unittest.TestCase):
             raise Error(_("Valgrind check failed. "
                           "Rerun with --log for more information."))
 
+
+class Error(Exception):
+    """Class to wrap errors in students' checks."""
+    def __init__(self, rationale=None, helpers=None, result=Checks.FAIL):
+        def raw(s):
+
+            if type(s) == list:
+                s = "\n".join(s)
+
+            if s == EOF:
+                return "EOF"
+
+            s = repr(s)  # get raw representation of string
+            s = s[1:-1]  # strip away quotation marks
+            if len(s) > 15:
+                s = s[:15] + "..."  # truncate if too long
+            return "\"{}\"".format(s)
+        if type(rationale) == tuple:
+            rationale = _("Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0])))
+        self.rationale = rationale
+        self.helpers = helpers
+        self.result = result
 
 if __name__ == "__main__":
     main()
