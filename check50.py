@@ -409,10 +409,13 @@ class Child():
 
     def exit(self, code=None, timeout=2):
         self.wait(timeout)
-        if code is not None:
-            self.test.log.append("Checking that program exited with status {}...".format(code))
-            if self.exitstatus != code:
-                raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
+
+        if code is None:
+            return self.exitstatus
+
+        self.test.log.append("Checking that program exited with status {}...".format(code))
+        if self.exitstatus != code:
+            raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
     def wait(self, timeout=2):
@@ -432,7 +435,7 @@ class Child():
             else:
                 self.output.append(bytes)
         else:
-            raise Error("Timed out while waiting for {} to exit".format(os.path.basename(self.child.command)))
+            raise Error("Timed out while waiting for program to exit")
 
         # Read any remaining data in pipe
         while True:
@@ -548,8 +551,8 @@ class Checks(unittest.TestCase):
             f.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, file):
-        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file)).exit(0)
-        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, file)).exit(0)
+        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file))
+        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, file))
 
     def _check_valgrind(self):
         """Log and report any errors encountered by valgrind"""
