@@ -23,7 +23,6 @@ import unittest
 import xml.etree.cElementTree as ET
 
 from backports.shutil_which import which
-from contextlib import contextmanager
 from distutils.version import StrictVersion
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
@@ -44,18 +43,6 @@ def copy(src, dst):
             shutil.copy(src, dst)
         else:
             raise
-
-
-@contextmanager
-def cd(path):
-    """Temporarily change current working directory
-    """
-    start = os.getcwd()
-    try:
-        os.chdir(path)
-        yield
-    finally:
-        os.chdir(start)
 
 
 def main():
