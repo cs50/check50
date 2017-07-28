@@ -1,16 +1,12 @@
-import os
-import sys
-
-sys.path.append(os.getcwd())
-from check50 import Checks, Error, check
+from check50 import *
 
 class Hello(Checks):
-    
+
     @check()
     def exists(self):
         """hello.c exists."""
         super(Hello, self).exists("hello.c")
-    
+
     @check("exists")
     def compiles(self):
         """hello.c compiles."""
@@ -19,7 +15,7 @@ class Hello(Checks):
     @check("compiles")
     def prints_hello(self):
         """prints "Hello, world!\\n" """
-        self.spawn("./hello").stdout("^Hello, world!\n$", "Hello, world!\n")
+        self.spawn("./hello").stdout("Hello, world!\n").exit(0)
 
     @check("compiles")
     def prints_hello_2(self):

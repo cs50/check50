@@ -1,11 +1,6 @@
-import os
-import sys
-
-sys.path.append(os.getcwd())
 from check50 import *
 
 
-@checks
 class Water(Checks):
 
     @check()
