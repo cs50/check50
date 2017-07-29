@@ -363,7 +363,7 @@ class Child(object):
             self.child.sendline(line)
         return self
 
-    def stdout(self, output=None, str_output=None, timeout=2):
+    def stdout(self, output=None, str_output=None, timeout=3):
         if output is None:
             return self.wait(timeout).output
 
@@ -401,16 +401,16 @@ class Child(object):
 
         return self
 
-    def reject(self):
+    def reject(self, timeout=3):
         self.test.log.append("Checking that input was rejected...")
         try:
-            self.child.expect(".+")
+            self.child.expect(".+", timeout=timeout)
             self.child.sendline("")
         except OSError:
             self.test.fail()
         return self
 
-    def exit(self, code=None, timeout=2):
+    def exit(self, code=None, timeout=3):
         self.wait(timeout)
 
         if code is None:
@@ -421,10 +421,7 @@ class Child(object):
             raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
-    def wait(self, timeout=2):
-        if timeout is None:
-            timeout = float("inf")
-
+    def wait(self, timeout=3):
         end = time.time() + timeout
         while time.time() <= end:
             if not self.child.isalive():
@@ -485,7 +482,7 @@ class Checks(unittest.TestCase):
         if type(f2) == File:
             f2 = f2.filename
         return bool(self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
-                        .wait(timeout=None)
+                        .wait()
                         .exitstatus)
 
     def exists(self, *filenames):
