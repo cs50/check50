@@ -348,14 +348,14 @@ class Child(object):
         self.output = []
         self.exitstatus = None
 
-    def stdin(self, line, prompt=True):
+    def stdin(self, line, prompt=True, timeout=3):
         if line == EOF:
             self.test.log.append("Sending EOF...")
         else:
             self.test.log.append("Sending input {}...".format(line))
 
         if prompt:
-            self.child.expect(".+")
+            self.child.expect(".+", timeout=timeout)
 
         if line == EOF:
             self.child.sendeof()
