@@ -7,9 +7,7 @@ class Speller(Checks):
     @check()
     def exists(self):
         """dictionary.c, dictionary.h, and Makefile exist"""
-        self.require("dictionary.c")
-        self.require("dictionary.h")
-        self.require("Makefile")
+        self.require("dictionary.c", "dictionary.h", "Makefile")
 
     @check("exists")
     def compiles(self):
