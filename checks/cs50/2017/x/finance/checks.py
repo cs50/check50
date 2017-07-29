@@ -1,16 +1,9 @@
-import os
-import re
-import requests
-import sys
-
-sys.path.append(os.getcwd())
 from check50 import *
-from selenium import webdriver
 
 class Finance(Checks):
 
     BASE_PATH = "http://127.0.0.1:5000"
-    
+
     def server_up(self):
         env = {
             "FLASK_APP": "application.py"
@@ -26,18 +19,18 @@ class Finance(Checks):
     def override_lookup(self):
         """Replaces student's lookup function with a deterministic one."""
         self.append_code("helpers.py", File("lookup.py"))
-    
+
     def register(self, username, password, confirmation, outcome):
         """Checks that registering results in success or failure."""
 
         # go to register page
         self.driver.get("{}/register".format(Finance.BASE_PATH))
         fields = self.driver.find_elements_by_tag_name("input")
-    
+
         # check for input fields
         if len(fields) == 0:
             raise Error("No available input fields to register.")
-        
+
         # fill in name, password, confiramtion
         fields_filled = 0
         for field in fields:
@@ -53,7 +46,7 @@ class Finance(Checks):
                 field.send_keys(confirmation)
         if fields_filled != 3:
             raise Error("Could not fill in username and/or password.")
-    
+
         # search for register button
         buttons = self.driver.find_elements_by_tag_name("button")
         register_button = None
@@ -106,7 +99,7 @@ class Finance(Checks):
         # go to quote page
         self.driver.get("{}/quote".format(Finance.BASE_PATH))
         fields = self.driver.find_elements_by_tag_name("input")
-    
+
         # find field to input quote
         quote_field = None
         for field in fields:

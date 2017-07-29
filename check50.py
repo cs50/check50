@@ -29,6 +29,14 @@ from pexpect.exceptions import EOF, TIMEOUT
 from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from termcolor import cprint
 
+try:
+    from flask.testing import FlaskClient
+except:
+    _has_flask = False
+else:
+    _has_flask = True
+
+
 import config
 
 __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
@@ -455,6 +463,71 @@ class Child():
         self.child.close(force=True)
         return self
 
+class Params(dict):
+    """Sentinel class for passing URL parameters to Flask"""
+    pass
+
+class Form(dict):
+    """Sentinel class for passing form data to Flask"""
+    pass
+
+
+class App():
+    def __init__(self, test, source_file):
+        if not _has_flask:
+            raise InternalError("This feature requires Flask")
+
+        dir, file = os.path.split(name)
+        module, _ = os.path.splitext(file)
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(dir)
+            app = importlib.import_module(module).app
+        except ImportError:
+            raise InternalError("Failed to import {}".format(name))
+        except AttributeError:
+            raise InternalError("Python module does not contain an app")
+        else:
+            app.testing = True
+            self.client = app.test_client()
+        finally:
+            os.chdir(cwd)
+
+        self.test = test
+        self.response = None
+        self.element = None
+
+    @property
+    def app(self):
+        return self.client.application
+
+    @property
+    def text(self):
+        return self.response.data
+
+    def get(route, data=None, params=None):
+        self.response = self.client.get(route, data=data, params=params)
+        return self
+
+    def post(route, data=None, params=None):
+        self.response = self.client.get(route, data=data, params=params)
+        return self
+
+    def find(*args, **kwargs):
+        pass
+
+    def redirect(route=None):
+        self.client.resolve_redirect
+
+    def status(code=None):
+        pass
+
+    def headers(header=None, content=None):
+        pass
+
+
+
 class Checks(unittest.TestCase):
     PASS = True
     FAIL = False
@@ -533,6 +606,9 @@ class Checks(unittest.TestCase):
 
         self.children.append(Child(self, child))
         return self.children[-1]
+
+    def flask(name):
+        return App(self, name)
 
     def include(self, *paths):
         """Copies a file to the temporary directory."""
