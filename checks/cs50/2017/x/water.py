@@ -7,7 +7,7 @@ class Water(Checks):
     @check()
     def exists(self):
         """water.c exists."""
-        super(Water, self).exists("water.c")
+        self.require("water.c")
 
     @check("exists")
     def compiles(self):

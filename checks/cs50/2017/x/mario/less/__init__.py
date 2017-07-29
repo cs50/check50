@@ -8,7 +8,7 @@ class MarioLess(Checks):
     @check()
     def exists(self):
         """mario.c exists."""
-        super(MarioLess, self).exists("mario.c")
+        self.require("mario.c")
         self.add("0.txt", "1.txt", "2.txt", "23.txt")
 
     @check("exists")

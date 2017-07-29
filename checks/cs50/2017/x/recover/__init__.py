@@ -25,7 +25,7 @@ class Recover(Checks):
     @check()
     def exists(self):
         """recover.c exists."""
-        super(Recover, self).exists("recover.c")
+        self.require("recover.c")
 
     @check("exists")
     def compiles(self):

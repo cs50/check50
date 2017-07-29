@@ -7,7 +7,7 @@ class Vigenere(Checks):
     @check()
     def exists(self):
         """vigenere.c exists."""
-        super(Vigenere, self).exists("vigenere.c")
+        self.require("vigenere.c")
 
     @check("exists")
     def compiles(self):

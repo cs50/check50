@@ -7,7 +7,7 @@ class Fifteen(Checks):
     @check()
     def exists(self):
         """fifteen.c exists."""
-        super(Fifteen, self).exists("fifteen.c")
+        self.require("fifteen.c")
 
     @check("exists")
     def compiles(self):

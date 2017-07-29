@@ -6,7 +6,7 @@ class Credit(Checks):
     @check()
     def exists(self):
         """credit.c exists."""
-        super(Credit, self).exists("credit.c")
+        self.require("credit.c")
 
     @check("exists")
     def compiles(self):

@@ -6,7 +6,7 @@ class Hello(Checks):
     @check()
     def exists(self):
         """hello.c exists."""
-        super(Hello, self).exists("hello.c")
+        self.require("hello.c")
 
     @check("exists")
     def compiles(self):

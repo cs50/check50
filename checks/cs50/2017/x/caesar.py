@@ -7,7 +7,7 @@ class Caesar(Checks):
     @check()
     def exists(self):
         """caesar.c exists."""
-        super(Caesar, self).exists("caesar.c")
+        self.require("caesar.c")
 
     @check("exists")
     def compiles(self):

@@ -7,7 +7,7 @@ class InitialsLess(Checks):
     @check()
     def exists(self):
         """initials.c exists."""
-        super(InitialsLess, self).exists("initials.c")
+        self.require("initials.c")
 
     @check("exists")
     def compiles(self):

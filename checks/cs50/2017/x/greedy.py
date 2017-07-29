@@ -9,7 +9,7 @@ class Greedy(Checks):
     @check()
     def exists(self):
         """greedy compiles."""
-        super(Greedy, self).exists("greedy.c")
+        self.require("greedy.c")
 
     @check("exists")
     def compiles(self):

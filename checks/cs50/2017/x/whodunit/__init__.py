@@ -7,7 +7,7 @@ class Whodunit(Checks):
     @check()
     def exists(self):
         """whodunit.c exists"""
-        super(Whodunit, self).exists("whodunit.c")
+        self.require("whodunit.c")
 
     @check("exists")
     def compiles(self):

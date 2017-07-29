@@ -7,7 +7,7 @@ class Find(Checks):
     @check()
     def exists(self):
         """helpers.c exists."""
-        super(Find, self).exists("helpers.c")
+        self.require("helpers.c")
 
     @check("exists")
     def compiles(self):

@@ -485,8 +485,8 @@ class Checks(unittest.TestCase):
                         .wait()
                         .exitstatus)
 
-    def exists(self, *filenames):
-        """Asserts that filename (or all filenames) exists."""
+    def require(self, *filenames):
+        """Asserts that all filenames exist."""
         for filename in filenames:
             self.log.append("Checking that {} exists...".format(filename))
             if not os.path.exists(filename):
@@ -498,7 +498,7 @@ class Checks(unittest.TestCase):
         # Assert that file exists.
         if type(filename) == File:
             filename = filename.filename
-        Checks.exists(self, filename)
+        self.require(filename)
 
         # https://stackoverflow.com/a/22058673
         sha256 = hashlib.sha256()
