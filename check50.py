@@ -144,7 +144,6 @@ def main():
     identifier = "checks.{}".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
-        import pdb; pdb.set_trace()
         test_class, = (cls for _, cls in inspect.getmembers(checks, inspect.isclass)
                            if hasattr(cls, "_{}__checks".format(cls.__name__))
                               and cls.__module__.startswith(identifier))
