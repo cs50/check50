@@ -141,7 +141,7 @@ def main():
     config.check_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "checks", identifier)
 
     # import the checks and identify check class
-    identifier = "checks.{}.checks".format(identifier.replace("/", "."))
+    identifier = "checks.{}".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
         test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)

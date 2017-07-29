@@ -1,11 +1,13 @@
 from check50 import *
 
-class Mario(Checks):
+
+class MarioLess(Checks):
+
 
     @check()
     def exists(self):
         """mario.c exists."""
-        super(Mario, self).exists("mario.c")
+        super(MarioLess, self).exists("mario.c")
         self.include("0.txt", "1.txt", "2.txt", "23.txt")
 
     @check("exists")

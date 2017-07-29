@@ -1,4 +1,4 @@
-from ..less.checks import *
+from .less import *
 
 
 class InitialsMore(InitialsLess):
