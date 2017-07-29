@@ -1,5 +1,6 @@
 from ..less import *
 
+@checks
 class ResizeMore(ResizeLess):
 
     @check("compiles")

@@ -1,6 +1,7 @@
 from .less import *
 
 
+@checks
 class InitialsMore(InitialsLess):
 
     @check("compiles")

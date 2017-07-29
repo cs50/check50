@@ -1,6 +1,7 @@
 from check50 import *
 
 
+@checks
 class ResizeLess(Checks):
     hashes = {
         "1.bmp": "7762f5ed1684a1fb02d8dfd8e6fc248c00b8326d1d3c27df7a1c6a4f5ac278be",

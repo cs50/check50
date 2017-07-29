@@ -1,6 +1,7 @@
 from check50 import *
 
 
+@checks
 class Vigenere(Checks):
 
     @check()

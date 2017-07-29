@@ -31,7 +31,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
+__all__ = ["check", "checks", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
 
 
 def copy(src, dst):
@@ -144,9 +144,11 @@ def main():
     identifier = "checks.{}".format(identifier.replace("/", "."))
     try:
         checks = importlib.import_module(identifier)
-        test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
-                if m[1].__module__ == identifier)
-    except (ImportError, StopIteration):
+        import pdb; pdb.set_trace()
+        test_class, = (cls for _, cls in inspect.getmembers(checks, inspect.isclass)
+                           if hasattr(cls, "_{}__checks".format(cls.__name__))
+                              and cls.__module__.startswith(identifier))
+    except (ImportError, ValueError):
         raise InternalError("Invalid identifier.")
 
     # create and run the test suite
@@ -190,7 +192,6 @@ def print_results(results, log=False):
                 print("    {}".format(line))
 
 
-
 def print_json(results):
     output = []
     for result in results:
@@ -205,12 +206,10 @@ def print_json(results):
     print(json.dumps(output))
 
 
-
 def cleanup():
     """Remove temporary files at end of test."""
     if config.tempdir:
         shutil.rmtree(config.tempdir)
-
 
 
 def excepthook(cls, exc, tb):
@@ -224,7 +223,6 @@ def excepthook(cls, exc, tb):
 
     if main.args.verbose:
         traceback.print_exception(cls, exc, tb)
-
 sys.excepthook = excepthook
 
 
@@ -258,6 +256,7 @@ class TestResult(unittest.TestResult):
         print(err[1])
         traceback.print_tb(err[2])
 
+
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
@@ -276,6 +275,11 @@ def valgrind(func):
         finally:
             self._valgrind = False
     return wrapper
+
+
+def checks(cls):
+    setattr(cls, "_{}__checks".format(cls.__name__), True)
+    return cls
 
 
 # decorator for checks
@@ -314,7 +318,7 @@ def check(dependency=None):
         return wrapper
     return decorator
 
-class File():
+class File(object):
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
         self.filename = filename
@@ -338,7 +342,7 @@ class InternalError(Exception):
 
 
 # wrapper class for pexpect child
-class Child():
+class Child(object):
     def __init__(self, test, child):
         self.test = test
         self.child = child
