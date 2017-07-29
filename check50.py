@@ -31,6 +31,8 @@ from termcolor import cprint
 
 import config
 
+
+# Exports
 __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
 
 
@@ -43,6 +45,12 @@ def copy(src, dst):
             shutil.copy(src, dst)
         else:
             raise
+
+
+# Internationalization
+gettext.bindtextdomain("messages", os.path.join(sys.path[0], "locale"))
+gettext.textdomain("messages")
+_ = gettext.gettext
 
 
 def main():
@@ -84,7 +92,7 @@ def main():
                 check50 = os.path.realpath(__file__)
                 os.execv(check50, sys.argv + ["--no-update"])
             else:
-                print("Could not update check50.", file=sys.stderr)
+                print(_("Could not update check50."), file=sys.stderr)
 
     if not main.args.local:
         try:
@@ -92,14 +100,14 @@ def main():
             # Submit to check50 repo.
             import submit50
         except ImportError:
-            raise InternalError("submit50 is not installed. Install submit50 and run check50 again.")
+            raise InternalError(_("submit50 is not installed. Install submit50 and run check50 again."))
         else:
             submit50.run.verbose = main.args.verbose
             prompts = {
-                "confirmation": "Are you sure you want to check these files?",
-                "submitting": "Uploading",
-                "files_submit": "Files that will be checked:",
-                "files_no_submit": "Files that won't be checked:",
+                "confirmation": _("Are you sure you want to check these files?"),
+                "submitting": _("Uploading"),
+                "files_submit": _("Files that will be checked:"),
+                "files_no_submit": _("Files that won't be checked:"),
                 "print_success": False
             }
             username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
@@ -121,7 +129,7 @@ def main():
 
             # Print results from payload
             print_results(payload["checks"], main.args.log)
-            print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
+            print(_("Detailed Results:"), "https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
     # copy all files to temporary directory
@@ -145,9 +153,9 @@ def main():
     try:
         checks = importlib.import_module(identifier)
         test_class = next(m[1] for m in inspect.getmembers(checks, inspect.isclass)
-                if m[1].__module__ == identifier)
+                               if m[1].__module__ == identifier)
     except (ImportError, StopIteration):
-        raise InternalError("Invalid identifier.")
+        raise InternalError(_("Invalid identifier."))
 
     # create and run the test suite
     suite = unittest.TestSuite()
@@ -218,7 +226,7 @@ def excepthook(cls, exc, tb):
     if cls is InternalError:
         cprint(exc.msg, "red")
     elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
-        cprint("{} not found".format(exc.filename), "red")
+        cprint(_("File {} not found".format(exc.filename)), "red")
     else:
         cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red")
 
@@ -254,16 +262,16 @@ class TestResult(unittest.TestResult):
             "status": Checks.FAIL,
             "test": test
         })
-        cprint("check50 ran into an error while running checks.", "red")
+        cprint(_("check50 ran into an error while running checks."), "red")
         print(err[1])
         traceback.print_tb(err[2])
 
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
-        raise InternalError("Invalid check in {} on line {} of {}:\n"
+        raise InternalError(_("Invalid check in {} on line {} of {}:\n"
                            "@valgrind must be placed below @check"\
-                            .format(frame.name, frame.lineno, frame.filename))
+                            .format(frame.name, frame.lineno, frame.filename)))
     @wraps(func)
     def wrapper(self):
         if not which("valgrind"):
@@ -347,9 +355,9 @@ class Child():
 
     def stdin(self, line, prompt=True):
         if line == EOF:
-            self.test.log.append("Sending EOF...")
+            self.test.log.append(_("Sending EOF..."))
         else:
-            self.test.log.append("Sending input {}...".format(line))
+            self.test.log.append(_("Sending input {}...".format(line)))
 
         if prompt:
             self.child.expect(".+")
@@ -380,7 +388,7 @@ class Child():
             output = output.replace("\n", "\r\n")
 
 
-        self.test.log.append("Checking for output \"{}\"...".format(str_output))
+        self.test.log.append(_("Checking for output \"{}\"...".format(str_output)))
 
         try:
             expect(output, timeout=timeout)
@@ -390,7 +398,7 @@ class Child():
                 result += self.child.after
             raise Error((result.replace("\r\n", "\n"), str_output))
         except TIMEOUT:
-            raise Error("Check timed out while waiting for {}".format(str_output))
+            raise Error(_("Check timed out while waiting for {}").format(str_output))
 
         # If we expected EOF and we still got output, report an error
         if output == EOF and self.child.before:
@@ -399,7 +407,7 @@ class Child():
         return self
 
     def reject(self):
-        self.test.log.append("Checking that input was rejected...")
+        self.test.log.append(_("Checking that input was rejected..."))
         try:
             self.child.expect(".+")
             self.child.sendline("")
@@ -413,9 +421,9 @@ class Child():
         if code is None:
             return self.exitstatus
 
-        self.test.log.append("Checking that program exited with status {}...".format(code))
+        self.test.log.append(_("Checking that program exited with status {}...".format(code)))
         if self.exitstatus != code:
-            raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
+            raise Error(_("Expected exit code {}, not {}".format(code, self.exitstatus)))
         return self
 
     def wait(self, timeout=2):
@@ -488,9 +496,9 @@ class Checks(unittest.TestCase):
     def exists(self, *filenames):
         """Asserts that filename (or all filenames) exists."""
         for filename in filenames:
-            self.log.append("Checking that {} exists...".format(filename))
+            self.log.append(_("Checking that {} exists...".format(filename)))
             if not os.path.exists(filename):
-                raise Error("File {} not found.".format(filename))
+                raise Error(_("File {} not found.".format(filename))
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
@@ -513,11 +521,11 @@ class Checks(unittest.TestCase):
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
         if self._valgrind:
-            self.log.append("Running valgrind {}...".format(cmd))
+            self.log.append(_("Running valgrind {}...".format(cmd)))
             cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}" \
                         .format(os.path.join(self.dir, self._valgrind_log), cmd)
         else:
-            self.log.append("Running {}...".format(cmd))
+            self.log.append(_("Running {}...").format(cmd))
 
         if env is None:
             env = {}
@@ -559,7 +567,7 @@ class Checks(unittest.TestCase):
         # Load XML file created by valgrind
         xml = ET.ElementTree(file=os.path.join(self.dir, self._valgrind_log))
 
-        self.log.append("Checking for valgrind errors... ")
+        self.log.append(_("Checking for valgrind errors... "))
 
         # Ensure that we don't get duplicate error messages
         reported = set()
@@ -589,8 +597,8 @@ class Checks(unittest.TestCase):
 
         # Only raise exception if we encountered errors
         if reported:
-            raise Error("Valgrind check failed. "
-                        "Rerun with --log for more information.")
+            raise Error(_("Valgrind check failed. "
+                          "Rerun with --log for more information."))
 
 
 class Error(Exception):
@@ -610,7 +618,7 @@ class Error(Exception):
                 s = s[:15] + "..."  # truncate if too long
             return "\"{}\"".format(s)
         if type(rationale) == tuple:
-            rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
+            rationale = _("Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0])))
         self.rationale = rationale
         self.helpers = helpers
         self.result = result
