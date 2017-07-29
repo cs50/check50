@@ -534,7 +534,7 @@ class Checks(unittest.TestCase):
         self.children.append(Child(self, child))
         return self.children[-1]
 
-    def include(self, *paths):
+    def add(self, *paths):
         """Copies a file to the temporary directory."""
         cwd = os.getcwd()
         try:

@@ -40,7 +40,7 @@ class Recover(Checks):
     @check("compiles")
     def first_image(self):
         """recovers 000.jpg correctly"""
-        self.include("card.raw")
+        self.add("card.raw")
         self.spawn("./recover").exit(0)
         if self.hash("000.jpg") != self.hashes[0]:
             raise Error("recovered image does not match")
@@ -48,7 +48,7 @@ class Recover(Checks):
     @check("compiles")
     def middle_images(self):
         """recovers middle images correctly"""
-        self.include("card.raw")
+        self.add("card.raw")
         self.spawn("./recover").exit(0)
 
         for i, hash in enumerate(self.hashes[1:-1], 1):
@@ -58,7 +58,7 @@ class Recover(Checks):
     @check("compiles")
     def last_image(self):
         """recovers 015.jpg correctly"""
-        self.include("card.raw")
+        self.add("card.raw")
         self.spawn("./recover").exit(0)
         if self.hash("015.jpg") != self.hashes[15]:
             raise Error("recovered image does not match")

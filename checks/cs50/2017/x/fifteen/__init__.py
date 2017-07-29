@@ -17,7 +17,7 @@ class Fifteen(Checks):
 
         cflags = "-std=c99 -Wall -Werror -Wno-deprecated-declarations"
         # Replace student's draw with our own
-        self.include("simple_draw.c")
+        self.add("simple_draw.c")
         self.spawn("clang -S {} fifteen.c -o fifteen.S".format(cflags)).exit(0)
         self.replace_fn("draw", "simple_draw", "fifteen.S")
         self.spawn("clang {} -o fifteen simple_draw.c fifteen.S -lcs50".format(cflags)).exit(0)

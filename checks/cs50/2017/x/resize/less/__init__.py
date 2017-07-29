@@ -26,7 +26,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_by_1(self):
         """doesn't resize 1x1-pixel BMP when n is 1"""
-        self.include("1.bmp")
+        self.add("1.bmp")
         self.spawn("./resize 1 1.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["1.bmp"]:
             raise Error("resized image does not match expected image")
@@ -34,7 +34,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_by_2(self):
         """resizes 1x1-pixel BMP to 2x2 correctly when n is 2"""
-        self.include("1.bmp")
+        self.add("1.bmp")
         self.spawn("./resize 2 1.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["2.bmp"]:
             raise Error("resized image does not match expected image")
@@ -42,7 +42,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_by_3(self):
         """resizes 1x1-pixel BMP to 3x3 correctly when n is 3"""
-        self.include("1.bmp")
+        self.add("1.bmp")
         self.spawn("./resize 3 1.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["3.bmp"]:
             raise Error("resized image does not match expected image")
@@ -50,7 +50,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_by_4(self):
         """resizes 1x1-pixel BMP to 4x4 correctly when n is 4"""
-        self.include("1.bmp")
+        self.add("1.bmp")
         self.spawn("./resize 4 1.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["4.bmp"]:
             raise Error("resized image does not match expected image")
@@ -58,7 +58,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_by_5(self):
         """resizes 1x1-pixel BMP to 5x5 correctly when n is 5"""
-        self.include("1.bmp")
+        self.add("1.bmp")
         self.spawn("./resize 5 1.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["5.bmp"]:
             raise Error("resized image does not match expected image")
@@ -66,7 +66,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_2_to_4(self):
         """resizes 2x2-pixel BMP to 4x4 correctly when n is 2"""
-        self.include("2.bmp")
+        self.add("2.bmp")
         self.spawn("./resize 2 2.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["4.bmp"]:
             raise Error("resized image does not match expected image")
@@ -74,7 +74,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_3_to_6(self):
         """resizes 3x3-pixel BMP to 6x6 correctly when n is 2"""
-        self.include("3.bmp")
+        self.add("3.bmp")
         self.spawn("./resize 2 3.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["6.bmp"]:
             raise Error("resized image does not match expected image")
@@ -82,7 +82,7 @@ class ResizeLess(Checks):
     @check("compiles")
     def scale_2_to_6(self):
         """resizes 2x2-pixel BMP to 6x6 correctly when n is 3"""
-        self.include("2.bmp")
+        self.add("2.bmp")
         self.spawn("./resize 3 2.bmp outfile.bmp").exit(0)
         if self.hash("outfile.bmp") != self.hashes["6.bmp"]:
             raise Error("resized image does not match expected image")

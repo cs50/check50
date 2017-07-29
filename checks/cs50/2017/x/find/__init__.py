@@ -12,8 +12,8 @@ class Find(Checks):
     @check("exists")
     def compiles(self):
         """helpers.c compiles."""
-        self.include("helpers.h")
-        self.include("find.c")
+        self.add("helpers.h")
+        self.add("find.c")
         self.spawn("clang -ggdb3 -O0 -std=c99 -Wall -o find find.c helpers.c -lcs50 -lm").exit(0)
 
     @check("compiles")
