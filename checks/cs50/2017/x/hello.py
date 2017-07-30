@@ -15,11 +15,6 @@ class Hello(Checks):
     @check("compiles")
     def prints_hello(self):
         """prints "Hello, world!\\n" """
-        self.spawn("./hello").stdout("Hello, world!\n").exit(0)
-
-    @check("compiles")
-    def prints_hello_2(self):
-        """prints "Hello, world!\\n" """
         expected = "Hello, world!\n"
         actual = self.spawn("./hello").stdout()
         if expected != actual:
