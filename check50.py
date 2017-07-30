@@ -5,13 +5,15 @@ from __future__ import print_function
 import argparse
 import errno
 import hashlib
-import importlib
+import imp
 import inspect
 import json
 import os
 import pexpect
+import pip
 import requests
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -43,11 +45,13 @@ def main():
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument("--full", action="store_true")
     parser.add_argument("-l", "--local", action="store_true")
+    parser.add_argument("--directory", action="store_const", const="directory", default="~/.local/share/check50")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--no-upgrade", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
 
     main.args = parser.parse_args()
+    main.args.directory = os.path.expanduser(main.args.directory)
     identifier = main.args.identifier[0]
     files = main.args.files
 
@@ -92,27 +96,13 @@ def main():
     for filename in files:
         copy(filename, src_dir)
 
-    # prepend cs50/ directory by default
-    if identifier.split("/")[0].isdigit():
-        identifier = os.path.join("cs50", identifier)
-
-    # get checks directory
-    config.check_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "checks", identifier)
-
-    # import the checks and identify check class
-    identifier = "checks.{}".format(identifier.replace("/", "."))
-    try:
-        checks = importlib.import_module(identifier)
-        test_class, = (cls for _, cls in inspect.getmembers(checks, inspect.isclass)
-                           if hasattr(cls, "_Checks__sentinel")
-                               and cls.__module__.startswith(identifier))
-    except (ImportError, ValueError):
-        raise InternalError("Invalid identifier.")
+    checks = get_checks(identifier)
+    config.check_dir = os.path.dirname(inspect.getfile(checks))
 
     # create and run the test suite
     suite = unittest.TestSuite()
     for case in config.test_cases:
-        suite.addTest(test_class(case))
+        suite.addTest(checks(case))
     result = TestResult()
     suite.run(result)
     cleanup()
@@ -189,10 +179,65 @@ def excepthook(cls, exc, tb):
     else:
         cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
-    if main.args.verbose:
+    try:
+        if main.args.verbose:
+            traceback.print_exception(cls, exc, tb)
+    except AttributeError:
         traceback.print_exception(cls, exc, tb)
+
+
 sys.excepthook = excepthook
 
+
+def get_checks(identifier):
+    try:
+        slug, repo = identifier.split("@")
+    except ValueError:
+        slug, repo = identifier, "cs50/checks"
+
+    org, repo = repo.split("/")
+
+    path = os.path.join(main.args.directory, org, repo)
+
+    if os.path.exists(path):
+        command = ["git", "-C", path, "pull", "origin", "master"]
+
+    else:
+        command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), path]
+
+    # Can't use subprocess.DEVNULL because it requires python 3.3
+    stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
+
+    try:
+        subprocess.check_call(command, stdout=stdout, stderr=stderr)
+    except subprocess.CalledProcessError:
+        raise InternalError("Failed to clone checks")
+
+    package = os.path.join(path, slug.replace("/", os.sep), "check50")
+    for dir in [path, package]:
+        requirements = os.path.join(dir, "requirements.txt")
+        if os.path.exists(requirements):
+            args = ["install", "-r", requirements]
+            # If we are not in a virtualenv, we need --user
+            if not hasattr(sys, "real_prefix"):
+                args.append("--user")
+            try:
+                code = pip.main(args)
+            except SystemExit as e:
+                code = e.code
+
+            if code:
+                raise InternalError("Installation of check dependencies failed")
+
+    try:
+        module = imp.load_source(slug, os.path.join(package, "__init__.py"))
+        checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
+                           if hasattr(cls, "_Checks__sentinel")
+                               and cls.__module__.startswith(slug))
+    except (ImportError, ValueError):
+        raise InternalError("Invalid identifier")
+
+    return checks
 
 class TestResult(unittest.TestResult):
     results = []
@@ -220,8 +265,8 @@ class TestResult(unittest.TestResult):
             "status": Checks.FAIL,
             "test": test
         })
-        cprint("check50 ran into an error while running checks.", "red")
-        print(err[1])
+        cprint("check50 ran into an error while running checks.", "red", file=sys.stderr)
+        print(err[1], file=sys.stderr)
         traceback.print_tb(err[2])
 
 
