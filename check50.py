@@ -85,14 +85,7 @@ def main():
             raise InternalError("submit50 is not installed. Install submit50 and run check50 again.")
         else:
             submit50.run.verbose = main.args.verbose
-            prompts = {
-                "confirmation": "Are you sure you want to check these files?",
-                "submitting": "Uploading",
-                "files_submit": "Files that will be checked:",
-                "files_no_submit": "Files that won't be checked:",
-                "print_success": False
-            }
-            username, commit_hash = submit50.submit("check50", identifier, prompts=prompts)
+            username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
             print("Running checks...", end="")
