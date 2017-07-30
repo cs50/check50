@@ -231,6 +231,10 @@ def import_checks(identifier):
             # If we are not in a virtualenv, we need --user
             if not hasattr(sys, "real_prefix"):
                 args.append("--user")
+
+            if not main.args.verbose:
+                args += ["--quiet"] * 3
+
             try:
                 code = pip.main(args)
             except SystemExit as e:
