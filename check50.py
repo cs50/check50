@@ -189,7 +189,15 @@ def excepthook(cls, exc, tb):
 sys.excepthook = excepthook
 
 
-def get_checks(identifier):
+def import_checks(identifier):
+    """
+    Given an identifier of the form path/to/check@org/repo, clone
+    the checks from github.com/org/repo (defaulting to cs50/checks
+    if there is no @) into main.args.directory. Then extract child
+    of Check class from path/to/check/check50/__init__.py and return it
+
+    Throws ImportError on error
+    """
     try:
         slug, repo = identifier.split("@")
     except ValueError:
@@ -208,11 +216,13 @@ def get_checks(identifier):
     # Can't use subprocess.DEVNULL because it requires python 3.3
     stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
 
+    # Update checks via git
     try:
         subprocess.check_call(command, stdout=stdout, stderr=stderr)
     except subprocess.CalledProcessError:
         raise InternalError("Failed to clone checks")
 
+    # Install any dependencies from requirements.txt either in the root of the repository or in the check50 directory of the specific check
     package = os.path.join(path, slug.replace("/", os.sep), "check50")
     for dir in [path, package]:
         requirements = os.path.join(dir, "requirements.txt")
@@ -230,10 +240,12 @@ def get_checks(identifier):
                 raise InternalError("Installation of check dependencies failed")
 
     try:
+        # Import module from file path directly
         module = imp.load_source(slug, os.path.join(package, "__init__.py"))
+        # Ensure that there is exactly one class decending from Checks defined in this package
         checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
-                           if hasattr(cls, "_Checks__sentinel")
-                               and cls.__module__.startswith(slug))
+                       if hasattr(cls, "_Checks__sentinel")
+                           and cls.__module__.startswith(slug))
     except (ImportError, ValueError):
         raise InternalError("Invalid identifier")
 
