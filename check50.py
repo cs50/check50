@@ -600,7 +600,7 @@ def copy(src, dst):
     """Copy src to dst, copying recursively if src is a directory"""
     try:
         shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
-    except IOError as e:
+    except (OSError, IOError) as e:
         if e.errno == errno.ENOTDIR:
             shutil.copy(src, dst)
         else:
