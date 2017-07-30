@@ -3,7 +3,6 @@ import re
 from check50 import *
 
 
-@checks
 class Greedy(Checks):
 
     @check()

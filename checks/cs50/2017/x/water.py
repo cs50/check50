@@ -1,7 +1,6 @@
 from check50 import *
 
 
-@checks
 class Water(Checks):
 
     @check()

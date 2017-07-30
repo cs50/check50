@@ -1,7 +1,6 @@
 from check50 import *
 
 
-@checks
 class Recover(Checks):
     hashes = [
         "c3ceda9dde5cf2212e96d6f61e2e849ac60e2c3cbdf0184f6e0c3b6ea5e69d31"

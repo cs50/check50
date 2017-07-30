@@ -1,6 +1,6 @@
 from check50 import *
 
-@checks
+
 class Credit(Checks):
 
     @check()

@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import abc
 import argparse
 import errno
 import hashlib
@@ -31,7 +32,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "checks", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
+__all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
 
 
 def main():
@@ -134,8 +135,8 @@ def main():
     try:
         checks = importlib.import_module(identifier)
         test_class, = (cls for _, cls in inspect.getmembers(checks, inspect.isclass)
-                           if hasattr(cls, "_{}__checks".format(cls.__name__))
-                              and cls.__module__.startswith(identifier))
+                           if hasattr(cls, "_Checks__sentinel")
+                               and cls.__module__.startswith(identifier))
     except (ImportError, ValueError):
         raise InternalError("Invalid identifier.")
 
@@ -273,11 +274,6 @@ def valgrind(func):
         finally:
             self._valgrind = False
     return wrapper
-
-
-def checks(cls):
-    setattr(cls, "_{}__checks".format(cls.__name__), True)
-    return cls
 
 
 # decorator for checks
@@ -456,6 +452,9 @@ class Checks(unittest.TestCase):
 
     _valgrind_log = "valgrind.xml"
     _valgrind = False
+
+    # Here so we can properly check subclasses even when child is imported from another module
+    __sentinel = None
 
     def tearDown(self):
         while self.children:

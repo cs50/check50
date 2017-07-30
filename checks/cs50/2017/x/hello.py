@@ -1,6 +1,5 @@
 from check50 import *
 
-@checks
 class Hello(Checks):
 
     @check()
