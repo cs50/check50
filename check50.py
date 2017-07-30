@@ -11,7 +11,6 @@ import json
 import os
 import pexpect
 import requests
-import shlex
 import shutil
 import sys
 import tempfile
@@ -24,6 +23,11 @@ from backports.shutil_which import which
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
 from termcolor import cprint
+
+try:
+    from shlex import quote
+except ImportError:
+    from pipes import quote
 
 import config
 
@@ -439,7 +443,7 @@ class Checks(unittest.TestCase):
             f1 = f1.filename
         if type(f2) == File:
             f2 = f2.filename
-        return bool(self.spawn("diff {} {}".format(shlex.quote(f1), shlex.quote(f2)))
+        return bool(self.spawn("diff {} {}".format(quote(f1), quote(f2)))
                         .wait()
                         .exitstatus)
 
@@ -483,7 +487,7 @@ class Checks(unittest.TestCase):
 
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
-        cmd = "bash -c {}".format(shlex.quote(cmd))
+        cmd = "bash -c {}".format(quote(cmd))
         if sys.version_info < (3, 0):
             child = pexpect.spawn(cmd, echo=False, env=env)
         else:
