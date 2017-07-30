@@ -22,8 +22,8 @@ class Hello(Checks):
         """prints "Hello, world!\\n" """
         expected = "Hello, world!\n"
         actual = self.spawn("./hello").stdout()
-        if out != desired:
+        if expected != actual:
             err = Error(Mismatch(expected, actual))
-            if out == "Hello, world!":
+            if actual == "Hello, world!":
                 err.helpers = "Did you forget a newline (\"\\n\") at the end of your printf string?"
             raise err
