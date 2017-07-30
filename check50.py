@@ -24,10 +24,8 @@ import unittest
 import xml.etree.cElementTree as ET
 
 from backports.shutil_which import which
-from distutils.version import StrictVersion
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
-from pkg_resources import DistributionNotFound, get_distribution, parse_version
 from termcolor import cprint
 
 import config
@@ -52,29 +50,6 @@ def main():
     identifier = main.args.identifier[0]
     files = main.args.files
 
-    # check if installed as package
-    try:
-        distribution = get_distribution("check50")
-    except DistributionNotFound:
-        distribution = None
-
-    # check for newer version on PyPi
-    if distribution:
-        res = requests.get("https://pypi.python.org/pypi/check50/json")
-        pypi = res.json() if res.status_code == 200 else None
-        version = StrictVersion(distribution.version)
-        if pypi and not main.args.no_upgrade and StrictVersion(pypi["info"]["version"]) > version:
-
-            # updade check50
-            pip = "pip3" if sys.version_info >= (3, 0) else "pip"
-            status = subprocess.call([pip, "install", "--upgrade", "check50"])
-
-            # if update succeeded, re-run check50
-            if status == 0:
-                check50 = os.path.realpath(__file__)
-                os.execv(check50, sys.argv + ["--no-update"])
-            else:
-                print("Could not update check50.", file=sys.stderr)
 
     if not main.args.local:
         try:
