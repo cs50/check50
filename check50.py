@@ -96,7 +96,7 @@ def main():
     for filename in files:
         copy(filename, src_dir)
 
-    checks = get_checks(identifier)
+    checks = import_checks(identifier)
     config.check_dir = os.path.dirname(inspect.getfile(checks))
 
     # create and run the test suite
