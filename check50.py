@@ -84,7 +84,7 @@ def main():
     src_dir = os.path.join(config.tempdir, "_")
     os.mkdir(src_dir)
     if len(files) == 0:
-        files = os.listdir()
+        files = os.listdir(".")
     for filename in files:
         copy(filename, src_dir)
 
