@@ -250,10 +250,15 @@ def import_checks(identifier):
         checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
                        if hasattr(cls, "_Checks__sentinel")
                            and cls.__module__.startswith(slug))
-    except (ImportError, ValueError):
-        raise InternalError("Invalid identifier")
+    except (OSError, IOError) as e:
+        if e.errno != errno.ENOENT:
+            raise
+    except ValueError:
+        pass
+    else:
+        return checks
 
-    return checks
+    raise InternalError("Invalid identifier")
 
 class TestResult(unittest.TestResult):
     results = []
