@@ -7,11 +7,11 @@ class Scratch(Checks):
     @check()
     def valid(self):
         """project exists and is valid Scratch program"""
-        self.exists("project.sb2")
+        self.require("project.sb2")
 
         # Ensure that unzipped .sb2 file contains .json file
         self.spawn("unzip project.sb2").exit()
-        self.exists("project.json")
+        self.require("project.json")
 
     @check("valid")
     def two_sprites(self):

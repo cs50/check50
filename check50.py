@@ -223,6 +223,7 @@ class TestResult(unittest.TestResult):
         cprint("check50 ran into an error while running checks.", "red")
         print(err[1])
         traceback.print_tb(err[2])
+        sys.exit(1)
 
 
 def valgrind(func):
