@@ -183,11 +183,11 @@ def cleanup():
 def excepthook(cls, exc, tb):
     cleanup()
     if cls is InternalError:
-        cprint(exc.msg, "red")
+        cprint(exc.msg, "red", file=sys.stderr)
     elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
-        cprint("{} not found".format(exc.filename), "red")
+        cprint("{} not found".format(exc.filename), "red", file=sys.stderr)
     else:
-        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red")
+        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
     if main.args.verbose:
         traceback.print_exception(cls, exc, tb)
