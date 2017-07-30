@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import abc
 import argparse
 import errno
 import hashlib
@@ -11,11 +10,9 @@ import inspect
 import json
 import os
 import pexpect
-import re
 import requests
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
