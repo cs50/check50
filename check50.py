@@ -314,7 +314,10 @@ class Child(object):
             self.test.log.append("Sending input {}...".format(line))
 
         if prompt:
-            self.child.expect(".+", timeout=timeout)
+            try:
+                self.child.expect(".+", timeout=timeout)
+            except TIMEOUT:
+                raise Error("Expected prompt for input, found none.")
 
         if line == EOF:
             self.child.sendeof()
@@ -367,6 +370,8 @@ class Child(object):
             self.child.sendline("")
         except OSError:
             self.test.fail()
+        except TIMEOUT:
+            raise Error("Check timed out while waiting for rejection of input.")
         return self
 
     def exit(self, code=None, timeout=3):
