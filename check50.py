@@ -31,18 +31,7 @@ from termcolor import cprint
 
 import config
 
-__all__ = ["check", "checks", "Checks", "Child", "EOF", "Error", "File", "valgrind"]
-
-
-def copy(src, dst):
-    """Copy src to dst regardless, copying recursively if src is a directory"""
-    try:
-        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
-    except IOError as e:
-        if e.errno == errno.ENOTDIR:
-            shutil.copy(src, dst)
-        else:
-            raise
+__all__ = ["check", "checks", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
 
 
 def main():
@@ -194,14 +183,24 @@ def print_results(results, log=False):
 def print_json(results):
     output = []
     for result in results:
-        output.append({
+        obj = {
             "name": result["test"]._testMethodName,
             "status": result["status"],
-            "rationale": result["rationale"],
             "description": result["description"],
             "helpers": result["helpers"],
-            "log": result["test"].log
-        })
+            "log": result["test"].log,
+            "rationale": str(result["rationale"])
+        }
+
+        try:
+            obj["mismatch"] = {
+                "expected": result["rationale"].expected,
+                "actual": result["rationale"].actual
+            }
+        except AttributeError:
+            pass
+
+        output.append(obj)
     print(json.dumps(output))
 
 
@@ -334,11 +333,6 @@ class File(object):
             return open(file, mode, newline="\n")
 
 
-class InternalError(Exception):
-    """Error during execution of check50."""
-    def __init__(self, msg):
-        self.msg = msg
-
 
 # wrapper class for pexpect child
 class Child(object):
@@ -391,13 +385,13 @@ class Child(object):
             result = self.child.before + self.child.buffer
             if self.child.after != EOF:
                 result += self.child.after
-            raise Error((result.replace("\r\n", "\n"), str_output))
+            raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
             raise Error("Check timed out while waiting for {}".format(str_output))
 
         # If we expected EOF and we still got output, report an error
         if output == EOF and self.child.before:
-            raise Error((self.child.before.replace("\r\n", "\n"), EOF))
+            raise Error(Mismatch(EOF, self.child.before.replace("\r\n", "\n")))
 
         return self
 
@@ -593,27 +587,61 @@ class Checks(unittest.TestCase):
                         "Rerun with --log for more information.")
 
 
+class Mismatch(object):
+    """Class which represents that expected output did not match actual output."""
+    def __init__(self, expected, actual):
+        self.expected = expected
+        self.actual = actual
+
+    def __str__(self):
+        return "Expected {}, not {}.".format(self.raw(self.expected),
+                                             self.raw(self.actual))
+
+    def __repr__(self):
+        return "Mismatch(expected={}, actual={})".format(repr(expected), repr(actual))
+
+    @staticmethod
+    def raw(s):
+        """Get raw representation of s, truncating if too long"""
+
+        if type(s) == list:
+            s = "\n".join(s)
+
+        if s == EOF:
+            return "EOF"
+
+        s = repr(s)  # get raw representation of string
+        s = s[1:-1]  # strip away quotation marks
+        if len(s) > 15:
+            s = s[:15] + "..."  # truncate if too long
+        return "\"{}\"".format(s)
+
+
+
 class Error(Exception):
     """Class to wrap errors in students' checks."""
     def __init__(self, rationale=None, helpers=None, result=Checks.FAIL):
-        def raw(s):
-
-            if type(s) == list:
-                s = "\n".join(s)
-
-            if s == EOF:
-                return "EOF"
-
-            s = repr(s)  # get raw representation of string
-            s = s[1:-1]  # strip away quotation marks
-            if len(s) > 15:
-                s = s[:15] + "..."  # truncate if too long
-            return "\"{}\"".format(s)
-        if type(rationale) == tuple:
-            rationale = "Expected {}, not {}.".format(raw(rationale[1]), raw(rationale[0]))
         self.rationale = rationale
         self.helpers = helpers
         self.result = result
+
+
+class InternalError(Exception):
+    """Error during execution of check50."""
+    def __init__(self, msg):
+        self.msg = msg
+
+
+def copy(src, dst):
+    """Copy src to dst, copying recursively if src is a directory"""
+    try:
+        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
+    except IOError as e:
+        if e.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else:
+            raise
+
 
 if __name__ == "__main__":
     main()

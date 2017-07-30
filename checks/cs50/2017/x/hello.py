@@ -21,10 +21,10 @@ class Hello(Checks):
     @check("compiles")
     def prints_hello_2(self):
         """prints "Hello, world!\\n" """
-        out = self.spawn("./hello").stdout()
-        desired = "Hello, world!\n"
+        expected = "Hello, world!\n"
+        actual = self.spawn("./hello").stdout()
         if out != desired:
+            err = Error(Mismatch(expected, actual))
             if out == "Hello, world!":
-                raise Error((out, desired), "Did you forget a newline (\"\\n\") at the end of your printf string?")
-            else:
-                raise Error((out, desired))
+                err.helpers = "Did you forget a newline (\"\\n\") at the end of your printf string?"
+            raise err
