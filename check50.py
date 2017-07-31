@@ -68,7 +68,7 @@ def main():
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
-            print("Running checks...", end="")
+            print("\nRunning checks...", end="")
             sys.stdout.flush()
             while True:
                 res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
