@@ -88,7 +88,17 @@ def main():
             # Wait until payload comes back with check data.
             print("Running checks...", end="")
             sys.stdout.flush()
+            pings = 0
             while True:
+
+                # Terminate if no response.
+                if pings > 45:
+                    cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
+                    cprint("more info at: https://cs50.me/check50/results/{}/{}".format(username, commit_hash), "red", file=sys.stderr)
+                    sys.exit(1)
+                pings += 1
+                
+                # Query for check results.
                 res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
                 if res.status_code != 200:
                     continue
@@ -100,7 +110,7 @@ def main():
                 time.sleep(2)
             print()
 
-            # Print results from payload
+            # Print results from payload.
             print_results(payload["checks"], config.args.log)
             print("detailed results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
