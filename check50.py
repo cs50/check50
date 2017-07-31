@@ -55,7 +55,7 @@ def main():
     parser.add_argument("--checkdir",
                         action="store",
                         nargs="?",
-                        const="~/.local/share/check50",
+                        default="~/.local/share/check50",
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
     parser.add_argument("--log",
