@@ -54,7 +54,7 @@ def main():
                         help="run checks completely offline (implies --local)")
     parser.add_argument("--checkdir",
                         action="store",
-                        nargs="?",
+                        nargs=1,
                         default="~/.local/share/check50",
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
