@@ -39,7 +39,7 @@ __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valg
 
 def main():
 
-    # parse command line arguments
+    # Parse command line arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
@@ -72,7 +72,6 @@ def main():
 
     if config.args.offline:
         config.args.local = True
-
 
     if not config.args.local:
         try:
@@ -115,7 +114,7 @@ def main():
             print("See https://cs50.me/checks/{} for more detail.".format(commit_hash))
             sys.exit(0)
 
-    # copy all files to temporary directory
+    # Copy all files to temporary directory.
     config.tempdir = tempfile.mkdtemp()
     src_dir = os.path.join(config.tempdir, "_")
     os.mkdir(src_dir)
@@ -126,7 +125,7 @@ def main():
 
     checks = import_checks(identifier)
 
-    # create and run the test suite
+    # Create and run the test suite.
     suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(checks(case))
@@ -134,10 +133,10 @@ def main():
     suite.run(result)
     cleanup()
 
-    # Get list of results from TestResult class
+    # Get list of results from TestResult class.
     results = result.results
 
-    # print the results
+    # Print the results.
     if config.args.debug:
         print_json(results)
     else:
@@ -175,7 +174,7 @@ def copy(src, dst):
 def excepthook(cls, exc, tb):
     cleanup()
 
-    # Class is a BaseException, better just quit
+    # Class is a BaseException, better just quit.
     if not issubclass(cls, Exception):
         print()
         return
@@ -265,17 +264,17 @@ def import_checks(identifier):
         else:
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
-        # Can't use subprocess.DEVNULL because it requires python 3.3
+        # Can't use subprocess.DEVNULL because it requires python 3.3.
         stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
 
-        # Update checks via git
+        # Update checks via git.
         try:
             subprocess.check_call(command, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
 
 
-    # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check
+    # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check.
     for dir in [checks_root, os.path.dirname(config.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
@@ -296,9 +295,9 @@ def import_checks(identifier):
                 raise InternalError("failed to install dependencies in ({})".format(requirements[len(config.args.checkdir)+1:]))
 
     try:
-        # Import module from file path directly
+        # Import module from file path directly.
         module = imp.load_source(slug, os.path.join(config.check_dir, "__init__.py"))
-        # Ensure that there is exactly one class decending from Checks defined in this package
+        # Ensure that there is exactly one class decending from Checks defined in this package.
         checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
                        if hasattr(cls, "_Checks__sentinel")
                            and cls.__module__.startswith(slug))
@@ -356,7 +355,7 @@ def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
         raise InternalError("invalid check in {} on line {} of {}:\n"
-                            "@valgrind must be placed below @check"\
+                            "@valgrind must be placed below @check"
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
     def wrapper(self):
@@ -372,7 +371,7 @@ def valgrind(func):
     return wrapper
 
 
-# decorator for checks
+# Decorator for checks
 def check(dependency=None):
     def decorator(func):
 
@@ -381,19 +380,19 @@ def check(dependency=None):
         @wraps(func)
         def wrapper(self):
 
-            # check if dependency failed
+            # Check if dependency failed.
             if dependency and config.test_results.get(dependency) != Checks.PASS:
                 self.result = config.test_results[func.__name__] = Checks.SKIP
                 self.rationale = "can't check until a frown turns upside down"
                 return
 
-            # move files into this check's directory
+            # Move files into this check's directory.
             self.dir = dst_dir = os.path.join(config.tempdir, self._testMethodName)
             src_dir = os.path.join(config.tempdir, dependency or "_")
             shutil.copytree(src_dir, dst_dir)
 
             os.chdir(self.dir)
-            # run the test, catch failures
+            # Run the test, catch failures.
             try:
                 func(self)
             except Error as e:
@@ -426,7 +425,7 @@ class File(object):
             return open(file, mode, newline="\n")
 
 
-# wrapper class for pexpect child
+# Wrapper class for pexpect child
 class Child(object):
     def __init__(self, test, child):
         self.test = test
@@ -456,7 +455,7 @@ class Child(object):
         if output is None:
             return self.wait(timeout).output
 
-        # Files should be interpreted literally, anything else shouldn't be
+        # Files should be interpreted literally, anything else shouldn't be.
         try:
             output = output.read()
         except AttributeError:
@@ -484,7 +483,7 @@ class Child(object):
         except TIMEOUT:
             raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
 
-        # If we expected EOF and we still got output, report an error
+        # If we expected EOF and we still got output, report an error.
         if output == EOF and self.child.before:
             raise Error(Mismatch(EOF, self.child.before.replace("\r\n", "\n")))
 
@@ -528,7 +527,7 @@ class Child(object):
         else:
             raise Error("timed out while waiting for program to exit")
 
-        # Read any remaining data in pipe
+        # Read any remaining data in pipe.
         while True:
             try:
                 bytes = self.child.read_nonblocking(size=1024, timeout=0)
@@ -554,7 +553,7 @@ class Checks(unittest.TestCase):
     _valgrind_log = "valgrind.xml"
     _valgrind = False
 
-    # Here so we can properly check subclasses even when child is imported from another module
+    # Here so we can properly check subclasses even when child is imported from another module.
     __sentinel = None
 
     def tearDown(self):
@@ -652,7 +651,7 @@ class Checks(unittest.TestCase):
 
         self.log.append("checking for valgrind errors... ")
 
-        # Ensure that we don't get duplicate error messages
+        # Ensure that we don't get duplicate error messages.
         reported = set()
         for error in xml.iterfind("error"):
             # Type of error valgrind encountered
@@ -664,7 +663,7 @@ class Checks(unittest.TestCase):
             # Error message that we will report
             msg = ["\t", what]
 
-            # Find first stack frame within student's code
+            # Find first stack frame within student's code.
             for frame in error.iterfind("stack/frame"):
                 obj = frame.find("obj")
                 if obj is not None and os.path.dirname(obj.text) == self.dir:
@@ -678,7 +677,7 @@ class Checks(unittest.TestCase):
                 self.log.append(msg)
                 reported.add(msg)
 
-        # Only raise exception if we encountered errors
+        # Only raise exception if we encountered errors.
         if reported:
             raise Error("valgrind tests failed; rerun with --log for more information.")
 
