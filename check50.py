@@ -631,9 +631,9 @@ class Checks(unittest.TestCase):
             f.write("\n")
             f.write(code.read())
 
-    def replace_fn(self, old_fn, new_fn, file):
-        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, file))
-        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, file))
+    def replace_fn(self, old_fn, new_fn, filename):
+        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, filename))
+        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, filename))
 
     def _check_valgrind(self):
         """Log and report any errors encountered by valgrind"""
