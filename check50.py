@@ -53,9 +53,9 @@ def main():
                         action="store_true",
                         help="run checks completely offline (implies --local)")
     parser.add_argument("--checkdir",
-                        action="store_const",
-                        const="checkdir",
-                        default="~/.local/share/check50",
+                        action="store",
+                        nargs="?",
+                        const="~/.local/share/check50",
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
     parser.add_argument("--log",
@@ -97,7 +97,7 @@ def main():
                     cprint("more info at: https://cs50.me/check50/results/{}/{}".format(username, commit_hash), "red", file=sys.stderr)
                     sys.exit(1)
                 pings += 1
-                
+
                 # Query for check results.
                 res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
                 if res.status_code != 200:
