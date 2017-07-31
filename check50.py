@@ -220,7 +220,7 @@ def print_json(results):
             "description": result["description"],
             "helpers": result["helpers"],
             "log": result["test"].log,
-            "rationale": str(result["rationale"])
+            "rationale": str(result["rationale"]) if result["rationale"] else None
         }
 
         try:
