@@ -42,18 +42,35 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("identifier", nargs=1)
     parser.add_argument("files", nargs="*")
-    parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("--full", action="store_true")
-    parser.add_argument("-l", "--local", action="store_true")
-    parser.add_argument("--directory", action="store_const", const="directory", default="~/.local/share/check50")
-    parser.add_argument("--log", action="store_true")
-    parser.add_argument("--no-upgrade", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-d", "--debug",
+                        action="store_true",
+                        help="display machine-readable output")
+    parser.add_argument("-l", "--local",
+                        action="store_true",
+                        help="run checks locally instead of uploading to cs50")
+    parser.add_argument("--offline",
+                        action="store_true",
+                        help="run checks completely offline (implies --local)")
+    parser.add_argument("--checkdir",
+                        action="store_const",
+                        const="checkdir",
+                        default="~/.local/share/check50",
+                        help="specify directory containing the checks "
+                             "(~/.local/share/check50 by default)")
+    parser.add_argument("--log",
+                        action="store_true",
+                        help="display more detailed information about check results")
+    parser.add_argument("-v", "--verbose",
+                        action="store_true",
+                        help="display the full tracebacks of any errors")
 
     main.args = parser.parse_args()
-    main.args.directory = os.path.expanduser(main.args.directory)
+    main.args.checkdir = os.path.expanduser(main.args.checkdir)
     identifier = main.args.identifier[0]
     files = main.args.files
+
+    if main.args.offline:
+        main.args.local = True
 
 
     if not main.args.local:
@@ -111,13 +128,7 @@ def main():
     results = result.results
 
     # print the results
-    if main.args.full:  # both JSON and results
-        sentinel = "\x1c" * 10
-        print(sentinel)
-        print_json(results)
-        print(sentinel)
-        print_results(results, log=main.args.log)
-    elif main.args.debug:
+    if main.args.debug:
         print_json(results)
     else:
         print_results(results, log=main.args.log)
@@ -199,7 +210,7 @@ def import_checks(identifier):
     """
     Given an identifier of the form path/to/check@org/repo, clone
     the checks from github.com/org/repo (defaulting to cs50/checks
-    if there is no @) into main.args.directory. Then extract child
+    if there is no @) into main.args.checkdir. Then extract child
     of Check class from path/to/check/check50/__init__.py and return it
 
     Throws ImportError on error
@@ -215,22 +226,23 @@ def import_checks(identifier):
         raise InternalError("expected repository to be of the form username/repository, but got \"{}\"".format(repo))
 
 
-    path = os.path.join(main.args.directory, org, repo)
+    path = os.path.join(main.args.checkdir, org, repo)
 
-    if os.path.exists(path):
-        command = ["git", "-C", path, "pull", "origin", "master"]
+    if not main.args.offline:
+        if os.path.exists(path):
+            command = ["git", "-C", path, "pull", "origin", "master"]
 
-    else:
-        command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), path]
+        else:
+            command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), path]
 
-    # Can't use subprocess.DEVNULL because it requires python 3.3
-    stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
+        # Can't use subprocess.DEVNULL because it requires python 3.3
+        stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
 
-    # Update checks via git
-    try:
-        subprocess.check_call(command, stdout=stdout, stderr=stderr)
-    except subprocess.CalledProcessError:
-        raise InternalError("failed to clone checks")
+        # Update checks via git
+        try:
+            subprocess.check_call(command, stdout=stdout, stderr=stderr)
+        except subprocess.CalledProcessError:
+            raise InternalError("failed to clone checks")
 
     # Install any dependencies from requirements.txt either in the root of the repository or in the check50 directory of the specific check
     package = os.path.join(path, slug.replace("/", os.sep), "check50")
@@ -251,7 +263,7 @@ def import_checks(identifier):
                 code = e.code
 
             if code:
-                raise InternalError("failed to install dependencies in ({})".format(requirements[len(main.args.directory)+1:]))
+                raise InternalError("failed to install dependencies in ({})".format(requirements[len(main.args.checkdir)+1:]))
 
     try:
         # Import module from file path directly
@@ -692,6 +704,8 @@ def copy(src, dst):
         else:
             raise
 
+def import_from(path):
+    return imp.load_source(os.path.basename(path), os.path.join(path, "check50", "__init__.py"))
 
 if __name__ == "__main__":
     main()
