@@ -68,7 +68,7 @@ def main():
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
-            print("\nRunning checks...", end="")
+            print("\nrunning checks...", end="")
             sys.stdout.flush()
             while True:
                 res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
@@ -84,7 +84,7 @@ def main():
 
             # Print results from payload
             print_results(payload["checks"], main.args.log)
-            print("Detailed Results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
+            print("detailed results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
     # copy all files to temporary directory
@@ -172,6 +172,12 @@ def cleanup():
 
 def excepthook(cls, exc, tb):
     cleanup()
+
+    # Class is a BaseException, better just quit
+    if not issubclass(cls, Exception):
+        print()
+        return
+
     if cls is InternalError:
         cprint(exc.msg, "red", file=sys.stderr)
     elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
@@ -241,7 +247,7 @@ def import_checks(identifier):
                 code = e.code
 
             if code:
-                raise InternalError("Installation of check dependencies failed")
+                raise InternalError("installation of check dependencies failed")
 
     try:
         # Import module from file path directly
@@ -258,7 +264,7 @@ def import_checks(identifier):
     else:
         return checks
 
-    raise InternalError("Invalid identifier")
+    raise InternalError("invalid identifier")
 
 class TestResult(unittest.TestResult):
     results = []
@@ -295,7 +301,7 @@ class TestResult(unittest.TestResult):
 def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
-        raise InternalError("Invalid check in {} on line {} of {}:\n"
+        raise InternalError("invalid check in {} on line {} of {}:\n"
                            "@valgrind must be placed below @check"\
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
@@ -348,6 +354,7 @@ def check(dependency=None):
         return wrapper
     return decorator
 
+
 class File(object):
     """Generic class to represent file in check directory."""
     def __init__(self, filename):
@@ -376,15 +383,15 @@ class Child(object):
 
     def stdin(self, line, prompt=True, timeout=3):
         if line == EOF:
-            self.test.log.append("Sending EOF...")
+            self.test.log.append("sending EOF...")
         else:
-            self.test.log.append("Sending input {}...".format(line))
+            self.test.log.append("sending input {}...".format(line))
 
         if prompt:
             try:
                 self.child.expect(".+", timeout=timeout)
             except TIMEOUT:
-                raise Error("Expected prompt for input, found none.")
+                raise Error("expected prompt for input, found none")
 
         if line == EOF:
             self.child.sendeof()
@@ -412,7 +419,7 @@ class Child(object):
             output = output.replace("\n", "\r\n")
 
 
-        self.test.log.append("Checking for output \"{}\"...".format(str_output))
+        self.test.log.append("checking for output \"{}\"...".format(str_output))
 
         try:
             expect(output, timeout=timeout)
@@ -422,7 +429,7 @@ class Child(object):
                 result += self.child.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error("Check timed out while waiting for {}".format(str_output))
+            raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
 
         # If we expected EOF and we still got output, report an error
         if output == EOF and self.child.before:
@@ -431,14 +438,14 @@ class Child(object):
         return self
 
     def reject(self, timeout=3):
-        self.test.log.append("Checking that input was rejected...")
+        self.test.log.append("checking that input was rejected...")
         try:
             self.child.expect(".+", timeout=timeout)
             self.child.sendline("")
         except OSError:
             self.test.fail()
         except TIMEOUT:
-            raise Error("Check timed out while waiting for rejection of input.")
+            raise Error("timed out while waiting for input to be rejected")
         return self
 
     def exit(self, code=None, timeout=3):
@@ -447,9 +454,9 @@ class Child(object):
         if code is None:
             return self.exitstatus
 
-        self.test.log.append("Checking that program exited with status {}...".format(code))
+        self.test.log.append("checking that program exited with status {}...".format(code))
         if self.exitstatus != code:
-            raise Error("Expected exit code {}, not {}".format(code, self.exitstatus))
+            raise Error("expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
     def wait(self, timeout=3):
@@ -466,7 +473,7 @@ class Child(object):
             else:
                 self.output.append(bytes)
         else:
-            raise Error("Timed out while waiting for program to exit")
+            raise Error("timed out while waiting for program to exit")
 
         # Read any remaining data in pipe
         while True:
@@ -524,7 +531,7 @@ class Checks(unittest.TestCase):
         for filename in filenames:
             self.log.append("Checking that {} exists...".format(filename))
             if not os.path.exists(filename):
-                raise Error("File {} not found.".format(filename))
+                raise Error("{} not found".format(filename))
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
@@ -547,11 +554,11 @@ class Checks(unittest.TestCase):
     def spawn(self, cmd, env=None):
         """Spawns a new child process."""
         if self._valgrind:
-            self.log.append("Running valgrind {}...".format(cmd))
+            self.log.append("running valgrind {}...".format(cmd))
             cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}" \
                         .format(os.path.join(self.dir, self._valgrind_log), cmd)
         else:
-            self.log.append("Running {}...".format(cmd))
+            self.log.append("running {}...".format(cmd))
 
         if env is None:
             env = {}
@@ -593,7 +600,7 @@ class Checks(unittest.TestCase):
         # Load XML file created by valgrind
         xml = ET.ElementTree(file=os.path.join(self.dir, self._valgrind_log))
 
-        self.log.append("Checking for valgrind errors... ")
+        self.log.append("checking for valgrind errors... ")
 
         # Ensure that we don't get duplicate error messages
         reported = set()
@@ -623,8 +630,7 @@ class Checks(unittest.TestCase):
 
         # Only raise exception if we encountered errors
         if reported:
-            raise Error("Valgrind check failed. "
-                        "Rerun with --log for more information.")
+            raise Error("valgrind tests failed; rerun with --log for more information.")
 
 
 class Mismatch(object):
@@ -634,7 +640,7 @@ class Mismatch(object):
         self.actual = actual
 
     def __str__(self):
-        return "Expected {}, not {}.".format(self.raw(self.expected),
+        return "expected {}, not {}".format(self.raw(self.expected),
                                              self.raw(self.actual))
 
     def __repr__(self):
