@@ -542,12 +542,12 @@ class Checks(unittest.TestCase):
                         .wait()
                         .exitstatus)
 
-    def require(self, *filenames):
-        """Asserts that all filenames exist."""
-        for filename in filenames:
-            self.log.append("Checking that {} exists...".format(filename))
-            if not os.path.exists(filename):
-                raise Error("{} not found".format(filename))
+    def require(self, *paths):
+        """Asserts that all paths exist."""
+        for path in paths:
+            self.log.append("Checking that {} exists...".format(path))
+            if not os.path.exists(path):
+                raise Error("{} not found".format(path))
 
     def hash(self, filename):
         """Hashes a file using SHA-256."""
