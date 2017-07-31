@@ -482,6 +482,8 @@ class Child(object):
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
             raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
+        except UnicodeDecodeError:
+            raise Error("output not valid ASCII text")
 
         # If we expected EOF and we still got output, report an error.
         if output == EOF and self.child.before:
