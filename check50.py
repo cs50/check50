@@ -484,6 +484,8 @@ class Child(object):
             raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
+        except Exception:
+            raise Error("check50 could not verify output")
 
         # If we expected EOF and we still got output, report an error.
         if output == EOF and self.child.before:
