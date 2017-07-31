@@ -209,7 +209,11 @@ def import_checks(identifier):
     except ValueError:
         slug, repo = identifier, "cs50/checks"
 
-    org, repo = repo.split("/")
+    try:
+        org, repo = repo.split("/")
+    except ValueError:
+        raise InternalError("expected repository to be of the form username/repository, but got \"{}\"".format(repo))
+
 
     path = os.path.join(main.args.directory, org, repo)
 
@@ -226,7 +230,7 @@ def import_checks(identifier):
     try:
         subprocess.check_call(command, stdout=stdout, stderr=stderr)
     except subprocess.CalledProcessError:
-        raise InternalError("Failed to clone checks")
+        raise InternalError("failed to clone checks")
 
     # Install any dependencies from requirements.txt either in the root of the repository or in the check50 directory of the specific check
     package = os.path.join(path, slug.replace("/", os.sep), "check50")
@@ -247,7 +251,7 @@ def import_checks(identifier):
                 code = e.code
 
             if code:
-                raise InternalError("installation of check dependencies failed")
+                raise InternalError("failed to install dependencies in ({})".format(requirements[len(main.args.directory)+1:]))
 
     try:
         # Import module from file path directly
@@ -302,7 +306,7 @@ def valgrind(func):
     if config.test_cases[-1] == func.__name__:
         frame = traceback.extract_stack(limit=2)[0]
         raise InternalError("invalid check in {} on line {} of {}:\n"
-                           "@valgrind must be placed below @check"\
+                            "@valgrind must be placed below @check"\
                             .format(frame.name, frame.lineno, frame.filename))
     @wraps(func)
     def wrapper(self):
