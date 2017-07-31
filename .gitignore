@@ -1,4 +1,5 @@
-*.c
-__pycache__/*
-checks/__pycache__/*
-checks/mario/__pycache__/*
+*.pyc
+*.egg-info
+dist
+build
+__pycache__/
