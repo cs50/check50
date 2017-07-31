@@ -255,15 +255,15 @@ def import_checks(identifier):
         raise InternalError("expected repository to be of the form username/repository, but got \"{}\"".format(repo))
 
 
-    path = os.path.join(config.args.checkdir, org, repo)
-    config.check_dir = os.path.join(path, slug.replace("/", os.sep), "check50")
+    checks_root = os.path.join(config.args.checkdir, org, repo)
+    config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
 
     if not config.args.offline:
-        if os.path.exists(path):
-            command = ["git", "-C", path, "pull", "origin", "master"]
+        if os.path.exists(checks_root):
+            command = ["git", "-C", checks_root, "pull", "origin", "master"]
 
         else:
-            command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), path]
+            command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
         # Can't use subprocess.DEVNULL because it requires python 3.3
         stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
@@ -275,8 +275,8 @@ def import_checks(identifier):
             raise InternalError("failed to clone checks")
 
 
-    # Install any dependencies from requirements.txt either in the root of the repository or in the check50 directory of the specific check
-    for dir in [path, config.check_dir]:
+    # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check
+    for dir in [checks_root, os.path.dirname(config.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
             args = ["install", "-r", requirements]
