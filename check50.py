@@ -22,6 +22,7 @@ import unittest
 import xml.etree.cElementTree as ET
 
 from backports.shutil_which import which
+from contextlib import contextmanager
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
 from termcolor import cprint
@@ -64,16 +65,16 @@ def main():
                         action="store_true",
                         help="display the full tracebacks of any errors")
 
-    main.args = parser.parse_args()
-    main.args.checkdir = os.path.expanduser(main.args.checkdir)
-    identifier = main.args.identifier[0]
-    files = main.args.files
+    config.args = parser.parse_args()
+    config.args.checkdir = os.path.expanduser(config.args.checkdir)
+    identifier = config.args.identifier[0]
+    files = config.args.files
 
-    if main.args.offline:
-        main.args.local = True
+    if config.args.offline:
+        config.args.local = True
 
 
-    if not main.args.local:
+    if not config.args.local:
         try:
 
             # Submit to check50 repo.
@@ -81,7 +82,7 @@ def main():
         except ImportError:
             raise InternalError("submit50 is not installed. Install submit50 and run check50 again.")
         else:
-            submit50.run.verbose = main.args.verbose
+            submit50.run.verbose = config.args.verbose
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
@@ -100,7 +101,7 @@ def main():
             print()
 
             # Print results from payload
-            print_results(payload["checks"], main.args.log)
+            print_results(payload["checks"], config.args.log)
             print("detailed results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
             sys.exit(0)
 
@@ -114,7 +115,6 @@ def main():
         copy(filename, src_dir)
 
     checks = import_checks(identifier)
-    config.check_dir = os.path.dirname(inspect.getfile(checks))
 
     # create and run the test suite
     suite = unittest.TestSuite()
@@ -128,10 +128,60 @@ def main():
     results = result.results
 
     # print the results
-    if main.args.debug:
+    if config.args.debug:
         print_json(results)
     else:
-        print_results(results, log=main.args.log)
+        print_results(results, log=config.args.log)
+
+
+@contextmanager
+def cd(path):
+    """can be used with a `with` statement to temporarily change directories"""
+    cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(cwd)
+
+
+def cleanup():
+    """Remove temporary files at end of test."""
+    if config.tempdir:
+        shutil.rmtree(config.tempdir)
+
+
+def copy(src, dst):
+    """Copy src to dst, copying recursively if src is a directory"""
+    try:
+        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
+    except (OSError, IOError) as e:
+        if e.errno == errno.ENOTDIR:
+            shutil.copy(src, dst)
+        else:
+            raise
+
+
+def excepthook(cls, exc, tb):
+    cleanup()
+
+    # Class is a BaseException, better just quit
+    if not issubclass(cls, Exception):
+        print()
+        return
+
+    if cls is InternalError:
+        cprint(exc.msg, "red", file=sys.stderr)
+    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
+        cprint("{} not found".format(exc.filename), "red", file=sys.stderr)
+    else:
+        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
+
+    if config.args.verbose:
+        traceback.print_exception(cls, exc, tb)
+
+
+sys.excepthook = excepthook
 
 
 def print_results(results, log=False):
@@ -175,42 +225,11 @@ def print_json(results):
     print(json.dumps(output))
 
 
-def cleanup():
-    """Remove temporary files at end of test."""
-    if config.tempdir:
-        shutil.rmtree(config.tempdir)
-
-
-def excepthook(cls, exc, tb):
-    cleanup()
-
-    # Class is a BaseException, better just quit
-    if not issubclass(cls, Exception):
-        print()
-        return
-
-    if cls is InternalError:
-        cprint(exc.msg, "red", file=sys.stderr)
-    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
-        cprint("{} not found".format(exc.filename), "red", file=sys.stderr)
-    else:
-        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
-
-    try:
-        if main.args.verbose:
-            traceback.print_exception(cls, exc, tb)
-    except AttributeError:
-        traceback.print_exception(cls, exc, tb)
-
-
-sys.excepthook = excepthook
-
-
 def import_checks(identifier):
     """
     Given an identifier of the form path/to/check@org/repo, clone
     the checks from github.com/org/repo (defaulting to cs50/checks
-    if there is no @) into main.args.checkdir. Then extract child
+    if there is no @) into config.args.checkdir. Then extract child
     of Check class from path/to/check/check50/__init__.py and return it
 
     Throws ImportError on error
@@ -226,9 +245,10 @@ def import_checks(identifier):
         raise InternalError("expected repository to be of the form username/repository, but got \"{}\"".format(repo))
 
 
-    path = os.path.join(main.args.checkdir, org, repo)
+    path = os.path.join(config.args.checkdir, org, repo)
+    config.check_dir = os.path.join(path, slug.replace("/", os.sep), "check50")
 
-    if not main.args.offline:
+    if not config.args.offline:
         if os.path.exists(path):
             command = ["git", "-C", path, "pull", "origin", "master"]
 
@@ -236,7 +256,7 @@ def import_checks(identifier):
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), path]
 
         # Can't use subprocess.DEVNULL because it requires python 3.3
-        stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
+        stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
 
         # Update checks via git
         try:
@@ -244,9 +264,9 @@ def import_checks(identifier):
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
 
+
     # Install any dependencies from requirements.txt either in the root of the repository or in the check50 directory of the specific check
-    package = os.path.join(path, slug.replace("/", os.sep), "check50")
-    for dir in [path, package]:
+    for dir in [path, config.check_dir]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
             args = ["install", "-r", requirements]
@@ -254,7 +274,7 @@ def import_checks(identifier):
             if not hasattr(sys, "real_prefix"):
                 args.append("--user")
 
-            if not main.args.verbose:
+            if not config.args.verbose:
                 args += ["--quiet"] * 3
 
             try:
@@ -263,11 +283,11 @@ def import_checks(identifier):
                 code = e.code
 
             if code:
-                raise InternalError("failed to install dependencies in ({})".format(requirements[len(main.args.checkdir)+1:]))
+                raise InternalError("failed to install dependencies in ({})".format(requirements[len(config.args.checkdir)+1:]))
 
     try:
         # Import module from file path directly
-        module = imp.load_source(slug, os.path.join(package, "__init__.py"))
+        module = imp.load_source(slug, os.path.join(config.check_dir, "__init__.py"))
         # Ensure that there is exactly one class decending from Checks defined in this package
         checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
                        if hasattr(cls, "_Checks__sentinel")
@@ -281,6 +301,14 @@ def import_checks(identifier):
         return checks
 
     raise InternalError("invalid identifier")
+
+
+def import_from(path):
+    """helper function to make it easier for a check to import another check"""
+    with cd(config.check_dir):
+        abspath = os.path.abspath(os.path.join(path, "check50", "__init__.py"))
+    return imp.load_source(os.path.basename(path), abspath)
+
 
 class TestResult(unittest.TestResult):
     results = []
@@ -386,7 +414,6 @@ class File(object):
             return open(file, mode + "U")
         else:
             return open(file, mode, newline="\n")
-
 
 
 # wrapper class for pexpect child
@@ -594,12 +621,9 @@ class Checks(unittest.TestCase):
     def add(self, *paths):
         """Copies a file to the temporary directory."""
         cwd = os.getcwd()
-        try:
-            os.chdir(config.check_dir)
+        with cd(config.check_dir):
             for path in paths:
                 copy(path, cwd)
-        finally:
-            os.chdir(cwd)
 
     def append_code(self, filename, codefile):
         with open(codefile.filename, "r") as code, \
@@ -693,19 +717,6 @@ class InternalError(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-
-def copy(src, dst):
-    """Copy src to dst, copying recursively if src is a directory"""
-    try:
-        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
-    except (OSError, IOError) as e:
-        if e.errno == errno.ENOTDIR:
-            shutil.copy(src, dst)
-        else:
-            raise
-
-def import_from(path):
-    return imp.load_source(os.path.basename(path), os.path.join(path, "check50", "__init__.py"))
 
 if __name__ == "__main__":
     main()
