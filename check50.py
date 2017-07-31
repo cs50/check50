@@ -94,7 +94,7 @@ def main():
                 # Terminate if no response.
                 if pings > 45:
                     cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
-                    cprint("more info at: https://cs50.me/check50/results/{}/{}".format(username, commit_hash), "red", file=sys.stderr)
+                    cprint("See https://cs50.me/checks/{} for more detail.".format(commit_hash), "red", file=sys.stderr)
                     sys.exit(1)
                 pings += 1
 
@@ -112,7 +112,7 @@ def main():
 
             # Print results from payload.
             print_results(payload["checks"], config.args.log)
-            print("detailed results: https://cs50.me/check50/results/{}/{}".format(username, commit_hash))
+            print("See https://cs50.me/checks/{} for more detail.".format(commit_hash))
             sys.exit(0)
 
     # copy all files to temporary directory
