@@ -443,7 +443,7 @@ class Child(object):
         if prompt:
             try:
                 self.child.expect(".+", timeout=timeout)
-            except TIMEOUT:
+            except (TIMEOUT, EOF):
                 raise Error("expected prompt for input, found none")
 
         if line == EOF:
