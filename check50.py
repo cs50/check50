@@ -338,18 +338,17 @@ class TestResult(unittest.TestResult):
         })
 
     def addError(self, test, err):
+        test.log.append(err[1])
+        test.log += traceback.format_tb(err[2])
+        test.log.append("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
         self.results.append({
             "description": test.shortDescription(),
             "helpers": test.helpers,
             "log": test.log,
-            "rationale": err[1],
-            "status": Checks.FAIL,
+            "rationale": "check50 ran into an error while running checks!",
+            "status": Checks.SKIP,
             "test": test
         })
-        cprint("check50 ran into an error while running checks.", "red", file=sys.stderr)
-        print(err[1], file=sys.stderr)
-        traceback.print_tb(err[2])
-        sys.exit(1)
 
 
 def valgrind(func):
