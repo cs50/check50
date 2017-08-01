@@ -269,10 +269,15 @@ def import_checks(identifier):
         stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
 
         # Update checks via git.
+        spawn = pexpect.spawn if sys.version_info < (3, 0) else pexpect.spawnu
         try:
-            subprocess.check_call(command, stdout=stdout, stderr=stderr)
-        except subprocess.CalledProcessError:
-            raise InternalError("failed to clone checks")
+            child = spawn(" ".join(command), timeout=5)
+            child.expect(pexpect.EOF)
+        except pexpect.TIMEOUT:
+            raise InternalError("timed out while trying to clone checks")
+
+        if config.args.verbose:
+            print(child.before + child.buffer)
 
 
     # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check.
