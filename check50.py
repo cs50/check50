@@ -265,9 +265,6 @@ def import_checks(identifier):
         else:
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
-        # Can't use subprocess.DEVNULL because it requires python 3.3.
-        stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
-
         # Update checks via git.
         spawn = pexpect.spawn if sys.version_info < (3, 0) else pexpect.spawnu
         try:
