@@ -92,6 +92,7 @@ def main():
 
                 # Terminate if no response.
                 if pings > 45:
+                    print()
                     cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
                     cprint("See https://cs50.me/checks/{} for more detail.".format(commit_hash), "red", file=sys.stderr)
                     sys.exit(1)
