@@ -637,11 +637,16 @@ class Checks(unittest.TestCase):
             for path in paths:
                 copy(path, cwd)
 
-    def append_code(self, filename, codefile):
-        with open(codefile.filename, "r") as code, \
-                open(os.path.join(self.dir, filename), "a") as f:
-            f.write("\n")
-            f.write(code.read())
+    def append_code(self, original, codefile):
+        if isinstance(original, File):
+            original = original.filename
+
+        if isinstance(codefile, File):
+            codefile = codefile.filename
+
+        with open(codefile) as code, open(original, "a") as o:
+            o.write("\n")
+            o.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, filename):
         self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, filename))
