@@ -265,17 +265,14 @@ def import_checks(identifier):
         else:
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
+        # Can't use subprocess.DEVNULL because it requires python 3.3.
+        stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
+
         # Update checks via git.
-        spawn = pexpect.spawn if sys.version_info < (3, 0) else pexpect.spawnu
         try:
-            child = spawn(" ".join(command), timeout=5)
-            child.expect(pexpect.EOF)
-        except pexpect.TIMEOUT:
-            raise InternalError("timed out while trying to clone checks")
-
-        if config.args.verbose:
-            print(child.before + child.buffer)
-
+            subprocess.check_call(command, stdout=stdout, stderr=stderr)
+        except subprocess.CalledProcessError:
+            raise InternalError("failed to clone checks")
 
     # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check.
     for dir in [checks_root, os.path.dirname(config.check_dir)]:
