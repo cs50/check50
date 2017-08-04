@@ -207,7 +207,7 @@ def print_results(results, log=False):
             cprint("    {}".format(result.get("rationale") or "check skipped"), "yellow")
 
         if log:
-            for line in result["test"].log:
+            for line in result.get("log", []):
                 print("    {}".format(line))
 
 
