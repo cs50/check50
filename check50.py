@@ -103,7 +103,7 @@ def main():
                 if res.status_code != 200:
                     continue
                 payload = res.json()
-                if payload["complete"] and payload["checks"] != []:
+                if payload["complete"]:
                     break
                 print(".", end="")
                 sys.stdout.flush()
