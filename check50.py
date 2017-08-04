@@ -480,7 +480,7 @@ class Child(object):
                 result += self.child.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
+            raise Error("did not find output {}".format(Mismatch.raw(str_output)))
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
         except Exception:
