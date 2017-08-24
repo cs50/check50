@@ -79,7 +79,8 @@ def main():
             # Submit to check50 repo.
             import submit50
         except ImportError:
-            raise InternalError("submit50 is not installed. Install submit50 and run check50 again.")
+            raise InternalError(
+                "submit50 is not installed. Install submit50 and run check50 again.")
         else:
             submit50.run.verbose = config.args.verbose
             username, commit_hash = submit50.submit("check50", identifier)
@@ -94,16 +95,20 @@ def main():
                 if pings > 45:
                     print()
                     cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
-                    cprint("See https://cs50.me/checks/{} for more detail.".format(commit_hash), "red", file=sys.stderr)
+                    cprint(
+                        "See https://cs50.me/checks/{} for more detail.".format(commit_hash),
+                        "red",
+                        file=sys.stderr)
                     sys.exit(1)
                 pings += 1
 
                 # Query for check results.
-                res = requests.post("https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
+                res = requests.post(
+                    "https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
                 if res.status_code != 200:
                     continue
                 payload = res.json()
-                if payload["complete"] and payload["checks"] != []:
+                if payload["complete"]:
                     break
                 print(".", end="")
                 sys.stdout.flush()
@@ -207,7 +212,7 @@ def print_results(results, log=False):
             cprint("    {}".format(result.get("rationale") or "check skipped"), "yellow")
 
         if log:
-            for line in result["test"].log:
+            for line in result.get("log", []):
                 print("    {}".format(line))
 
 
@@ -252,8 +257,8 @@ def import_checks(identifier):
     try:
         org, repo = repo.split("/")
     except ValueError:
-        raise InternalError("expected repository to be of the form username/repository, but got \"{}\"".format(repo))
-
+        raise InternalError(
+            "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
 
     checks_root = os.path.join(config.args.checkdir, org, repo)
     config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
@@ -274,7 +279,8 @@ def import_checks(identifier):
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
 
-    # Install any dependencies from requirements.txt either in the root of the repository or in the directory of the specific check.
+    # Install any dependencies from requirements.txt either in the root of the
+    # repository or in the directory of the specific check.
     for dir in [checks_root, os.path.dirname(config.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
@@ -292,15 +298,16 @@ def import_checks(identifier):
                 code = e.code
 
             if code:
-                raise InternalError("failed to install dependencies in ({})".format(requirements[len(config.args.checkdir)+1:]))
+                raise InternalError("failed to install dependencies in ({})".format(
+                    requirements[len(config.args.checkdir) + 1:]))
 
     try:
         # Import module from file path directly.
         module = imp.load_source(slug, os.path.join(config.check_dir, "__init__.py"))
         # Ensure that there is exactly one class decending from Checks defined in this package.
         checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
-                       if hasattr(cls, "_Checks__sentinel")
-                           and cls.__module__.startswith(slug))
+                   if hasattr(cls, "_Checks__sentinel")
+                   and cls.__module__.startswith(slug))
     except (OSError, IOError) as e:
         if e.errno != errno.ENOENT:
             raise
@@ -356,6 +363,7 @@ def valgrind(func):
         raise InternalError("invalid check in {} on line {} of {}:\n"
                             "@valgrind must be placed below @check"
                             .format(frame.name, frame.lineno, frame.filename))
+
     @wraps(func)
     def wrapper(self):
         if not which("valgrind"):
@@ -376,6 +384,7 @@ def check(dependency=None):
 
         # add test to list of test, in order of declaration
         config.test_cases.append(func.__name__)
+
         @wraps(func)
         def wrapper(self):
 
@@ -409,6 +418,7 @@ def check(dependency=None):
 
 class File(object):
     """Generic class to represent file in check directory."""
+
     def __init__(self, filename):
         self.filename = filename
 
@@ -469,7 +479,6 @@ class Child(object):
                 str_output = output
             output = output.replace("\n", "\r\n")
 
-
         self.test.log.append("checking for output \"{}\"...".format(str_output))
 
         try:
@@ -480,7 +489,7 @@ class Child(object):
                 result += self.child.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error("timed out while waiting for {}".format(Mismatch.raw(str_output)))
+            raise Error("did not find output {}".format(Mismatch.raw(str_output)))
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
         except Exception:
@@ -548,6 +557,7 @@ class Child(object):
         self.child.close(force=True)
         return self
 
+
 class Checks(unittest.TestCase):
     PASS = True
     FAIL = False
@@ -573,9 +583,9 @@ class Checks(unittest.TestCase):
 
     def diff(self, f1, f2):
         """Returns boolean indicating whether or not the files are different"""
-        if type(f1) == File:
+        if isinstance(f1, File):
             f1 = f1.filename
-        if type(f2) == File:
+        if isinstance(f2, File):
             f2 = f2.filename
         return bool(self.spawn("diff {} {}".format(quote(f1), quote(f2)))
                         .wait()
@@ -592,7 +602,7 @@ class Checks(unittest.TestCase):
         """Hashes a file using SHA-256."""
 
         # Assert that file exists.
-        if type(filename) == File:
+        if isinstance(filename, File):
             filename = filename.filename
         self.require(filename)
 
@@ -610,8 +620,8 @@ class Checks(unittest.TestCase):
         """Spawns a new child process."""
         if self._valgrind:
             self.log.append("running valgrind {}...".format(cmd))
-            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}" \
-                        .format(os.path.join(self.dir, self._valgrind_log), cmd)
+            cmd = "valgrind --show-leak-kinds=all --xml=yes --xml-file={} -- {}".format(
+                os.path.join(self.dir, self._valgrind_log), cmd)
         else:
             self.log.append("running {}...".format(cmd))
 
@@ -637,11 +647,16 @@ class Checks(unittest.TestCase):
             for path in paths:
                 copy(path, cwd)
 
-    def append_code(self, filename, codefile):
-        with open(codefile.filename, "r") as code, \
-                open(os.path.join(self.dir, filename), "a") as f:
-            f.write("\n")
-            f.write(code.read())
+    def append_code(self, original, codefile):
+        if isinstance(original, File):
+            original = original.filename
+
+        if isinstance(codefile, File):
+            codefile = codefile.filename
+
+        with open(codefile) as code, open(original, "a") as o:
+            o.write("\n")
+            o.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, filename):
         self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, filename))
@@ -672,7 +687,9 @@ class Checks(unittest.TestCase):
                 if obj is not None and os.path.dirname(obj.text) == self.dir:
                     location = frame.find("file"), frame.find("line")
                     if None not in location:
-                        msg.append(": (file: {}, line: {})".format(location[0].text, location[1].text))
+                        msg.append(
+                            ": (file: {}, line: {})".format(
+                                location[0].text, location[1].text))
                     break
 
             msg = "".join(msg)
@@ -687,13 +704,14 @@ class Checks(unittest.TestCase):
 
 class Mismatch(object):
     """Class which represents that expected output did not match actual output."""
+
     def __init__(self, expected, actual):
         self.expected = expected
         self.actual = actual
 
     def __str__(self):
         return "expected {}, not {}".format(self.raw(self.expected),
-                                             self.raw(self.actual))
+                                            self.raw(self.actual))
 
     def __repr__(self):
         return "Mismatch(expected={}, actual={})".format(repr(expected), repr(actual))
@@ -702,7 +720,7 @@ class Mismatch(object):
     def raw(s):
         """Get raw representation of s, truncating if too long"""
 
-        if type(s) == list:
+        if isinstance(s, list):
             s = "\n".join(s)
 
         if s == EOF:
@@ -715,9 +733,9 @@ class Mismatch(object):
         return "\"{}\"".format(s)
 
 
-
 class Error(Exception):
     """Class to wrap errors in students' checks."""
+
     def __init__(self, rationale=None, helpers=None, result=Checks.FAIL):
         self.rationale = rationale
         self.helpers = helpers
@@ -726,6 +744,7 @@ class Error(Exception):
 
 class InternalError(Exception):
     """Error during execution of check50."""
+
     def __init__(self, msg):
         self.msg = msg
 
