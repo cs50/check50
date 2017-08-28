@@ -506,6 +506,8 @@ class Child(object):
         try:
             self.child.expect(".+", timeout=timeout)
             self.child.sendline("")
+        except EOF:
+            raise Error("expected prompt for input, found none")
         except OSError:
             self.test.fail()
         except TIMEOUT:
