@@ -11,6 +11,7 @@ import json
 import os
 import pexpect
 import pip
+import re
 import requests
 import shutil
 import subprocess
@@ -661,8 +662,10 @@ class Checks(unittest.TestCase):
             o.write(code.read())
 
     def replace_fn(self, old_fn, new_fn, filename):
-        self.spawn("sed -i='' -e 's/callq\t_{}/callq\t_{}/g' {}".format(old_fn, new_fn, filename))
-        self.spawn("sed -i='' -e 's/callq\t{}/callq\t{}/g' {}".format(old_fn, new_fn, filename))
+        with open(filename, "r+") as f:
+            asm = re.sub(r"(callq\t_?){}(?!\w)".format(old_fn), r"\1{}".format(new_fn), f.read())
+            f.seek(0)
+            f.write(asm)
 
     def _check_valgrind(self):
         """Log and report any errors encountered by valgrind"""
