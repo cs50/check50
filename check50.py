@@ -473,14 +473,15 @@ class Child(object):
         else:
             expect = self.child.expect_exact
 
-        if output == EOF:
-            str_output = "EOF"
-        else:
-            if str_output is None:
-                str_output = output
-            output = output.replace("\n", "\r\n")
+        if str_output is None:
+            str_output = output
 
-        self.test.log.append("checking for output \"{}\"...".format(str_output))
+        if output == EOF:
+            self.test.log.append("checking for EOF...")
+        else:
+            output = output.replace("\n", "\r\n")
+            self.test.log.append("checking for output \"{}\"...".format(str_output))
+
 
         try:
             expect(output, timeout=timeout)
@@ -490,7 +491,7 @@ class Child(object):
                 result += self.child.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error("did not find output {}".format(Mismatch.raw(str_output)))
+            raise Error("did not find {}".format(Mismatch.raw(str_output)))
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
         except Exception:
