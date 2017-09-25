@@ -537,6 +537,8 @@ class Child(object):
                 pass
             except EOF:
                 break
+            except UnicodeDecodeError:
+                raise Error("output not valid ASCII text")
             else:
                 self.output.append(bytes)
         else:
