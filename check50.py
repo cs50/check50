@@ -223,6 +223,7 @@ def print_json(results):
         obj = {
             "name": result["test"]._testMethodName,
             "status": result["status"],
+            "data": result["test"].data,
             "description": result["description"],
             "helpers": result["helpers"],
             "log": result["test"].log,
@@ -585,6 +586,7 @@ class Checks(unittest.TestCase):
         self.helpers = None
         self.log = []
         self.children = []
+        self.data = {}
 
     def diff(self, f1, f2):
         """Returns boolean indicating whether or not the files are different"""
