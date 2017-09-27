@@ -87,7 +87,7 @@ def main():
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
-            print("Running checks...", end="")
+            print("Checking...", end="")
             sys.stdout.flush()
             pings = 0
             while True:
