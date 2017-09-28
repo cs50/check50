@@ -67,6 +67,8 @@ def main():
                         help="display the full tracebacks of any errors")
 
     config.args = parser.parse_args()
+    if isinstance(config.args.checkdir, list):
+        config.args.checkdir = config.args.checkdir[0]
     config.args.checkdir = os.path.expanduser(config.args.checkdir)
     identifier = config.args.identifier[0]
     files = config.args.files
