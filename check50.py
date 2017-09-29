@@ -40,6 +40,7 @@ __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valg
 
 
 def main():
+    signal.signal(signal.SIGINT, handler)
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser()
@@ -198,6 +199,11 @@ def excepthook(cls, exc, tb):
 
 
 sys.excepthook = excepthook
+
+
+def handler(number, frame):
+    print()
+    sys.exit(1)
 
 
 def print_results(results, log=False):
