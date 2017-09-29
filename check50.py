@@ -84,6 +84,9 @@ def main():
             raise InternalError(
                 "submit50 is not installed. Install submit50 and run check50 again.")
         else:
+            submit50.handler.type = "check"
+            signal.signal(signal.SIGINT, submit50.handler)
+
             submit50.run.verbose = config.args.verbose
             username, commit_hash = submit50.submit("check50", identifier)
 
@@ -202,7 +205,7 @@ sys.excepthook = excepthook
 
 
 def handler(number, frame):
-    print()
+    termcolor.cprint("Check cancelled.", "red")
     sys.exit(1)
 
 
