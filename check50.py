@@ -14,6 +14,7 @@ import pip
 import re
 import requests
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -55,7 +56,6 @@ def main():
                         help="run checks completely offline (implies --local)")
     parser.add_argument("--checkdir",
                         action="store",
-                        nargs=1,
                         default="~/.local/share/check50",
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
@@ -67,9 +67,7 @@ def main():
                         help="display the full tracebacks of any errors")
 
     config.args = parser.parse_args()
-    if isinstance(config.args.checkdir, list):
-        config.args.checkdir = config.args.checkdir[0]
-    config.args.checkdir = os.path.expanduser(config.args.checkdir)
+    config.args.checkdir = os.path.abspath(config.args.checkdir)
     identifier = config.args.identifier[0]
     files = config.args.files
 
@@ -270,7 +268,6 @@ def import_checks(identifier):
     if not config.args.offline:
         if os.path.exists(checks_root):
             command = ["git", "-C", checks_root, "pull", "origin", "master"]
-
         else:
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
@@ -558,6 +555,10 @@ class Child(object):
 
         self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
         self.kill()
+
+        if self.child.signalstatus == signal.SIGSEGV:
+            raise Error("failed to execute program due to segmentation fault")
+
         self.exitstatus = self.child.exitstatus
         return self
 
