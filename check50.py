@@ -87,7 +87,7 @@ def main():
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
-            print("Running checks...", end="")
+            print("Checking...", end="")
             sys.stdout.flush()
             pings = 0
             while True:
@@ -223,6 +223,7 @@ def print_json(results):
         obj = {
             "name": result["test"]._testMethodName,
             "status": result["status"],
+            "data": result["test"].data,
             "description": result["description"],
             "helpers": result["helpers"],
             "log": result["test"].log,
@@ -536,6 +537,8 @@ class Child(object):
                 pass
             except EOF:
                 break
+            except UnicodeDecodeError:
+                raise Error("output not valid ASCII text")
             else:
                 self.output.append(bytes)
         else:
@@ -586,6 +589,7 @@ class Checks(unittest.TestCase):
         self.helpers = None
         self.log = []
         self.children = []
+        self.data = {}
 
     def diff(self, f1, f2):
         """Returns boolean indicating whether or not the files are different"""
