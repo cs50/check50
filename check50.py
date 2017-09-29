@@ -14,6 +14,7 @@ import pip
 import re
 import requests
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -39,6 +40,7 @@ __all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valg
 
 
 def main():
+    signal.signal(signal.SIGINT, handler)
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser()
@@ -55,7 +57,6 @@ def main():
                         help="run checks completely offline (implies --local)")
     parser.add_argument("--checkdir",
                         action="store",
-                        nargs=1,
                         default="~/.local/share/check50",
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
@@ -67,7 +68,7 @@ def main():
                         help="display the full tracebacks of any errors")
 
     config.args = parser.parse_args()
-    config.args.checkdir = os.path.expanduser(config.args.checkdir)
+    config.args.checkdir = os.path.abspath(config.args.checkdir)
     identifier = config.args.identifier[0]
     files = config.args.files
 
@@ -83,11 +84,14 @@ def main():
             raise InternalError(
                 "submit50 is not installed. Install submit50 and run check50 again.")
         else:
+            submit50.handler.type = "check"
+            signal.signal(signal.SIGINT, submit50.handler)
+
             submit50.run.verbose = config.args.verbose
             username, commit_hash = submit50.submit("check50", identifier)
 
             # Wait until payload comes back with check data.
-            print("Running checks...", end="")
+            print("Checking...", end="")
             sys.stdout.flush()
             pings = 0
             while True:
@@ -200,6 +204,11 @@ def excepthook(cls, exc, tb):
 sys.excepthook = excepthook
 
 
+def handler(number, frame):
+    termcolor.cprint("Check cancelled.", "red")
+    sys.exit(1)
+
+
 def print_results(results, log=False):
     for result in results:
         if result["status"] == Checks.PASS:
@@ -268,7 +277,6 @@ def import_checks(identifier):
     if not config.args.offline:
         if os.path.exists(checks_root):
             command = ["git", "-C", checks_root, "pull", "origin", "master"]
-
         else:
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
@@ -474,14 +482,15 @@ class Child(object):
         else:
             expect = self.child.expect_exact
 
-        if output == EOF:
-            str_output = "EOF"
-        else:
-            if str_output is None:
-                str_output = output
-            output = output.replace("\n", "\r\n")
+        if str_output is None:
+            str_output = output
 
-        self.test.log.append("checking for output \"{}\"...".format(str_output))
+        if output == EOF:
+            self.test.log.append("checking for EOF...")
+        else:
+            output = output.replace("\n", "\r\n")
+            self.test.log.append("checking for output \"{}\"...".format(str_output))
+
 
         try:
             expect(output, timeout=timeout)
@@ -491,7 +500,7 @@ class Child(object):
                 result += self.child.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error("did not find output {}".format(Mismatch.raw(str_output)))
+            raise Error("did not find {}".format(Mismatch.raw(str_output)))
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
         except Exception:
@@ -556,6 +565,10 @@ class Child(object):
 
         self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
         self.kill()
+
+        if self.child.signalstatus == signal.SIGSEGV:
+            raise Error("failed to execute program due to segmentation fault")
+
         self.exitstatus = self.child.exitstatus
         return self
 
