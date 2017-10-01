@@ -354,7 +354,7 @@ class TestResult(unittest.TestResult):
         })
 
     def addError(self, test, err):
-        test.log.append(err[1])
+        test.log.append(str(err[1]))
         test.log += traceback.format_tb(err[2])
         test.log.append("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
         self.results.append({
