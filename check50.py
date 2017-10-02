@@ -354,7 +354,7 @@ class TestResult(unittest.TestResult):
         })
 
     def addError(self, test, err):
-        test.log.append(err[1])
+        test.log.append(str(err[1]))
         test.log += traceback.format_tb(err[2])
         test.log.append("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
         self.results.append({
@@ -452,7 +452,7 @@ class Child(object):
         self.output = []
         self.exitstatus = None
 
-    def stdin(self, line, prompt=True, timeout=1):
+    def stdin(self, line, prompt=True, timeout=3):
         if line == EOF:
             self.test.log.append("sending EOF...")
         else:
@@ -470,7 +470,7 @@ class Child(object):
             self.child.sendline(line)
         return self
 
-    def stdout(self, output=None, str_output=None, timeout=1):
+    def stdout(self, output=None, str_output=None, timeout=3):
         if output is None:
             return self.wait(timeout).output
 
@@ -512,7 +512,7 @@ class Child(object):
 
         return self
 
-    def reject(self, timeout=1):
+    def reject(self, timeout=3):
         self.test.log.append("checking that input was rejected...")
         try:
             self.child.expect(".+", timeout=timeout)
@@ -525,7 +525,7 @@ class Child(object):
             raise Error("timed out while waiting for input to be rejected")
         return self
 
-    def exit(self, code=None, timeout=1):
+    def exit(self, code=None, timeout=5):
         self.wait(timeout)
 
         if code is None:
@@ -536,7 +536,7 @@ class Child(object):
             raise Error("expected exit code {}, not {}".format(code, self.exitstatus))
         return self
 
-    def wait(self, timeout=1):
+    def wait(self, timeout=5):
         end = time.time() + timeout
         while time.time() <= end:
             if not self.child.isalive():
