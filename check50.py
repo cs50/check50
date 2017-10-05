@@ -68,7 +68,7 @@ def main():
                         help="display the full tracebacks of any errors")
 
     config.args = parser.parse_args()
-    config.args.checkdir = os.path.abspath(config.args.checkdir)
+    config.args.checkdir = os.path.abspath(os.path.expanduser(config.args.checkdir))
     identifier = config.args.identifier[0]
     files = config.args.files
 
