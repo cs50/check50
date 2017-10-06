@@ -248,7 +248,7 @@ def print_json(results):
             pass
 
         output.append(obj)
-    print(json.dumps(output))
+    print(json.dumps(output, cls=Encoder))
 
 
 def import_checks(identifier):
@@ -424,6 +424,15 @@ def check(dependency=None):
 
         return wrapper
     return decorator
+
+
+class Encoder(json.JSONEncoder):
+    """Custom class for JSON encoding."""
+
+    def default(self, o):
+        if o == EOF:
+            return "EOF"
+        return o.__dict__
 
 
 class File(object):
