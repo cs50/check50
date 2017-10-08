@@ -45,8 +45,7 @@ setup(
         "Topic :: Education",
         "Topic :: Utilities"
     ],
-    description="This is check50, with which you can check solutions to \
-        problems for CS50.",
+    description="This is check50, with which you can check solutions to problems for CS50.",
     install_requires=["argparse", "pexpect", "requests", "backports.shutil_which", "termcolor", "submit50>=2.4.5"],
     keywords=["check", "check50"],
     name="check50",
