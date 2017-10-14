@@ -1,8 +1,0 @@
-*.c
-*.egg-info
-*.pyc
-*.sb2
-dist
-build
-__pycache__/
-tmp
