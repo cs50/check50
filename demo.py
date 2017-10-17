@@ -1,5 +1,6 @@
 from enum import Enum
 from functools import wraps
+from multiprocessing import Queue
 from time import sleep
 
 
@@ -14,15 +15,15 @@ def check(*args):
         def wrapper(self):
             for arg in args:
                 if not results.get(arg):
-                    print(f"Skipping {f.__name__} because {depend} not called yet") # TODO: try again later
+                    print(f"Skipping {f.__name__} because {arg} not called yet") # TODO: try again later
                     results[f.__name__] = Result.SKIP
                     return
                 elif results.get(arg) == Result.SKIP:
-                    print(f"Skipping {f.__name__} because {depend} skipped")
+                    print(f"Skipping {f.__name__} because {arg} skipped")
                     results[f.__name__] = Result.SKIP
                     return
                 elif results.get(arg) == Result.FAIL:
-                    print(f"Skipping {f.__name__} because {depend} failed")
+                    print(f"Skipping {f.__name__} because {arg} failed")
                     results[f.__name__] = Result.SKIP
                     return
             print(f"Calling {f.__name__}")
@@ -30,6 +31,7 @@ def check(*args):
                 f()
             except:
                 results[f.__name__] = Result.FAIL
+                return
             results[f.__name__] = Result.PASS
         return wrapper
     return decorator
