@@ -2,6 +2,7 @@
 Proof of concept for a basic multiprocessing script.
 '''
 import multiprocessing
+import collections
 
 from enum import Enum
 from functools import wraps
@@ -21,7 +22,7 @@ class OrderedAsyncManager:
     Each index will map to a list of 1 or more function objects to later be called via the dispatch method.
     '''
     def __init__(self):
-        self.job_map = {}
+        self.job_map = collections.defaultdict(list)
         self.results = {
             None : Result.PASS
         }
@@ -61,17 +62,14 @@ def check(*args):
             if f.__name__ in manager.job_map:
                 manager.dispatch(f.__name__)
         key = args[0] if args else None
-        if not key in manager.job_map:
-            manager.job_map[key] = [wrapper]
-        else:
-            manager.job_map[key].append(wrapper)
+        manager.job_map[key].append(wrapper)
         return wrapper
     return decorator
 
 class Checks:
     @check()
     def exists():
-        raise RuntimeError()
+        sleep(1)
 
     @check("exists")
     def compiles():
