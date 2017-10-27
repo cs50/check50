@@ -21,17 +21,43 @@ class OrderedAsyncManager:
 
     Each index will map to a list of 1 or more function objects to later be called via the dispatch method.
     '''
+
+    class JobBatch:
+        """
+        Helper class that holds the child processes of the current thread
+        """
+        def __init__(self):
+            self.jobs = []
+
+        def __iter__(self):
+            return iter(self.jobs)
+
+        def __getitem__(self, idx):
+            return self.jobs[idx]
+
+        def __len__(self):
+            return len(self.jobs)
+
+        def start(self, fn):
+            self.jobs.append(multiprocessing.Process(target=fn))
+            self.jobs[-1].start()
+
+        def wait(self):
+            for job in self:
+                job.join()
+
     def __init__(self):
         self.job_map = collections.defaultdict(list)
         self.results = {
             None : Result.PASS
         }
 
-    def dispatch(self, key):
+    def dispatch(self, key=None):
         '''
-        Given a key, deploy a multiprocessing queue with all of the functions held in the job_map at the 
+        Given a key, deploy a multiprocessing queue with all of the functions held in the job_map at the
         index of said key.
         '''
+        batch = self.JobBatch()
         if self.results[key] == Result.SKIP:
             for f in self.job_map[key]:
                 self.results[f.__name__] = Result.SKIP
@@ -42,7 +68,8 @@ class OrderedAsyncManager:
                 print(f'Skipping {f.__name__} because {key} failed!')
         else:
             for f in self.job_map[key]:
-                multiprocessing.Process(target=f).start()
+                batch.start(f)
+        return batch
 
 manager = OrderedAsyncManager()
 
@@ -60,7 +87,7 @@ def check(*args):
                 manager.results[f.__name__] = Result.FAIL
             # if there is a pool of functions defined by a keyword, dispatch it
             if f.__name__ in manager.job_map:
-                manager.dispatch(f.__name__)
+                manager.dispatch(f.__name__).wait()
         key = args[0] if args else None
         manager.job_map[key].append(wrapper)
         return wrapper
@@ -105,5 +132,6 @@ class Checks:
 
 if __name__ == '__main__':
     # begin the manager by executing jobs requiring no dependencies
-    
-    manager.dispatch(None)
+    print("Before")
+    manager.dispatch().wait()
+    print("After")
