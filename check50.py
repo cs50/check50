@@ -527,8 +527,8 @@ class App(object):
             self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
         except BaseException as e:  # Catch all exceptions thrown by app
             # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
-            self.test.log.append("exception raised in application: {}".format(e))
-            raise Error("application raised an exception (see log for more details)")
+            self.test.log.append("exception raised in application: {}: {}".format(type(e).__name__, e))
+            raise Error("application raised an exception (see log for details)")
 
         return self
 
