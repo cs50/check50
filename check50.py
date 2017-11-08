@@ -522,7 +522,14 @@ class App(object):
         """Send request of type `method` to `route`"""
         route = self._fmt_route(route, params)
         self.test.log.append("sending {} request to {}".format(method.upper(), route))
-        self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
+
+        try:
+            self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
+        except BaseException as e:  # Catch all exceptions thrown by app
+            # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
+            self.test.log.append("exception raised in application: {}: {}".format(type(e).__name__, e))
+            raise Error("application raised an exception (see log for details)")
+
         return self
 
     def _search_page(self, output, str_output, content, match_fn, **kwargs):
@@ -603,7 +610,6 @@ class Child(object):
         else:
             output = output.replace("\n", "\r\n")
             self.test.log.append("checking for output \"{}\"...".format(str_output))
-
 
         try:
             expect(output, timeout=timeout)
