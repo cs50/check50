@@ -631,17 +631,15 @@ class Child(object):
 
         return self
 
-    def reject(self, timeout=3):
+    def reject(self, timeout=1):
         self.test.log.append("checking that input was rejected...")
         try:
-            self.child.expect(".+", timeout=timeout)
-            self.child.sendline("")
-        except EOF:
-            raise Error("expected prompt for input, found none")
-        except OSError:
-            self.test.fail()
-        except TIMEOUT:
-            raise Error("timed out while waiting for input to be rejected")
+            self.wait(timeout)
+        except Error as e:
+            if not isinstance(e.__context__, TIMEOUT):
+                raise
+        else:
+            raise Error("expected program to reject input, but it did not")
         return self
 
     def exit(self, code=None, timeout=5):
@@ -671,7 +669,10 @@ class Child(object):
             else:
                 self.output.append(bytes)
         else:
-            raise Error("timed out while waiting for program to exit")
+            e = Error("timed out while waiting for program to exit")
+            e.__context__ = TIMEOUT(timeout)
+            raise e
+
 
         # Read any remaining data in pipe.
         while True:
