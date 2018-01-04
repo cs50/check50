@@ -10,7 +10,6 @@ import inspect
 import json
 import os
 import pexpect
-import pip
 import re
 import requests
 import shutil
@@ -24,9 +23,11 @@ import unittest
 import xml.etree.cElementTree as ET
 
 from backports.shutil_which import which
+from bs4 import BeautifulSoup
 from contextlib import contextmanager
 from functools import wraps
 from pexpect.exceptions import EOF, TIMEOUT
+from six.moves.urllib import parse as url
 from termcolor import cprint
 
 try:
@@ -36,7 +37,7 @@ except ImportError:
 
 import config
 
-__all__ = ["check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
+__all__ = ["App", "check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
 
 
 def main():
@@ -100,10 +101,8 @@ def main():
                 if pings > 45:
                     print()
                     cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
-                    cprint(
-                        "See https://cs50.me/checks/{} for more detail.".format(commit_hash),
-                        "red",
-                        file=sys.stderr)
+                    cprint("See https://cs50.me/checks/{} for more detail.".format(commit_hash),
+                           "red", file=sys.stderr)
                     sys.exit(1)
                 pings += 1
 
@@ -303,7 +302,7 @@ def import_checks(identifier):
                 args += ["--quiet"] * 3
 
             try:
-                code = pip.main(args)
+                code = __import__("pip").main(args)
             except SystemExit as e:
                 code = e.code
 
@@ -355,7 +354,7 @@ class TestResult(unittest.TestResult):
 
     def addError(self, test, err):
         test.log.append(str(err[1]))
-        test.log += traceback.format_tb(err[2])
+        test.log += (line.rstrip() for line in traceback.format_tb(err[2]))
         test.log.append("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
         self.results.append({
             "description": test.shortDescription(),
@@ -453,6 +452,118 @@ class File(object):
             return open(file, mode, newline="\n")
 
 
+class App(object):
+    def __init__(self, test, path):
+        dir, file = os.path.split(path)
+        name, _ = os.path.splitext(file)
+
+        # add directory of flask app to sys.path so we can import it properly
+        prevpath = sys.path[0]
+        try:
+            sys.path[0] = os.path.abspath(dir or ".")
+            mod = imp.load_source(name, file)
+        except (OSError, IOError) as e:
+            if e.errno == errno.ENOENT:
+                e = Error("could not find {}".format(file))
+            raise e
+        finally:
+            # restore sys.path
+            sys.path[0] = prevpath
+
+        try:
+            app = mod.app
+        except AttributeError:
+            raise Error("{} does not contain an app".format(file))
+
+        # initialize flask client
+        app.testing = True
+        self.client = app.test_client()
+
+        self.test = test
+        self.response = None
+
+    def get(self, route, data=None, params=None, follow_redirects=True):
+        """Send GET request to `route`."""
+        return self._send("GET", route, data, params, follow_redirects=follow_redirects)
+
+    def post(self, route, data=None, params=None, follow_redirects=True):
+        """Send POST request to `route`."""
+        return self._send("POST", route, data, params, follow_redirects=follow_redirects)
+
+    def status(self, code=None):
+        """Throw error if http status code doesn't equal `code`or return the status code if `code is None."""
+        if code is None:
+            return self.response.status_code
+
+        self.test.log.append(
+            "checking that status code {} is returned...".format(code))
+        if code != self.response.status_code:
+            raise Error("expected status code {}, but got {}".format(
+                code, self.response.status_code))
+        return self
+
+    def raw_content(self, output=None, str_output=None):
+        """Searches for `output` regex match within content of page, regardless of mimetype."""
+        return self._search_page(output, str_output, self.response.data, lambda regex, content: regex.search(content.decode()))
+
+    def content(self, output=None, str_output=None, **kwargs):
+        """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
+        if self.response.mimetype != "text/html":
+            raise Error("expected request to return HTML, but it returned {}".format(
+                self.response.mimetype))
+
+        return self._search_page(
+            output,
+            str_output,
+            BeautifulSoup(self.response.data, "html.parser"),
+            lambda regex, content, **kwargs: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)))
+
+    def _send(self, method, route, data, params, **kwargs):
+        """Send request of type `method` to `route`"""
+        route = self._fmt_route(route, params)
+        self.test.log.append("sending {} request to {}".format(method.upper(), route))
+
+        try:
+            self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
+        except BaseException as e:  # Catch all exceptions thrown by app
+            # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
+            self.test.log.append("exception raised in application: {}: {}".format(type(e).__name__, e))
+            raise Error("application raised an exception (see log for details)")
+
+        return self
+
+    def _search_page(self, output, str_output, content, match_fn, **kwargs):
+        if output is None:
+            return content
+
+        if str_output is None:
+            str_output = output
+
+        self.test.log.append(
+            "checking that \"{}\" is in page".format(str_output))
+        regex = re.compile(output)
+
+        if not match_fn(regex, content, **kwargs):
+            raise Error("expected to find \"{}\" in page, but it wasn't found".format(str_output))
+
+        return self
+
+    @staticmethod
+    def _fmt_route(route, params):
+        parsed = url.urlparse(route)
+
+        # convert params dict into urlencoded string
+        params = url.urlencode(params) if params else ""
+
+        # concatenate params
+        param_str = "&".join((ps for ps in [params, parsed.query] if ps))
+        if param_str:
+            param_str = "?" + param_str
+
+        # only display netloc if it isn't localhost
+        return "".join([parsed.netloc if parsed.netloc != "localhost" else "", parsed.path, param_str])
+
+
 # Wrapper class for pexpect child
 class Child(object):
     def __init__(self, test, child):
@@ -499,7 +610,6 @@ class Child(object):
         else:
             output = output.replace("\n", "\r\n")
             self.test.log.append("checking for output \"{}\"...".format(str_output))
-
 
         try:
             expect(output, timeout=timeout)
@@ -669,6 +779,9 @@ class Checks(unittest.TestCase):
 
         self.children.append(Child(self, child))
         return self.children[-1]
+
+    def flask(self, file):
+        return App(self, file)
 
     def add(self, *paths):
         """Copies a file to the temporary directory."""
