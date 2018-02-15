@@ -2,7 +2,6 @@
 
 from __future__ import print_function
 
-import types
 import argparse
 import errno
 import hashlib
@@ -908,5 +907,4 @@ class InternalError(Exception):
 
 
 if __name__ == "__main__":
-    checks = None
     main()
