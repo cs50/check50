@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import types
 import argparse
 import errno
 import hashlib
@@ -135,10 +136,12 @@ def main():
 
     checks = import_checks(identifier)
 
-    # Create and run the test suite.
+    # Create the test suite
     suite = unittest.TestSuite()
     for case in config.test_cases:
         suite.addTest(checks(case))
+
+    # Run the test suite
     result = TestResult()
     suite.run(result)
     cleanup()
@@ -313,10 +316,18 @@ def import_checks(identifier):
     try:
         # Import module from file path directly.
         module = imp.load_source(slug, os.path.join(config.check_dir, "__init__.py"))
-        # Ensure that there is exactly one class decending from Checks defined in this package.
-        checks, = (cls for _, cls in inspect.getmembers(module, inspect.isclass)
-                   if hasattr(cls, "_Checks__sentinel")
-                   and cls.__module__.startswith(slug))
+        test_methods = [method for method in module.__dict__.values() if getattr(method, "is_check", False)]
+
+        # Create a custom Checks class for this one test
+        class CustomChecks(Checks):
+            pass
+
+        # Add all test functions to CustomChecks
+        for test_method in test_methods:
+            setattr(CustomChecks, test_method.__name__, test_method)
+
+        checks = CustomChecks
+
     except (OSError, IOError) as e:
         if e.errno != errno.ENOENT:
             raise
@@ -386,13 +397,15 @@ def valgrind(func):
             self._valgrind = False
     return wrapper
 
-
 # Decorator for checks
 def check(dependency=None):
     def decorator(func):
 
         # add test to list of test, in order of declaration
         config.test_cases.append(func.__name__)
+
+        # set sentinel signalling this is a check
+        func.is_check = True
 
         @wraps(func)
         def wrapper(self):
@@ -895,4 +908,5 @@ class InternalError(Exception):
 
 
 if __name__ == "__main__":
+    checks = None
     main()
