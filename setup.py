@@ -5,6 +5,20 @@ from setuptools.command.install import install
 from subprocess import call
 from sys import platform, version_info
 
+# tentative requirements
+requires = ["argparse", "bs4", "pexpect", "requests", "backports.shutil_which", "six", "termcolor", "submit50>=2.4.5"]
+
+# check whether we have a Homebrew or Python installation of Python
+INSTALL_CERTS = "/Applications/Python 3.6/Install Certificates.command"
+HOMEBREW_PYTHON = "/usr/local/bin/python3"
+
+if platform == "darwin" and version_info >= (3, 6):
+    if not isfile(INSTALL_CERTS) or call(INSTALL_CERTS) != 0:
+        if not isfile(HOMEBREW_PYTHON):
+            raise RuntimeError("Install certificates not found and no Homebrew Python installed!")
+        else:
+            # certifi library installs needed certificates
+            requires.append("certifi")
 
 def install_certs(cmd):
     """
@@ -16,10 +30,6 @@ def install_certs(cmd):
     orig_run = cmd.run
 
     def run(self):
-        if platform == "darwin" and version_info >= (3, 6):
-            INSTALL_CERTS = "/Applications/Python 3.6/Install Certificates.command"
-            if not isfile(INSTALL_CERTS) or call(INSTALL_CERTS) != 0:
-                raise RuntimeError("Error installing certificates.")
         orig_run(self)
 
     cmd.run = run
@@ -46,7 +56,8 @@ setup(
         "Topic :: Utilities"
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
-    install_requires=["argparse", "bs4", "pexpect", "requests", "backports.shutil_which", "six", "termcolor", "submit50>=2.4.5"],
+    install_requires=requires,
+    setup_requires=requires,
     keywords=["check", "check50"],
     name="check50",
     py_modules=["check50", "config"],
