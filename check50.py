@@ -37,7 +37,7 @@ except ImportError:
 
 import config
 
-__all__ = ["App", "check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind"]
+__all__ = ["App", "check", "Checks", "Child", "EOF", "Error", "File", "Mismatch", "valgrind", "fail"]
 
 
 def main():
@@ -216,6 +216,8 @@ def print_results(results, log=False):
             cprint(":( {}".format(result["description"]), "red")
             if result["rationale"] is not None:
                 cprint("    {}".format(result["rationale"]), "red")
+            if result["helpers"] is not None:
+                cprint("    {}".format(result["helpers"]), "red") # TODO remove
         elif result["status"] == Checks.SKIP:
             cprint(":| {}".format(result["description"]), "yellow")
             cprint("    {}".format(result.get("rationale") or "check skipped"), "yellow")
@@ -259,21 +261,21 @@ def import_checks(identifier):
 
     Throws ImportError on error
     """
-    try:
-        slug, repo = identifier.split("@")
-    except ValueError:
-        slug, repo = identifier, "cs50/checks"
-
-    try:
-        org, repo = repo.split("/")
-    except ValueError:
-        raise InternalError(
-            "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
-
-    checks_root = os.path.join(config.args.checkdir, org, repo)
-    config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
-
     if not config.args.offline:
+        try:
+            slug, repo = identifier.split("@")
+        except ValueError:
+            slug, repo = identifier, "cs50/checks"
+
+        try:
+            org, repo = repo.split("/")
+        except ValueError:
+            raise InternalError(
+                "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
+
+        checks_root = os.path.join(config.args.checkdir, org, repo)
+        config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
+
         if os.path.exists(checks_root):
             command = ["git", "-C", checks_root, "pull", "origin", "master"]
         else:
@@ -287,6 +289,10 @@ def import_checks(identifier):
             subprocess.check_call(command, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
+    else:
+        slug = os.path.join(config.args.checkdir, identifier)
+        checks_root = slug
+        config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
 
     # Install any dependencies from requirements.txt either in the root of the
     # repository or in the directory of the specific check.
@@ -320,7 +326,7 @@ def import_checks(identifier):
     except (OSError, IOError) as e:
         if e.errno != errno.ENOENT:
             raise
-    except ValueError:
+    except ValueError as e:
         pass
     else:
         return checks
@@ -386,6 +392,8 @@ def valgrind(func):
             self._valgrind = False
     return wrapper
 
+def fail(child):
+    return child.status.failed
 
 # Decorator for checks
 def check(dependency=None):
@@ -412,6 +420,10 @@ def check(dependency=None):
             # Run the test, catch failures.
             try:
                 func(self)
+                if self.children and self.children[-1].status.failed: # TODO make less hacky
+                    error = Error(self.children[-1].payload.error_message)
+                    error.helpers = self.children[-1].payload.help_message
+                    raise error
             except Error as e:
                 self.rationale = e.rationale
                 self.helpers = e.helpers
@@ -564,15 +576,29 @@ class App(object):
         return "".join([parsed.netloc if parsed.netloc != "localhost" else "", parsed.path, param_str])
 
 
+class Status:
+    def __init__(self):
+        self.failed = False
+
+class Payload:
+    def __init__(self):
+        self.output = ""
+        self.exit = None
+        self.error_message = ""
+        self.help_message = ""
+
 # Wrapper class for pexpect child
 class Child(object):
     def __init__(self, test, child):
         self.test = test
         self.child = child
-        self.output = []
-        self.exitstatus = None
+        self.payload = Payload()
+        self.status = Status()
 
     def stdin(self, line, prompt=True, timeout=3):
+        if self.status.failed:
+            return self
+
         if line == EOF:
             self.test.log.append("sending EOF...")
         else:
@@ -582,7 +608,7 @@ class Child(object):
             try:
                 self.child.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
-                raise Error("expected prompt for input, found none")
+                return self.fail("expected prompt for input, found none")
 
         if line == EOF:
             self.child.sendeof()
@@ -591,47 +617,20 @@ class Child(object):
         return self
 
     def stdout(self, output=None, str_output=None, timeout=3):
-        if output is None:
-            return self.wait(timeout).output
+        if self.status.failed:
+            return self
 
-        # Files should be interpreted literally, anything else shouldn't be.
-        try:
-            output = output.read()
-        except AttributeError:
-            expect = self.child.expect
-        else:
-            expect = self.child.expect_exact
+        self.wait(timeout)
 
-        if str_output is None:
-            str_output = output
-
-        if output == EOF:
-            self.test.log.append("checking for EOF...")
-        else:
-            output = output.replace("\n", "\r\n")
-            self.test.log.append("checking for output \"{}\"...".format(str_output))
-
-        try:
-            expect(output, timeout=timeout)
-        except EOF:
-            result = self.child.before + self.child.buffer
-            if self.child.after != EOF:
-                result += self.child.after
-            raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
-        except TIMEOUT:
-            raise Error("did not find {}".format(Mismatch.raw(str_output)))
-        except UnicodeDecodeError:
-            raise Error("output not valid ASCII text")
-        except Exception:
-            raise Error("check50 could not verify output")
-
-        # If we expected EOF and we still got output, report an error.
-        if output == EOF and self.child.before:
-            raise Error(Mismatch(EOF, self.child.before.replace("\r\n", "\n")))
+        if output:
+            return self.match(output = output, str_output = str_output)
 
         return self
 
     def reject(self, timeout=1):
+        if self.status.failed:
+            return self
+
         self.test.log.append("checking that input was rejected...")
         try:
             self.wait(timeout)
@@ -639,21 +638,25 @@ class Child(object):
             if not isinstance(e.__context__, TIMEOUT):
                 raise
         else:
-            raise Error("expected program to reject input, but it did not")
+            return self.fail("expected program to reject input, but it did not")
         return self
 
     def exit(self, code=None, timeout=5):
+        if self.status.failed:
+            return self
+
         self.wait(timeout)
 
         if code is None:
-            return self.exitstatus
+            return self.payload.exit
 
         self.test.log.append("checking that program exited with status {}...".format(code))
-        if self.exitstatus != code:
-            raise Error("expected exit code {}, not {}".format(code, self.exitstatus))
+        if self.payload.exit != code:
+            return self.fail("expected exit code {}, not {}".format(code, self.status.exit))
         return self
 
     def wait(self, timeout=5):
+        out = []
         end = time.time() + timeout
         while time.time() <= end:
             if not self.child.isalive():
@@ -665,9 +668,9 @@ class Child(object):
             except EOF:
                 break
             except UnicodeDecodeError:
-                raise Error("output not valid ASCII text")
+                return self.fail("output not valid ASCII text")
             else:
-                self.output.append(bytes)
+                out.append(bytes)
         else:
             e = Error("timed out while waiting for program to exit")
             e.__context__ = TIMEOUT(timeout)
@@ -681,21 +684,73 @@ class Child(object):
             except (TIMEOUT, EOF):
                 break
             else:
-                self.output.append(bytes)
+                out.append(bytes)
 
-        self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
+        self.payload.output = "".join(out).replace("\r\n", "\n").lstrip("\n")
         self.kill()
 
         if self.child.signalstatus == signal.SIGSEGV:
-            raise Error("failed to execute program due to segmentation fault")
+            return self.fail("failed to execute program due to segmentation fault")
 
-        self.exitstatus = self.child.exitstatus
+        self.payload.exit = self.child.exitstatus
         return self
 
     def kill(self):
         self.child.close(force=True)
         return self
 
+    def fail(self, error_message = ""):
+        self.status.failed = True
+        if not self.payload.error_message:
+            self.payload.error_message = error_message
+        return self
+
+    def on(self, condition):
+        new = Child(self.test, self.child)
+        new.payload = self.payload
+        if not condition(self):
+            new.fail()
+        return new
+
+    def match(self, output, str_output = None):
+        if self.status.failed:
+            return self
+
+        if str_output is None:
+            str_output = output
+
+        if output == EOF:
+            self.test.log.append("checking for EOF...")
+        else:
+            self.test.log.append("checking for output \"{}\"...".format(str_output))
+
+        # Files should be interpreted literally, anything else shouldn't be.
+        try:
+            output = output.read()
+        except AttributeError:
+            #expect = self.child.expect
+            expect = lambda : bool(re.match(output, self.payload.output))
+        else:
+            #expect = self.child.expect_exact
+            expect = lambda : output == self.payload.output
+
+        if not expect():
+            return self.fail(Mismatch(str_output, self.payload.output.replace("\r\n", "\n")))
+        #except Exception:
+        #    return self.fail("check50 could not verify output")
+
+        # If we expected EOF and we still got output, report an error.
+        if output == EOF and re.match(re.compile(".+" + EOF, re.DOTALL), self.payload.output[0]):
+            return self.fail(Mismatch(EOF, self.child.before.replace("\r\n", "\n")))
+
+        return self
+
+    def help(self, message):
+        if self.status.failed:
+            return self
+
+        self.payload.help_message = message
+        return self
 
 class Checks(unittest.TestCase):
     PASS = True
@@ -729,7 +784,7 @@ class Checks(unittest.TestCase):
             f2 = f2.filename
         return bool(self.spawn("diff {} {}".format(quote(f1), quote(f2)))
                         .wait()
-                        .exitstatus)
+                        .status.exit)
 
     def require(self, *paths):
         """Asserts that all paths exist."""
