@@ -20,5 +20,5 @@ setup(
         "console_scripts": ["check50=check50:main"]
     },
     url="https://github.com/cs50/check50",
-    version="2.2.2"
+    version="2.2.3"
 )
