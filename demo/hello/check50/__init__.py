@@ -1,18 +1,17 @@
-import re
+import check50
+import check50.c
 
-from check50 import *
+@check50.check()
+def exists():
+    """hello.c exists"""
+    check50.require("hello.c")
 
-class Hello(Checks):
+@check50.check() # < dependencies aren't ordered yet
+def compiles():
+    """hello.c compiles"""
+    check50.c.compile("hello.c")
 
-    @check()
-    def exists(self):
-        """hello.c exists."""
-        self.require("hello.py")
-
-    @check("exists")
-    def prints_hello(self):
-        """prints "hello, world\\n" """
-        expected = "[Hh]ello, world!?\n"
-        self = self.spawn("python3 hello.py").stdout().match(expected)
-        self.on(fail).match(expected[-1]).help("Did you forget a newline (\"\\n\") at the end of your printf string?")
-        self.on(fail).match(expected.replace(",", "")).help("Did you forget the ,?")
+@check50.check() # < dependencies aren't ordered yet
+def valgrind_hello():
+    """valgrinding "hello, world\\n" """
+    check50.c.valgrind("./hello").stdout("[H|h]ello, world!?")
