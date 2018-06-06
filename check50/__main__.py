@@ -1,5 +1,4 @@
 import signal
-import config
 import os
 import subprocess
 import imp
@@ -10,11 +9,10 @@ import tempfile
 import shutil
 import errno
 import inspect
-from errors import Error, InternalError
 
-_rootPath = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[:-1])
-if _rootPath not in sys.path:
-	sys.path.append(_rootPath)
+from . import config
+from .errors import Error, InternalError
+
 
 def handler(number, frame):
     termcolor.cprint("Check cancelled.", "red")
@@ -176,4 +174,5 @@ def main():
     #else:
     #    print_results(results, log=config.args.log)
 
-main()
+if __name__ == "__main__":
+    main()

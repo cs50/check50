@@ -56,7 +56,7 @@ setup(
     },
     packages=find_packages(),
     entry_points={
-        "console_scripts": ["check50=check50:main"]
+        "console_scripts": ["check50=check50.__main__:main"]
     },
     url="https://github.com/cs50/check50",
     version="2.2.2"
