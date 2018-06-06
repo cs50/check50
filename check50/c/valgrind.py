@@ -8,16 +8,16 @@ import check50.internal
 _valgrind_log = ".valgrind.xml"
 
 def valgrind(command):
-    check50.register_after(lambda : check50.log("valgrind inspection"))
+    check50.internal.register_after(lambda : _check_valgrind())
     return check50.run(f"valgrind {command}")
 
 
-def _check_valgrind(self):
+def _check_valgrind():
     """Log and report any errors encountered by valgrind"""
-    # Load XML file created by valgrind
-    xml = ET.ElementTree(file=os.path.join(self.dir, _valgrind_log))
+    check50.log("checking for valgrind errors... ")
 
-    log("checking for valgrind errors... ")
+    # Load XML file created by valgrind
+    xml = ET.ElementTree(file=os.path.join(check50.test_dir(), _valgrind_log))
 
     # Ensure that we don't get duplicate error messages.
     reported = set()
@@ -44,7 +44,7 @@ def _check_valgrind(self):
 
         msg = "".join(msg)
         if msg not in reported:
-            log(msg)
+            check50.log(msg)
             reported.add(msg)
 
     # Only raise exception if we encountered errors.

@@ -1,6 +1,9 @@
 def log(line):
     _log.add(line)
 
+def get_log():
+    return str(_log)
+
 class Log:
     def __init__(self):
         self._content = []

@@ -10,8 +10,8 @@ import shutil
 import errno
 import inspect
 
-from . import config
-from .errors import Error, InternalError
+from check50 import config
+from check50.errors import Error, InternalError
 
 
 def handler(number, frame):
@@ -154,16 +154,16 @@ def main():
 
     checks = import_checks(identifier)
 
-    import check50.internal_api
+    import check50.internal
 
     # TODO sort checks on dependencies
 
     # TODO multiprocessing kicks in here
     for check in checks:
-        check50.internal_api.before()
+        check50.internal.before()
         check()
-        check50.internal_api.after()
-    print(check50.internal_api.log_as_str())
+        check50.internal.after()
+    print(check50.internal.get_log())
 
     # Get list of results from TestResult class.
     # results = result.results

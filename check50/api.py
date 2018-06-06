@@ -14,7 +14,7 @@ from . import internal
 from .internal import log
 from .errors import Error, InternalError, Mismatch
 
-__all__ = ["run", "require", "log", "check", "Error", "Mismatch"]
+__all__ = ["run", "require", "log", "check", "test_dir", "Error", "Mismatch"]
 
 
 def run(command, env=None):
@@ -70,6 +70,10 @@ class Result(enum.Enum):
     Skip = None
     Error = None
 
+_test_dir = ""
+def test_dir():
+    return _test_dir
+
 # This is going to change quite a lot
 # Decorator for checks
 def check(dependency=None):
@@ -87,7 +91,8 @@ def check(dependency=None):
                 return
 
             # Move files into this check's directory.
-            dst_dir = os.path.join(config.tempdir, func.__name__)
+            global test_dir
+            test_dir = dst_dir = os.path.join(config.tempdir, func.__name__)
             src_dir = os.path.join(config.tempdir, dependency or "_")
             shutil.copytree(src_dir, dst_dir)
 
@@ -122,15 +127,16 @@ class Process:
 
         if prompt:
             try:
-                self.child.expect(".+", timeout=timeout)
+                self.process.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
                 raise Error("expected prompt for input, found none")
-
-        if line == EOF:
-            self.child.sendeof()
-        else:
-            self.child.sendline(line)
-
+        try:
+            if line == EOF:
+                self.process.sendeof()
+            else:
+                self.process.sendline(line)
+        except OSError:
+            pass
         return self
 
     def stdout(self, output=None, str_output=None, timeout=3):
@@ -141,9 +147,9 @@ class Process:
         try:
             output = output.read()
         except AttributeError:
-            expect = self.child.expect
+            expect = self.process.expect
         else:
-            expect = self.child.expect_exact
+            expect = self.process.expect_exact
 
         if str_output is None:
             str_output = output
@@ -157,9 +163,9 @@ class Process:
         try:
             expect(output, timeout=timeout)
         except EOF:
-            result = self.child.before + self.child.buffer
-            if self.child.after != EOF:
-                result += self.child.after
+            result = self.process.before + self.process.buffer
+            if self.process.after != EOF:
+                result += self.process.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
             raise Error(f"did not find {Mismatch.raw(str_output)}")
@@ -169,8 +175,8 @@ class Process:
             raise Error("check50 could not verify output")
 
         # If we expected EOF and we still got output, report an error.
-        if output == EOF and self.child.before:
-            raise Error(Mismatch(EOF, self.child.before.replace("\r\n", "\n")))
+        if output == EOF and self.process.before:
+            raise Error(Mismatch(EOF, self.process.before.replace("\r\n", "\n")))
 
         return self
 
@@ -243,4 +249,4 @@ def _stop_all():
     for p in _processes:
         p.kill()
     _processes = []
-internal.register_after(_stop_all)
+#internal.register_after(_stop_all)
