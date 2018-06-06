@@ -16,7 +16,6 @@ from .errors import Error, InternalError, Mismatch
 
 __all__ = ["run", "require", "log", "check", "test_dir", "Error", "Mismatch"]
 
-
 def run(command, env=None):
     log(f"running {command}...")
 
@@ -33,26 +32,26 @@ def run(command, env=None):
     _processes.append(Process(child))
     return _processes[-1]
 
-# should we take an (optional) str_output here? Don't want to log a regex necessarily
-# TODO: rewrite
-def match(actual, expected):
-
-    # log("checking that  output \"{}\"...".format(expected))
+def match(actual, expected, str_output = ""):
+    if not str_output:
+        str_output = expected
 
     # Files should be interpreted literally, anything else shouldn't be.
     try:
         expected = expected.read()
     except AttributeError:
-        expect = re.match(expected, actual)
+        is_match = re.match(expected, actual)
     else:
-        expect = expected == actual
+        is_match = expected == actual
 
-    if not expect:
-        raise Error(Mismatch(expected, actual.replace("\r\n", "\n")))
+    if not is_match:
+        return False
 
     # If we expected EOF and we still got output, report an error.
     if output == EOF and re.match(re.compile(".+" + EOF, re.DOTALL), actual):
-        raise Error(Mismatch(EOF, actual))
+        return False
+
+    return True
 
 def require(*paths):
     """Asserts that all paths exist."""
@@ -246,7 +245,8 @@ class Process:
 
 _processes = []
 def _stop_all():
+    global _processes
     for p in _processes:
         p.kill()
     _processes = []
-#internal.register_after(_stop_all)
+internal.register_after(_stop_all)
