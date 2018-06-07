@@ -1,4 +1,3 @@
-
 def _set_version():
     """ Set check50 version, hiding variables from autocompleter.  """
     global __version__
@@ -19,7 +18,6 @@ def _set_version():
         __version__ = _dist.version
 
 _set_version()
-
 
 from .internal.builtins import run, require, match
 from .internal.errors import Error, Mismatch

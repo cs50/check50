@@ -60,7 +60,6 @@ def require(*paths):
             raise Error(f"{path} not found")
 
 
-<<<<<<< HEAD:check50/api.py
 # NOTE: this is here temporarily. Will get moved to runner.py
 import enum
 class Result(enum.Enum):
@@ -111,8 +110,6 @@ def check(dependency=None):
 
     return decorator
 
-=======
->>>>>>> Restructured and began work on runner.py:check50/internal/builtins.py
 class Process:
     """ Wrapper class for pexpect child process. """
 
