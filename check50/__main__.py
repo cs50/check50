@@ -10,8 +10,9 @@ import shutil
 import errno
 import inspect
 
-from check50 import config
-from check50.errors import Error, InternalError
+from . import globals
+from . import Error
+from .internal.errors import InternalError
 
 
 def handler(number, frame):

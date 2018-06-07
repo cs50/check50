@@ -1,2 +1,1 @@
-from .register import *
-from .logger import *
+from . import builtins, errors, logger, register, globals

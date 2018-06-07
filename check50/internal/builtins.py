@@ -9,14 +9,13 @@ from shlex import quote
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
-from . import config
-from . import internal
-from .internal import log
+from . import globals
+from . import register
 from .errors import Error, InternalError, Mismatch
-
-__all__ = ["run", "require", "log", "check", "test_dir", "Error", "Mismatch"]
+from .logger import log
 
 def run(command, env=None):
+    """ Runs a command. """
     log(f"running {command}...")
 
     if env is None:
@@ -61,6 +60,7 @@ def require(*paths):
             raise Error(f"{path} not found")
 
 
+<<<<<<< HEAD:check50/api.py
 # NOTE: this is here temporarily. Will get moved to runner.py
 import enum
 class Result(enum.Enum):
@@ -111,6 +111,8 @@ def check(dependency=None):
 
     return decorator
 
+=======
+>>>>>>> Restructured and began work on runner.py:check50/internal/builtins.py
 class Process:
     """ Wrapper class for pexpect child process. """
 
@@ -249,4 +251,4 @@ def _stop_all():
     for p in _processes:
         p.kill()
     _processes = []
-internal.register_after(_stop_all)
+register.register_after(_stop_all)
