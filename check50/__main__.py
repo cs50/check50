@@ -10,7 +10,7 @@ import shutil
 import errno
 import inspect
 
-from . import globals
+from .internal import globals
 from . import Error
 from .internal.errors import InternalError
 
