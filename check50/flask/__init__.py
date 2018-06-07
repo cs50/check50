@@ -1,13 +1,14 @@
-import check50
 import re
 import os
 import sys
 import imp
 import errno
+import urllib.parse as url
 
-from check50.errors import Error
-from six.moves.urllib import parse as url
 from bs4 import BeautifulSoup
+
+import check50
+from check50 import Error
 
 def app(file):
     return App(file)
