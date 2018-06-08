@@ -107,6 +107,10 @@ class CheckRunner:
                 result = queue.get()
                 results[result.name] = result
 
+                # This should return immidiately since the last thing a check does per the decorator is push to the queue
+                procs[result.name].join()
+                del procs[result.name]
+
                 if result.status is Status.Pass:
                     procs.update({
                         check.__name__ : start(check)
@@ -115,9 +119,6 @@ class CheckRunner:
                 else:
                     self._skip_children(result.name, results)
 
-                # This should return immidiately since the last thing a check does per the decorator is push to the queue
-                procs[result.name].join()
-                del procs[result.name]
         return results
 
     def _skip_children(self, check_name, results):

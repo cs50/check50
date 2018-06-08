@@ -1,23 +1,31 @@
 import os
+import tempfile
 import xml.etree.cElementTree as ET
 
 import check50
 from check50.internal import register, globals
 
 
-_valgrind_log = ".valgrind.xml"
-
 def valgrind(command):
-    register.register_after(lambda : _check_valgrind())
-    return check50.run(f"valgrind {command}")
+    xml_file = tempfile.NamedTemporaryFile()
+
+    def check():
+        try:
+            _check_valgrind(xml_file)
+        finally:
+            xml_file.close()
+
+    register.register_after(check)
+    # ideally we'd like for this whole command not to be logged.
+    return check50.run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
 
 
-def _check_valgrind():
+def _check_valgrind(xml_file):
     """Log and report any errors encountered by valgrind"""
     check50.log("checking for valgrind errors... ")
 
     # Load XML file created by valgrind
-    xml = ET.ElementTree(file=os.path.join(check50.test_dir(), _valgrind_log))
+    xml = ET.ElementTree(file=xml_file)
 
     # Ensure that we don't get duplicate error messages.
     reported = set()
