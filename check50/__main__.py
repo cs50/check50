@@ -150,7 +150,7 @@ def main():
 
     results = CheckRunner(checks_module).run(main.args.files)
     for check_name in globals.check_names:
-        pprint({check_name : results[check_name]})
+        pprint({check_name : results[check_name].to_dict()})
 
 
     # Get list of results from TestResult class.

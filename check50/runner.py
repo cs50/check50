@@ -18,51 +18,57 @@ class Status(enum.Enum):
     Fail = False
     Skip = None
 
+class CheckResult:
+    def __init__(self, check, status=None, log=None, rationale=None, helpers=None, data=None):
+        self.name = check.__name__
+        self.description = check.__doc__
+        self.status = status
+        self.log = log
+        self.rationale = rationale
+        self.helpers = helpers
+        self.data = data
+
+    def to_dict(self):
+        return {key : getattr(self, key)
+            for key in ["name", "description", "status",
+                        "log", "rationale", "helpers", "data"]}
 
 def check(dependency=None):
     """ Decorator for checks. """
-    def decorator(f):
+    def decorator(check):
 
-        globals.check_names.append(f.__name__)
-        f._check_dependency = dependency
+        globals.check_names.append(check.__name__)
+        check._check_dependency = dependency
 
-        @functools.wraps(f)
+        @functools.wraps(check)
         def wrapper(checks_root, results):
             # Result template
-            result = {
-                "name": f.__name__,
-                "description": f.__doc__,
-                "helpers": None,
-                "status": None,
-                "log": None,
-                "rationale": None,
-
-            }
+            result = CheckResult(check)
             try:
                 # Setup check environment
-                dst_dir = globals.cwd = os.path.join(checks_root, f.__name__)
+                dst_dir = globals.cwd = os.path.join(checks_root, check.__name__)
                 src_dir = os.path.join(checks_root, dependency.__name__ if dependency is not None else "_")
                 shutil.copytree(src_dir, dst_dir)
                 os.chdir(globals.cwd)
 
                 register._exec_before()
-                f()
+                check()
                 register._exec_after()
             except Error as e:
-                result["status"] = e.result
-                result["helpers"] = e.helpers
-                result["rationale"] = e.rationale
+                result.status = e.result
+                result.helpers = e.helpers
+                result.rationale = e.rationale
             except BaseException as e:
-                result["status"] = Status.Skip
-                result["rationale"] = "check50 ran into an error while running checks!"
+                result.status = Status.Skip
+                result.rationale = "check50 ran into an error while running checks!"
                 logger.log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     logger.log(line.rstrip())
                 logger.log("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
             else:
-                result["status"] = Status.Pass
+                result.status = Status.Pass
             finally:
-                result["log"] = logger._log
+                result.log = logger._log
                 results.put(result)
         return wrapper
     return decorator
@@ -99,14 +105,27 @@ class CheckRunner:
             while procs:
                 # TODO: This will currently block if we don't get a result for a check due to some error. Fix this.
                 result = queue.get()
-                name = result["name"]
-                results[name] = result
-                procs.update({
-                    check.__name__ : start(check)
-                        for check in self.child_map.get(name, [])
-                })
-                # This should return immidiately since the last thing a check does per the decorator is push to the queue
-                procs[name].join()
-                del procs[name]
+                results[result.name] = result
 
+                if result.status is Status.Pass:
+                    procs.update({
+                        check.__name__ : start(check)
+                            for check in self.child_map.get(result.name, [])
+                    })
+                else:
+                    self._skip_children(result.name, results)
+
+                # This should return immidiately since the last thing a check does per the decorator is push to the queue
+                procs[result.name].join()
+                del procs[result.name]
         return results
+
+    def _skip_children(self, check_name, results):
+        for child in self.child_map[check_name]:
+            name = child.__name__
+            if name not in results:
+                results[name] = CheckResult(child,
+                                            status=Status.Skip,
+                                            rationale="can't check until a frown turns upside down")
+                self._skip_children(name, results)
+
