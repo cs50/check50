@@ -9,8 +9,7 @@ from shlex import quote
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
-from . import globals
-from . import register
+from . import register, globals, utils
 from .errors import Error, InternalError, Mismatch
 from .logger import log
 
@@ -20,8 +19,6 @@ def run(command, env=None):
 
     if env is None:
         env = {}
-
-    env = os.environ.update(env)
 
     # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
     # Workaround from https://github.com/pexpect/pexpect/issues/373
@@ -37,7 +34,7 @@ def include(*paths):
     cwd = os.getcwd()
     with cd(globals.check_dir):
         for path in paths:
-            copy(path, cwd)
+            utils.copy(path, cwd)
 
 
 def match(actual, expected, str_output = ""):
@@ -52,14 +49,7 @@ def match(actual, expected, str_output = ""):
     else:
         is_match = expected == actual
 
-    if not is_match:
-        return False
-
-    # If we expected EOF and we still got output, report an error.
-    if output == EOF and re.match(re.compile(".+" + EOF, re.DOTALL), actual):
-        return False
-
-    return True
+    return is_match
 
 def exists(*paths):
     """Asserts that all paths exist."""
@@ -125,7 +115,7 @@ class Process:
                 result += self.process.after
             raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
         except TIMEOUT:
-            raise Error(f"did not find {Mismatch.raw(str_output)}")
+            raise Error(f"did not find {utils.raw(str_output)}")
         except UnicodeDecodeError:
             raise Error("output not valid ASCII text")
         except Exception:
@@ -164,6 +154,7 @@ class Process:
         return self
 
     def _wait(self, timeout=5):
+        out = []
         end = time.time() + timeout
         while time.time() <= end:
             if not self.process.isalive():
@@ -203,8 +194,6 @@ class Process:
 
 _processes = []
 def _stop_all():
-    global _processes
-    for p in _processes:
-        p.kill()
-    _processes = []
+    while _processes:
+        _processes.pop().kill()
 register.register_after(_stop_all)

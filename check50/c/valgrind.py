@@ -2,13 +2,13 @@ import os
 import xml.etree.cElementTree as ET
 
 import check50
-import check50.internal
+from check50.internal import register, globals
 
 
 _valgrind_log = ".valgrind.xml"
 
 def valgrind(command):
-    check50.internal.register_after(lambda : _check_valgrind())
+    register.register_after(lambda : _check_valgrind())
     return check50.run(f"valgrind {command}")
 
 
@@ -34,7 +34,7 @@ def _check_valgrind():
         # Find first stack frame within student's code.
         for frame in error.iterfind("stack/frame"):
             obj = frame.find("obj")
-            if obj is not None and os.path.dirname(obj.text) == check50.internal.check_dir:
+            if obj is not None and os.path.dirname(obj.text) == globals.cwd:
                 location = frame.find("file"), frame.find("line")
                 if None not in location:
                     msg.append(

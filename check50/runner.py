@@ -1,19 +1,22 @@
 import collections
 import enum
+import functools
 import os
 import multiprocessing as mp
 import traceback
+import tempfile
+import inspect
 
 import shutil
 
 from .internal import globals, logger, register, utils
+from .internal.errors import Error
 
 
 class Status(enum.Enum):
     Pass = True
     Fail = False
     Skip = None
-    Error = None
 
 
 def check(dependency=None):
@@ -23,7 +26,7 @@ def check(dependency=None):
         globals.check_names.append(f.__name__)
         f._check_dependency = dependency
 
-        @wraps(f)
+        @functools.wraps(f)
         def wrapper(checks_root, results):
             # Result template
             result = {
@@ -38,9 +41,9 @@ def check(dependency=None):
             try:
                 # Setup check environment
                 dst_dir = globals.cwd = os.path.join(checks_root, f.__name__)
-                src_dir = os.path.join(checks_root, dependency or "_")
+                src_dir = os.path.join(checks_root, dependency.__name__ if dependency is not None else "_")
                 shutil.copytree(src_dir, dst_dir)
-                os.chdir(self.dir)
+                os.chdir(globals.cwd)
 
                 register._exec_before()
                 f()
@@ -50,7 +53,7 @@ def check(dependency=None):
                 result["helpers"] = e.helpers
                 result["rationale"] = e.rationale
             except BaseException as e:
-                result["status"] = Status.Error
+                result["status"] = Status.Skip
                 result["rationale"] = "check50 ran into an error while running checks!"
                 logger.log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
@@ -65,18 +68,19 @@ def check(dependency=None):
     return decorator
 
 class CheckRunner:
-    def __init__(self, checks):
-        self.checks = checks
+    def __init__(self, check_module):
+        self.checks = [check for _, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))]
 
         # map each check to the check(s) that depend on it
         self.child_map = collections.defaultdict(set)
-        for check in checks:
-            self.child_map[check._check_dependency.__name__].add(check)
+        for check in self.checks:
+            if check._check_dependency is not None:
+                self.child_map[check._check_dependency.__name__].add(check)
 
     def run(self, files):
         results = {}
         queue = mp.Queue()
-        with tempdir.TemporaryDirectory() as checks_root:
+        with tempfile.TemporaryDirectory() as checks_root:
             dst_dir = os.path.join(checks_root, "_")
             os.mkdir(dst_dir)
 
@@ -95,14 +99,14 @@ class CheckRunner:
             while procs:
                 # TODO: This will currently block if we don't get a result for a check due to some error. Fix this.
                 result = queue.get()
-                self.results[result.name] = result
+                name = result["name"]
+                results[name] = result
                 procs.update({
                     check.__name__ : start(check)
-                        for check in self.child_map[result.name]
+                        for check in self.child_map.get(name, [])
                 })
-
                 # This should return immidiately since the last thing a check does per the decorator is push to the queue
-                procs[result.name].join()
-                del procs[result.name]
+                procs[name].join()
+                del procs[name]
 
         return results

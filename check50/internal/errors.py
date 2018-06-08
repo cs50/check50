@@ -1,4 +1,4 @@
-from pexpect.exceptions import EOF, TIMEOUT
+from . import utils
 
 class Error(Exception):
     """Class to wrap errors in students' checks."""
@@ -14,7 +14,7 @@ class InternalError(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-class Mismatch(object):
+class Mismatch:
     """Class which represents that expected output did not match actual output."""
 
     def __init__(self, expected, actual):
@@ -22,24 +22,8 @@ class Mismatch(object):
         self.actual = actual
 
     def __str__(self):
-        return "expected {}, not {}".format(self.raw(self.expected),
-                                            self.raw(self.actual))
+        return "expected {}, not {}".format(utils.raw(self.expected),
+                                            utils.raw(self.actual))
 
     def __repr__(self):
-        return "Mismatch(expected={}, actual={})".format(repr(expected), repr(actual))
-
-    @staticmethod
-    def raw(s):
-        """Get raw representation of s, truncating if too long"""
-
-        if isinstance(s, list):
-            s = "\n".join(s)
-
-        if s == EOF:
-            return "EOF"
-
-        s = repr(s)  # get raw representation of string
-        s = s[1:-1]  # strip away quotation marks
-        if len(s) > 15:
-            s = s[:15] + "..."  # truncate if too long
-        return "\"{}\"".format(s)
+        return "Mismatch(expected={}, actual={})".format(repr(self.expected), repr(self.actual))

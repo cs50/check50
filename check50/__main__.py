@@ -9,6 +9,9 @@ import tempfile
 import shutil
 import errno
 import inspect
+import traceback
+
+from pprint import pprint
 
 from .internal import globals
 from . import Error
@@ -32,7 +35,7 @@ def excepthook(cls, exc, tb):
     else:
         termcolor. cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
-    if main.args.verbose:
+    if main.args.debug:
         traceback.print_exception(cls, exc, tb)
 
 
@@ -69,7 +72,7 @@ def import_checks(checks_dir, identifier):
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
         # Can't use subprocess.DEVNULL because it requires python 3.3.
-        stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
+        stdout = stderr = None if main.args.debug else open(os.devnull, "wb")
 
         # Update checks via git.
         try:
@@ -104,8 +107,7 @@ def import_checks(checks_dir, identifier):
     except FileNotFoundError:
         raise InternalError("invalid identifier")
 
-    checks = [func for _, func in inspect.getmembers(module, inspect.isfunction) if hasattr(func, "_checks_sentinel")]
-    return checks
+    return module
 
 def main():
     signal.signal(signal.SIGINT, handler)
@@ -144,10 +146,12 @@ def main():
     if main.args.debug:
         main.args.log = True
 
-    checks = import_checks(main.args.checkdir, main.args.identifier)
+    checks_module = import_checks(main.args.checkdir, main.args.identifier)
 
-    results = CheckRunner(checks).run(main.args.files)
-    print(results)
+    results = CheckRunner(checks_module).run(main.args.files)
+    for check_name in globals.check_names:
+        pprint({check_name : results[check_name]})
+
 
     # Get list of results from TestResult class.
     # results = result.results
