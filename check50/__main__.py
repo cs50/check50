@@ -13,32 +13,42 @@ import inspect
 from .internal import globals
 from . import Error
 from .internal.errors import InternalError
-
+from .runner import CheckRunner
 
 def handler(number, frame):
     termcolor.cprint("Check cancelled.", "red")
     sys.exit(1)
 
-def copy(src, dst):
-    """Copy src to dst, copying recursively if src is a directory"""
-    try:
-        shutil.copytree(src, os.path.join(dst, os.path.basename(src)))
-    except (OSError, IOError) as e:
-        if e.errno == errno.ENOTDIR:
-            shutil.copy(src, dst)
-        else:
-            raise
+def excepthook(cls, exc, tb):
+    # Class is a BaseException, better just quit.
+    if not issubclass(cls, Exception):
+        print()
+        return
 
-def import_checks(identifier):
+    if cls is InternalError:
+        termcolor.cprint(exc.msg, "red", file=sys.stderr)
+    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
+        termcolor.cprint("{} not found".format(exc.filename), "red", file=sys.stderr)
+    else:
+        termcolor. cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
+
+    if main.args.verbose:
+        traceback.print_exception(cls, exc, tb)
+
+
+sys.excepthook = excepthook
+
+
+def import_checks(checks_dir, identifier):
     """
     Given an identifier of the form path/to/check@org/repo, clone
     the checks from github.com/org/repo (defaulting to cs50/checks
-    if there is no @) into config.args.checkdir. Then extract child
+    if there is no @) into main.args.checkdir. Then extract child
     of Check class from path/to/check/check50/__init__.py and return it
 
     Throws ImportError on error
     """
-    if not config.args.offline:
+    if not main.args.offline:
         try:
             slug, repo = identifier.split("@")
         except ValueError:
@@ -50,8 +60,8 @@ def import_checks(identifier):
             raise InternalError(
                 "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
 
-        checks_root = os.path.join(config.args.checkdir, org, repo)
-        config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
+        checks_root = os.path.join(checks_dir, org, repo)
+        globals.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
 
         if os.path.exists(checks_root):
             command = ["git", "-C", checks_root, "pull", "origin", "master"]
@@ -59,7 +69,7 @@ def import_checks(identifier):
             command = ["git", "clone", "https://github.com/{}/{}".format(org, repo), checks_root]
 
         # Can't use subprocess.DEVNULL because it requires python 3.3.
-        stdout = stderr = None if config.args.verbose else open(os.devnull, "wb")
+        stdout = stderr = None if main.args.verbose else open(os.devnull, "wb")
 
         # Update checks via git.
         try:
@@ -67,57 +77,46 @@ def import_checks(identifier):
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
     else:
-        slug = os.path.join(config.args.checkdir, identifier)
+        slug = os.path.join(checks_dir, identifier)
         checks_root = slug
-        config.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
+        globals.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
 
     # Install any dependencies from requirements.txt either in the root of the
     # repository or in the directory of the specific check.
-    for dir in [checks_root, os.path.dirname(config.check_dir)]:
+    for dir in [checks_root, os.path.dirname(globals.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
-            args = ["install", "-r", requirements]
+            pip = ["pip", "install", "-r", requirements]
+
             # If we are not in a virtualenv, we need --user
             if not hasattr(sys, "real_prefix"):
-                args.append("--user")
-
-            if not config.args.verbose:
-                args += ["--quiet"] * 3
+                pip.append("--user")
 
             try:
-                code = __import__("pip").main(args)
-            except SystemExit as e:
-                code = e.code
-
-            if code:
+                subprocess.check_call(pip, stdout=stdout, stderr=stderr)
+            except subprocess.CalledProcessError:
                 raise InternalError("failed to install dependencies in ({})".format(
-                    requirements[len(config.args.checkdir) + 1:]))
+                    requirements[len(checks_dir) + 1:]))
 
     try:
         # Import module from file path directly.
-        module = imp.load_source(slug, os.path.join(config.check_dir, "__init__.py"))
-        # TODO check for sentinel
-        checks = [func for _, func in inspect.getmembers(module, inspect.isfunction) if hasattr(func, "_checks_sentinel")]
-    except (OSError, IOError) as e:
-        if e.errno != errno.ENOENT:
-            raise
-    except ValueError as e:
-        pass
-    else:
-        return checks
+        module = imp.load_source(slug, os.path.join(globals.check_dir, "__init__.py"))
+    except FileNotFoundError:
+        raise InternalError("invalid identifier")
 
-    raise InternalError("invalid identifier")
+    checks = [func for _, func in inspect.getmembers(module, inspect.isfunction) if hasattr(func, "_checks_sentinel")]
+    return checks
 
 def main():
     signal.signal(signal.SIGINT, handler)
 
     # Parse command line arguments.
     parser = argparse.ArgumentParser()
-    parser.add_argument("identifier", nargs=1)
-    parser.add_argument("files", nargs="*")
-    parser.add_argument("-d", "--debug",
+    parser.add_argument("identifier")
+    parser.add_argument("files", nargs="*", default=os.listdir("."))
+    parser.add_argument("-j", "--json",
                         action="store_true",
-                        help="display machine-readable output")
+                        help="display machine-readable JSON output")
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help="run checks locally instead of uploading to cs50")
@@ -132,39 +131,23 @@ def main():
     parser.add_argument("--log",
                         action="store_true",
                         help="display more detailed information about check results")
-    parser.add_argument("-v", "--verbose",
+    parser.add_argument("-d", "--debug",
                         action="store_true",
-                        help="display the full tracebacks of any errors")
+                        help="display the full tracebacks of any errors (also implies --log)")
 
-    config.args = parser.parse_args()
-    config.args.checkdir = os.path.abspath(os.path.expanduser(config.args.checkdir))
-    identifier = config.args.identifier[0]
-    files = config.args.files
+    main.args = parser.parse_args()
+    main.args.checkdir = os.path.abspath(os.path.expanduser(main.args.checkdir))
 
-    if config.args.offline:
-        config.args.local = True
+    if main.args.offline:
+        main.args.local = True
 
-    # Copy all files to temporary directory.
-    config.tempdir = tempfile.mkdtemp()
-    src_dir = os.path.join(config.tempdir, "_")
-    os.mkdir(src_dir)
-    if len(files) == 0:
-        files = os.listdir(".")
-    for filename in files:
-        copy(filename, src_dir)
+    if main.args.debug:
+        main.args.log = True
 
-    checks = import_checks(identifier)
+    checks = import_checks(main.args.checkdir, main.args.identifier)
 
-    import check50.internal
-
-    # TODO sort checks on dependencies
-
-    # TODO multiprocessing kicks in here
-    for check in checks:
-        check50.internal.before()
-        check()
-        check50.internal.after()
-    print(check50.internal.get_log())
+    results = CheckRunner(checks).run(main.args.files)
+    print(results)
 
     # Get list of results from TestResult class.
     # results = result.results

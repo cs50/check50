@@ -19,7 +19,7 @@ def _set_version():
 
 _set_version()
 
-from .internal.builtins import run, require, match
+from .internal.builtins import run, exists, match, include
 from .internal.errors import Error, Mismatch
 from .internal.logger import log
 from .internal.globals import check_dir

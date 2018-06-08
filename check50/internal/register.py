@@ -7,10 +7,10 @@ def register_before(func):
 def register_after(func):
     _afters.append(func)
 
-def before():
+def _exec_before():
     for func in _befores:
         func()
 
-def after():
+def _exec_after():
     for func in _afters:
         func()

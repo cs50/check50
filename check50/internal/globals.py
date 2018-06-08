@@ -1,5 +1,4 @@
 args = None
 check_dir = None
-tempdir = None
-test_cases = []
-test_results = {}
+checks_root = None
+check_names = []

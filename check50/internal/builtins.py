@@ -31,6 +31,15 @@ def run(command, env=None):
     _processes.append(Process(child))
     return _processes[-1]
 
+
+def include(*paths):
+    """Copies a file to the temporary directory."""
+    cwd = os.getcwd()
+    with cd(globals.check_dir):
+        for path in paths:
+            copy(path, cwd)
+
+
 def match(actual, expected, str_output = ""):
     if not str_output:
         str_output = expected
@@ -52,63 +61,13 @@ def match(actual, expected, str_output = ""):
 
     return True
 
-def require(*paths):
+def exists(*paths):
     """Asserts that all paths exist."""
     for path in paths:
         log(f"Checking that {path} exists...")
         if not os.path.exists(path):
             raise Error(f"{path} not found")
 
-
-# NOTE: this is here temporarily. Will get moved to runner.py
-import enum
-class Result(enum.Enum):
-    Pass = True
-    Fail = False
-    Skip = None
-    Error = None
-
-_test_dir = ""
-def test_dir():
-    return _test_dir
-
-# This is going to change quite a lot
-# Decorator for checks
-def check(dependency=None):
-    def decorator(func):
-
-        # add test to list of test, in order of declaration
-        config.test_cases.append(func.__name__)
-
-        @wraps(func)
-        def wrapper():
-
-            # Check if dependency failed.
-            if dependency and config.test_results.get(dependency) is not Result.Pass:
-                wrapper.result = config.test_results[func.__name__] = Result.Skip
-                return
-
-            # Move files into this check's directory.
-            global test_dir
-            test_dir = dst_dir = os.path.join(config.tempdir, func.__name__)
-            src_dir = os.path.join(config.tempdir, dependency or "_")
-            shutil.copytree(src_dir, dst_dir)
-
-            os.chdir(dst_dir)
-            # Run the test, catch failures.
-            try:
-                func()
-            except Error as e:
-                result = e.result
-            else:
-                result = Result.Pass
-
-            config.test_results[func.__name__] = result
-
-        wrapper._checks_sentinel = True
-        return wrapper
-
-    return decorator
 
 class Process:
     """ Wrapper class for pexpect child process. """
