@@ -43,6 +43,7 @@ def excepthook(cls, exc, tb):
     elif cls is FileNotFoundError:
         termcolor.cprint(f"{exc.filename} not found", "red", file=sys.stderr)
     else:
+        print(cls, exc, tb)
         termcolor. cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
     if main.args.debug:
@@ -96,7 +97,7 @@ def import_checks(checks_dir, identifier):
             pip = ["pip", "install", "-r", requirements]
 
             # If we are not in a virtualenv, we need --user
-            if not hasattr(sys, "real_prefix"):
+            if not hasattr(sys, "real_prefix") and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
                 pip.append("--user")
 
             try:
