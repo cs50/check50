@@ -13,14 +13,24 @@ import traceback
 
 from pprint import pprint
 
-from .internal import globals
-from . import Error
-from .internal.errors import InternalError
-from .runner import CheckRunner
+import attr
+
+from . import internal
+from .api import Failure
+from .runner import CheckRunner, check_names
+
+
+class InternalError(Exception):
+    """Error during execution of check50."""
+
+    def __init__(self, msg):
+        self.msg = msg
+
 
 def handler(number, frame):
     termcolor.cprint("Check cancelled.", "red")
     sys.exit(1)
+
 
 def excepthook(cls, exc, tb):
     # Class is a BaseException, better just quit.
@@ -30,8 +40,8 @@ def excepthook(cls, exc, tb):
 
     if cls is InternalError:
         termcolor.cprint(exc.msg, "red", file=sys.stderr)
-    elif any(issubclass(cls, err) for err in [IOError, OSError]) and exc.errno == errno.ENOENT:
-        termcolor.cprint("{} not found".format(exc.filename), "red", file=sys.stderr)
+    elif cls is FileNotFoundError:
+        termcolor.cprint(f"{exc.filename} not found", "red", file=sys.stderr)
     else:
         termcolor. cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
@@ -48,24 +58,22 @@ def import_checks(checks_dir, identifier):
     the checks from github.com/org/repo (defaulting to cs50/checks
     if there is no @) into main.args.checkdir. Then extract child
     of Check class from path/to/check/check50/__init__.py and return it
-
-    Throws ImportError on error
     """
+
+    try:
+        slug, repo = identifier.split("@")
+    except ValueError:
+        slug, repo = identifier, "cs50/checks"
+
+    try:
+        org, repo = repo.split("/")
+    except ValueError:
+        raise InternalError(
+            "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
+    checks_root = os.path.join(checks_dir, org, repo)
+    internal.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
+
     if not main.args.offline:
-        try:
-            slug, repo = identifier.split("@")
-        except ValueError:
-            slug, repo = identifier, "cs50/checks"
-
-        try:
-            org, repo = repo.split("/")
-        except ValueError:
-            raise InternalError(
-                "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
-
-        checks_root = os.path.join(checks_dir, org, repo)
-        globals.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
-
         if os.path.exists(checks_root):
             command = ["git", "-C", checks_root, "pull", "origin", "master"]
         else:
@@ -79,14 +87,10 @@ def import_checks(checks_dir, identifier):
             subprocess.check_call(command, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
             raise InternalError("failed to clone checks")
-    else:
-        slug = os.path.join(checks_dir, identifier)
-        checks_root = slug
-        globals.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
 
     # Install any dependencies from requirements.txt either in the root of the
     # repository or in the directory of the specific check.
-    for dir in [checks_root, os.path.dirname(globals.check_dir)]:
+    for dir in [checks_root, os.path.dirname(internal.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
             pip = ["pip", "install", "-r", requirements]
@@ -103,7 +107,7 @@ def import_checks(checks_dir, identifier):
 
     try:
         # Import module from file path directly.
-        module = imp.load_source(slug, os.path.join(globals.check_dir, "__init__.py"))
+        module = imp.load_source(slug, os.path.join(internal.check_dir, "__init__.py"))
     except FileNotFoundError:
         raise InternalError("invalid identifier")
 
@@ -149,8 +153,8 @@ def main():
     checks_module = import_checks(main.args.checkdir, main.args.identifier)
 
     results = CheckRunner(checks_module).run(main.args.files)
-    for check_name in globals.check_names:
-        pprint({check_name : results[check_name].to_dict()})
+    for check_name in check_names:
+        pprint({check_name : attr.asdict(results[check_name])})
 
 
     # Get list of results from TestResult class.

@@ -2,27 +2,33 @@ import os
 import tempfile
 import xml.etree.cElementTree as ET
 
-import check50
-from check50.internal import register, globals
+from .api import run, log, Failure
+from . import internal
+
+CC = "clang"
+CFLAGS = "-std=c11 -O0 -ggdb3" # etc.
+
+
+def compile(file_name, exe_name=None):
+    if exe_name is None and file_name.endswith(".c"):
+        exe_name = file_name.split(".c")[0]
+
+    out_flag = f"-o {exe_name}" if exe_name is not None else ""
+
+    run(f"{CC} {file_name} {out_flag} {CFLAGS}").exit(0)
 
 
 def valgrind(command):
     xml_file = tempfile.NamedTemporaryFile()
+    register.after(lambda: _check_valgrind(xml_file))
 
-    def check():
-        try:
-            _check_valgrind(xml_file)
-        finally:
-            xml_file.close()
-
-    register.register_after(check)
     # ideally we'd like for this whole command not to be logged.
-    return check50.run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
+    return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
 
 
 def _check_valgrind(xml_file):
     """Log and report any errors encountered by valgrind"""
-    check50.log("checking for valgrind errors... ")
+    log("checking for valgrind errors... ")
 
     # Load XML file created by valgrind
     xml = ET.ElementTree(file=xml_file)
@@ -42,7 +48,7 @@ def _check_valgrind(xml_file):
         # Find first stack frame within student's code.
         for frame in error.iterfind("stack/frame"):
             obj = frame.find("obj")
-            if obj is not None and os.path.dirname(obj.text) == globals.cwd:
+            if obj is not None and os.path.dirname(obj.text) == run_dir:
                 location = frame.find("file"), frame.find("line")
                 if None not in location:
                     msg.append(
@@ -52,9 +58,9 @@ def _check_valgrind(xml_file):
 
         msg = "".join(msg)
         if msg not in reported:
-            check50.log(msg)
+            log(msg)
             reported.add(msg)
 
     # Only raise exception if we encountered errors.
     if reported:
-        raise check50.Error("valgrind tests failed; rerun with --log for more information.")
+        raise Failure("valgrind tests failed; rerun with --log for more information.")

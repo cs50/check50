@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from functools import wraps
 import os
 import re
@@ -9,12 +10,11 @@ from shlex import quote
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
-from . import register, globals, utils
-from .errors import Error, InternalError, Mismatch
-from .logger import log
+from . import internal
+
 
 def run(command, env=None):
-    """ Runs a command. """
+    """Runs a command with the specified environment."""
     log(f"running {command}...")
 
     if env is None:
@@ -25,46 +25,70 @@ def run(command, env=None):
     command = "bash -c {}".format(quote(command))
     child = pexpect.spawnu(command, encoding="utf-8", echo=False, env=env)
 
-    _processes.append(Process(child))
-    return _processes[-1]
+    return Process(child)
+
+
+_log = []
+def log(line):
+    """Add line to check log."""
+    _log.append(line)
 
 
 def include(*paths):
-    """Copies a file to the temporary directory."""
+    """Copies a file from the check directory to the current directory."""
     cwd = os.getcwd()
-    with cd(globals.check_dir):
+    with cd(internal.check_dir):
         for path in paths:
-            utils.copy(path, cwd)
+            _copy(path, cwd)
 
 
-def match(actual, expected, str_output = ""):
-    if not str_output:
-        str_output = expected
+def hash(self, file):
+    """Hashes a file using SHA-256."""
 
-    # Files should be interpreted literally, anything else shouldn't be.
+    # Get filename
     try:
-        expected = expected.read()
+        file = file.name
     except AttributeError:
-        is_match = re.match(expected, actual)
-    else:
-        is_match = expected == actual
+        pass
 
-    return is_match
+    exists(file)
+
+    # https://stackoverflow.com/a/22058673
+    with open(file, "rb"):
+        sha256 = hashlib.sha256()
+        for block in iter(lambda: f.read(65536), ""):
+            sha256.update(data)
+        return sha256.hexdigest()
+
+
+def diff(self, f1, f2):
+    """Returns boolean indicating whether or not the files are different"""
+    try:
+        f1 = f1.name
+    except AttributeError:
+        pass
+
+    try:
+        f2 = f2.name
+    except AttributeError:
+        pass
+
+    return bool(run("diff {} {}".format(quote(f1), quote(f2))).exit())
+
 
 def exists(*paths):
     """Asserts that all paths exist."""
     for path in paths:
         log(f"Checking that {path} exists...")
         if not os.path.exists(path):
-            raise Error(f"{path} not found")
+            raise Failure(f"{path} not found")
 
 
 class Process:
     """ Wrapper class for pexpect child process. """
 
-    def __init__(self, process_reference):
-        _processes.append(self)
-        self.process = process_reference
+    def __init__(self, proc):
+        self.process = proc
 
     def stdin(self, line, prompt=True, timeout=3):
         if line == EOF:
@@ -76,7 +100,7 @@ class Process:
             try:
                 self.process.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
-                raise Error("expected prompt for input, found none")
+                raise Failure("expected prompt for input, found none")
         try:
             if line == EOF:
                 self.process.sendeof()
@@ -113,17 +137,17 @@ class Process:
             result = self.process.before + self.process.buffer
             if self.process.after != EOF:
                 result += self.process.after
-            raise Error(Mismatch(str_output, result.replace("\r\n", "\n")))
+            raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Error(f"did not find {utils.raw(str_output)}")
+            raise Failure(f"did not find {_raw(str_output)}")
         except UnicodeDecodeError:
-            raise Error("output not valid ASCII text")
+            raise Failure("output not valid ASCII text")
         except Exception:
-            raise Error("check50 could not verify output")
+            raise Failure("check50 could not verify output")
 
         # If we expected EOF and we still got output, report an error.
         if output == EOF and self.process.before:
-            raise Error(Mismatch(EOF, self.process.before.replace("\r\n", "\n")))
+            raise Mismatch(EOF, self.process.before.replace("\r\n", "\n"))
 
         return self
 
@@ -131,11 +155,11 @@ class Process:
         log("checking that input was rejected...")
         try:
             self._wait(timeout)
-        except Error as e:
+        except Failure as e:
             if not isinstance(e.__context__, TIMEOUT):
                 raise
         else:
-            raise Error("expected program to reject input, but it did not")
+            raise Failure("expected program to reject input, but it did not")
         return self
 
     def exit(self, code=None, timeout=5):
@@ -146,7 +170,7 @@ class Process:
 
         log(f"checking that program exited with status {code}...")
         if self.exitcode != code:
-            raise Error(f"expected exit code {code}, not {self.exitcode}")
+            raise Failure(f"expected exit code {code}, not {self.exitcode}")
         return self
 
     def kill(self):
@@ -166,11 +190,11 @@ class Process:
             except EOF:
                 break
             except UnicodeDecodeError:
-                raise Error("output not valid ASCII text")
+                raise Failure("output not valid ASCII text")
             else:
                 out.append(bytes)
         else:
-            e = Error("timed out while waiting for program to exit")
+            e = Failure("timed out while waiting for program to exit")
             e.__context__ = TIMEOUT(timeout)
             raise e
 
@@ -187,13 +211,59 @@ class Process:
         self.kill()
 
         if self.process.signalstatus == signal.SIGSEGV:
-            raise Error("failed to execute program due to segmentation fault")
+            raise Failure("failed to execute program due to segmentation fault")
 
         self.exitcode = self.process.exitstatus
         return self
 
-_processes = []
-def _stop_all():
-    while _processes:
-        _processes.pop().kill()
-register.register_after(_stop_all)
+
+
+class Failure(Exception):
+    def __init__(self, rationale, help=None):
+        self.rationale = rationale
+        self.help = help
+
+    def __str__(self):
+        return self.rationale
+
+    def asdict(self):
+        return {"rationale": self.rationale, "help": self.help}
+
+
+class Mismatch(Failure):
+    def __init__(self, expected, actual, help=None):
+        super().__init__(rationale=f"expected {_raw(expected)}, not {_raw(actual)}", help=help)
+        self.expected = expected
+        self.actual = actual
+
+
+    def asdict(self):
+        return dict(expected=self.expected,
+                    actual=self.actual
+                    **super().asdict())
+
+
+def _raw(s):
+    """Get raw representation of s, truncating if too long"""
+
+    if isinstance(s, list):
+        s = "\n".join(_raw(item) for item in s)
+
+    if s == EOF:
+        return "EOF"
+
+    s = repr(s)  # get raw representation of string
+    s = s[1:-1]  # strip away quotation marks
+    if len(s) > 15:
+        s = s[:15] + "..."  # truncate if too long
+    return "\"{}\"".format(s)
+
+
+def _copy(src, dst):
+    """Copy src to dst, copying recursively if src is a directory"""
+    try:
+        shutil.copy(src, dst)
+    except IsADirectoryError:
+        if os.path.isdir(dst):
+            dst = os.path.join(dst, os.path.basename(src))
+        shutil.copytree(src, dst)

@@ -7,72 +7,77 @@ import traceback
 import tempfile
 import inspect
 
+import attr
 import shutil
 
-from .internal import globals, logger, register, utils
-from .internal.errors import Error
+from . import internal
+from .api import log, _log, Failure, _copy
 
+check_names = []
 
 class Status(enum.Enum):
     Pass = True
     Fail = False
     Skip = None
 
-class CheckResult:
-    def __init__(self, check, status=None, log=None, rationale=None, helpers=None, data=None):
-        self.name = check.__name__
-        self.description = check.__doc__
-        self.status = status
-        self.log = log
-        self.rationale = rationale
-        self.helpers = helpers
-        self.data = data
 
-    def to_dict(self):
-        return {key : getattr(self, key)
-            for key in ["name", "description", "status",
-                        "log", "rationale", "helpers", "data"]}
+@attr.s
+class CheckResult:
+    name = attr.ib(default=None)
+    description = attr.ib(default=None)
+    status = attr.ib(default=None)
+    log = attr.ib(default=None)
+    rationale = attr.ib(default=None)
+    help = attr.ib(default=None)
+    data = attr.ib(default=None)
+
+    @classmethod
+    def from_check(cls, check):
+        return cls(name=check.__name__, description=check.__doc__)
+
 
 def check(dependency=None):
     """ Decorator for checks. """
     def decorator(check):
 
-        globals.check_names.append(check.__name__)
+        check_names.append(check.__name__)
         check._check_dependency = dependency
 
         @functools.wraps(check)
         def wrapper(checks_root, results):
             # Result template
-            result = CheckResult(check)
+            result = CheckResult.from_check(check)
             try:
                 # Setup check environment
-                dst_dir = globals.cwd = os.path.join(checks_root, check.__name__)
-                src_dir = os.path.join(checks_root, dependency.__name__ if dependency is not None else "_")
+                dst_dir = internal.run_dir = os.path.join(checks_root, check.__name__)
+                src_dir = os.path.join(checks_root, dependency.__name__ if dependency is not None else "-")
                 shutil.copytree(src_dir, dst_dir)
-                os.chdir(globals.cwd)
+                os.chdir(internal.run_dir)
 
-                register._exec_before()
-                check()
-                register._exec_after()
-            except Error as e:
-                result.status = e.result
-                result.helpers = e.helpers
+                with internal.register:
+                    check()
+
+            except Failure as e:
+                result.status = Status.Fail
+                result.help = e.help
                 result.rationale = e.rationale
             except BaseException as e:
                 result.status = Status.Skip
                 result.rationale = "check50 ran into an error while running checks!"
-                logger.log(repr(e))
+                log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
-                    logger.log(line.rstrip())
-                logger.log("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
+                    log(line.rstrip())
+                log("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
             else:
                 result.status = Status.Pass
             finally:
-                result.log = logger._log
+                result.log = _log
                 results.put(result)
         return wrapper
     return decorator
 
+
+# Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, check_module):
         self.checks = [check for _, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))]
@@ -87,11 +92,11 @@ class CheckRunner:
         results = {}
         queue = mp.Queue()
         with tempfile.TemporaryDirectory() as checks_root:
-            dst_dir = os.path.join(checks_root, "_")
+            dst_dir = os.path.join(checks_root, "-")
             os.mkdir(dst_dir)
 
             for filename in files:
-                utils.copy(filename, dst_dir)
+                _copy(filename, dst_dir)
 
             def start(check):
                 proc = mp.Process(target=check, args=(checks_root, queue))

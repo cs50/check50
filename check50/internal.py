@@ -1,0 +1,38 @@
+"""
+Additional check50 internals exposed to extension writers in addition to the standard API
+"""
+
+from contextlib import contextmanager
+
+# Directory containing the check and its associated files
+check_dir = None
+
+# Temporary directory in which check is being run
+run_dir = None
+
+
+class Register:
+    def __init__(self, befores=[], afters=[]):
+        self._befores = befores
+        self._afters = afters
+
+    def before(func):
+        self._befores.append(func)
+
+    def afters(func):
+        self._afters.append(func)
+
+    def __enter__(self):
+        for f in self._befores:
+            f()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Only run 'afters' when check has passed
+        if exc_type is not None:
+            return
+
+        for f in self._afters:
+            f()
+
+
+register = Register()

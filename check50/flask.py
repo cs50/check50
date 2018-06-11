@@ -7,11 +7,12 @@ import urllib.parse as url
 
 from bs4 import BeautifulSoup
 
-import check50
-from check50 import Error
+from .api import log
+
 
 def app(file):
     return App(file)
+
 
 class App:
     def __init__(self, path):
@@ -23,10 +24,8 @@ class App:
         try:
             sys.path[0] = os.path.abspath(dir or ".")
             mod = imp.load_source(name, file)
-        except (OSError, IOError) as e:
-            if e.errno == errno.ENOENT:
-                e = Error("could not find {}".format(file))
-            raise e
+        except FileNotFoundError:
+            raise Fail("could not find {}".format(file))
         finally:
             # restore sys.path
             sys.path[0] = prevpath
@@ -34,7 +33,7 @@ class App:
         try:
             app = mod.app
         except AttributeError:
-            raise Error("{} does not contain an app".format(file))
+            raise Fail("{} does not contain an app".format(file))
 
         # initialize flask client
         app.testing = True
@@ -55,9 +54,9 @@ class App:
         if code is None:
             return self.response.status_code
 
-        check50.log(f"checking that status code {code} is returned...")
+        log(f"checking that status code {code} is returned...")
         if code != self.response.status_code:
-            raise Error("expected status code {}, but got {}".format(
+            raise Fail("expected status code {}, but got {}".format(
                 code, self.response.status_code))
         return self
 
@@ -68,7 +67,7 @@ class App:
     def content(self, output=None, str_output=None, **kwargs):
         """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
         if self.response.mimetype != "text/html":
-            raise Error("expected request to return HTML, but it returned {}".format(
+            raise Fail("expected request to return HTML, but it returned {}".format(
                 self.response.mimetype))
 
         return self._search_page(
@@ -80,14 +79,14 @@ class App:
     def _send(self, method, route, data, params, **kwargs):
         """Send request of type `method` to `route`"""
         route = self._fmt_route(route, params)
-        check50.log(f"sending {method.upper()} request to {route}")
+        log(f"sending {method.upper()} request to {route}")
 
         try:
             self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
         except BaseException as e:  # Catch all exceptions thrown by app
             # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
-            check50.log(f"exception raised in application: {type(e).__name__}: {e}")
-            raise Error("application raised an exception (see log for details)")
+            log(f"exception raised in application: {type(e).__name__}: {e}")
+            raise Fail("application raised an exception (see log for details)")
 
         return self
 
@@ -98,11 +97,11 @@ class App:
         if str_output is None:
             str_output = output
 
-        check50.log(f"checking that \"{str_output}\" is in page")
+        log(f"checking that \"{str_output}\" is in page")
         regex = re.compile(output)
 
         if not match_fn(regex, content, **kwargs):
-            raise Error(f"expected to find \"{str_output}\" in page, but it wasn't found")
+            raise Fail(f"expected to find \"{str_output}\" in page, but it wasn't found")
 
         return self
 
