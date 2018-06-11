@@ -2,7 +2,6 @@ import signal
 import os
 import subprocess
 import imp
-import termcolor
 import sys
 import argparse
 import tempfile
@@ -14,10 +13,11 @@ import traceback
 from pprint import pprint
 
 import attr
+from termcolor import cprint
 
 from . import internal
 from .api import Failure
-from .runner import CheckRunner, check_names
+from .runner import CheckRunner, check_names, Status
 
 
 class InternalError(Exception):
@@ -28,7 +28,7 @@ class InternalError(Exception):
 
 
 def handler(number, frame):
-    termcolor.cprint("Check cancelled.", "red")
+    cprint("Check cancelled.", "red")
     sys.exit(1)
 
 
@@ -39,11 +39,11 @@ def excepthook(cls, exc, tb):
         return
 
     if cls is InternalError:
-        termcolor.cprint(exc.msg, "red", file=sys.stderr)
+        cprint(exc.msg, "red", file=sys.stderr)
     elif cls is FileNotFoundError:
-        termcolor.cprint(f"{exc.filename} not found", "red", file=sys.stderr)
+        cprint(f"{exc.filename} not found", "red", file=sys.stderr)
     else:
-        termcolor. cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
+        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
     if main.args.debug:
         traceback.print_exception(cls, exc, tb)
@@ -113,6 +113,24 @@ def import_checks(checks_dir, identifier):
 
     return module
 
+
+def print_results(results, log=True):
+    for result in results:
+        if result.status is Status.Pass:
+            cprint(f":) {result.description}", "green")
+        elif result.status is Status.Fail:
+            cprint(f":( {result.description}", "red")
+            if result.rationale is not None:
+                cprint(f"    {result.rationale}", "red")
+        elif result.status is Status.Skip:
+            cprint(f":| {result.description}", "yellow")
+            cprint(f"    {result.rationale or 'check skipped'}", "yellow")
+
+        if log:
+            for line in result.log:
+                print(f"    {line}")
+
+
 def main():
     signal.signal(signal.SIGINT, handler)
 
@@ -153,8 +171,9 @@ def main():
     checks_module = import_checks(main.args.checkdir, main.args.identifier)
 
     results = CheckRunner(checks_module).run(main.args.files)
-    for check_name in check_names:
-        pprint({check_name : attr.asdict(results[check_name])})
+    print_results(results[name] for name in check_names)
+    # for check_name in check_names:
+        # pprint({check_name : attr.asdict(results[check_name])})
 
 
     # Get list of results from TestResult class.
