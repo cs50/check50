@@ -26,14 +26,14 @@ class CheckResult:
     name = attr.ib(default=None)
     description = attr.ib(default=None)
     status = attr.ib(default=None)
-    log = attr.ib(default=None)
+    log = attr.ib(default=[])
     rationale = attr.ib(default=None)
     help = attr.ib(default=None)
     data = attr.ib(default=None)
 
     @classmethod
-    def from_check(cls, check):
-        return cls(name=check.__name__, description=check.__doc__)
+    def from_check(cls, check, *args, **kwargs):
+        return cls(name=check.__name__, description=check.__doc__, *args, **kwargs)
 
 
 def check(dependency=None):
@@ -130,7 +130,7 @@ class CheckRunner:
         for child in self.child_map[check_name]:
             name = child.__name__
             if name not in results:
-                results[name] = CheckResult(child,
+                results[name] = CheckResult.from_check(child,
                                             status=Status.Skip,
                                             rationale="can't check until a frown turns upside down")
                 self._skip_children(name, results)

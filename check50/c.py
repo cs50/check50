@@ -6,7 +6,7 @@ from .api import run, log, Failure
 from . import internal
 
 CC = "clang"
-CFLAGS = "-std=c11 -O0 -ggdb3" # etc.
+CFLAGS = "-std=c11 -ggdb3 -lcs50 -lm"
 
 
 def compile(file_name, exe_name=None):

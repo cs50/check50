@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 from functools import wraps
+import hashlib
 import os
 import re
 import signal
@@ -37,12 +38,12 @@ def log(line):
 def include(*paths):
     """Copies a file from the check directory to the current directory."""
     cwd = os.getcwd()
-    with cd(internal.check_dir):
+    with _cd(internal.check_dir):
         for path in paths:
             _copy(path, cwd)
 
 
-def hash(self, file):
+def hash(file):
     """Hashes a file using SHA-256."""
 
     # Get filename
@@ -52,12 +53,13 @@ def hash(self, file):
         pass
 
     exists(file)
+    log(f"Hashing {file}...")
 
     # https://stackoverflow.com/a/22058673
-    with open(file, "rb"):
+    with open(file, "rb") as f:
         sha256 = hashlib.sha256()
-        for block in iter(lambda: f.read(65536), ""):
-            sha256.update(data)
+        for block in iter(lambda: f.read(65536), b""):
+            sha256.update(block)
         return sha256.hexdigest()
 
 
@@ -267,3 +269,13 @@ def _copy(src, dst):
         if os.path.isdir(dst):
             dst = os.path.join(dst, os.path.basename(src))
         shutil.copytree(src, dst)
+
+@contextmanager
+def _cd(path):
+    """can be used with a `with` statement to temporarily change directories"""
+    cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(cwd)
