@@ -71,7 +71,7 @@ def import_checks(checks_dir, identifier):
         raise InternalError(
             "expected repository to be of the form username/repository, but got \"{}\"".format(repo))
     checks_root = os.path.join(checks_dir, org, repo)
-    internal.check_dir = os.path.join(checks_root, slug.replace("/", os.sep), "check50")
+    internal.check_dir = os.path.join(checks_root, slug.replace("/", os.sep))
 
     if not main.args.offline:
         if os.path.exists(checks_root):
@@ -114,7 +114,7 @@ def import_checks(checks_dir, identifier):
     return module
 
 
-def print_results(results, log=True):
+def print_results(results, log=False):
     for result in results:
         if result.status is Status.Pass:
             cprint(f":) {result.description}", "green")
@@ -171,7 +171,7 @@ def main():
     checks_module = import_checks(main.args.checkdir, main.args.identifier)
 
     results = CheckRunner(checks_module).run(main.args.files)
-    print_results(results[name] for name in check_names)
+    print_results(results.values(), log=main.args.log)
     # for check_name in check_names:
         # pprint({check_name : attr.asdict(results[check_name])})
 

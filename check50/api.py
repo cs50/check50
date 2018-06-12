@@ -4,6 +4,7 @@ import hashlib
 import os
 import re
 import signal
+import sys
 import time
 
 import shutil
@@ -46,12 +47,6 @@ def include(*paths):
 def hash(file):
     """Hashes a file using SHA-256."""
 
-    # Get filename
-    try:
-        file = file.name
-    except AttributeError:
-        pass
-
     exists(file)
     log(f"Hashing {file}...")
 
@@ -64,17 +59,7 @@ def hash(file):
 
 
 def diff(self, f1, f2):
-    """Returns boolean indicating whether or not the files are different"""
-    try:
-        f1 = f1.name
-    except AttributeError:
-        pass
-
-    try:
-        f2 = f2.name
-    except AttributeError:
-        pass
-
+    """Returns boolean indicating whether or not the given files are different."""
     return bool(run("diff {} {}".format(quote(f1), quote(f2))).exit())
 
 
@@ -84,6 +69,24 @@ def exists(*paths):
         log(f"Checking that {path} exists...")
         if not os.path.exists(path):
             raise Failure(f"{path} not found")
+
+
+
+def import_from(path, name):
+    """Helper function to make it easier for a check to import another check."""
+    prevpath = sys.path
+    try:
+        with _cd(internal.check_dir):
+            sys.path.insert(0, os.path.abspath(path))
+        return __import__(name)
+    finally:
+        sys.path = prevpath
+
+
+def append_code(original, codefile):
+    with open(codefile) as code, open(original, "a") as o:
+        o.write("\n")
+        o.write(code.read())
 
 
 class Process:

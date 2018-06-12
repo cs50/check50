@@ -21,5 +21,5 @@ def _set_version():
 _set_version()
 del _set_version
 
-from .api import run, exists, include, hash, log, diff, Failure, Mismatch
+from .api import run, exists, include, hash, log, diff, Failure, Mismatch, import_from, append_code
 from .runner import check

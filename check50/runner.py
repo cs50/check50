@@ -89,7 +89,7 @@ class CheckRunner:
                 self.child_map[check._check_dependency.__name__].add(check)
 
     def run(self, files):
-        results = {}
+        results = {name: None for name in check_names}
         queue = mp.Queue()
         with tempfile.TemporaryDirectory() as checks_root:
             dst_dir = os.path.join(checks_root, "-")
@@ -129,7 +129,7 @@ class CheckRunner:
     def _skip_children(self, check_name, results):
         for child in self.child_map[check_name]:
             name = child.__name__
-            if name not in results:
+            if results[name] is None:
                 results[name] = CheckResult.from_check(child,
                                             status=Status.Skip,
                                             rationale="can't check until a frown turns upside down")
