@@ -1,4 +1,5 @@
 import collections
+import concurrent.futures as futures
 import enum
 import functools
 import os
@@ -9,11 +10,14 @@ import inspect
 
 import attr
 import shutil
+import rq
 
 from . import internal
-from .api import log, _log, Failure, _copy
+from . import api
+from .api import log, Failure, _copy
 
 check_names = []
+checks_root = None
 
 class Status(enum.Enum):
     Pass = True
@@ -30,6 +34,7 @@ class CheckResult:
     rationale = attr.ib(default=None)
     help = attr.ib(default=None)
     data = attr.ib(default=None)
+    _pid = attr.ib(default=attr.Factory(lambda: os.getpid()), init=False)
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
@@ -44,7 +49,7 @@ def check(dependency=None):
         check._check_dependency = dependency
 
         @functools.wraps(check)
-        def wrapper(checks_root, results):
+        def wrapper():
             # Result template
             result = CheckResult.from_check(check)
             try:
@@ -71,8 +76,8 @@ def check(dependency=None):
             else:
                 result.status = Status.Pass
             finally:
-                result.log = _log
-                results.put(result)
+                result.log = api._log
+                return result
         return wrapper
     return decorator
 
@@ -89,8 +94,10 @@ class CheckRunner:
                 self.child_map[check._check_dependency.__name__].add(check)
 
     def run(self, files):
-        results = {name: None for name in check_names}
-        queue = mp.Queue()
+        results = { name : None for name in check_names }
+        executor = futures.ProcessPoolExecutor()
+
+        global checks_root
         with tempfile.TemporaryDirectory() as checks_root:
             dst_dir = os.path.join(checks_root, "-")
             os.mkdir(dst_dir)
@@ -98,32 +105,18 @@ class CheckRunner:
             for filename in files:
                 _copy(filename, dst_dir)
 
-            def start(check):
-                proc = mp.Process(target=check, args=(checks_root, queue))
-                proc.start()
-                return proc
+            not_done = set(executor.submit(check) for check in self.checks if check._check_dependency is None)
 
-
-            procs = {check.__name__ : start(check)
-                        for check in self.checks
-                        if check._check_dependency is None}
-            while procs:
-                # TODO: This will currently block if we don't get a result for a check due to some error. Fix this.
-                result = queue.get()
-                results[result.name] = result
-
-                # This should return immidiately since the last thing a check does per the decorator is push to the queue
-                procs[result.name].join()
-                del procs[result.name]
-
-                if result.status is Status.Pass:
-                    procs.update({
-                        check.__name__ : start(check)
-                            for check in self.child_map.get(result.name, [])
-                    })
-                else:
-                    self._skip_children(result.name, results)
-
+            while not_done:
+                done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
+                for future in done:
+                    result = future.result()
+                    results[result.name] = result
+                    if result.status is Status.Pass:
+                        for child in self.child_map[result.name]:
+                            not_done.add(executor.submit(child))
+                    else:
+                        self._skip_children(result.name, results)
         return results
 
     def _skip_children(self, check_name, results):

@@ -12,9 +12,10 @@ run_dir = None
 
 
 class Register:
-    def __init__(self, befores=[], afters=[]):
+    def __init__(self, befores=[], afters=[], resets=[]):
         self._befores = befores
         self._afters = afters
+        self._resets = resets
 
     def before(self, func):
         self._befores.append(func)
@@ -22,7 +23,13 @@ class Register:
     def after(self, func):
         self._afters.append(func)
 
+    def reset(self, func):
+        self._resets.append(func)
+
     def __enter__(self):
+        for f in self._resets:
+            f()
+
         for f in self._befores:
             f()
 
