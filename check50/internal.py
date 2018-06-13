@@ -16,10 +16,10 @@ class Register:
         self._befores = befores
         self._afters = afters
 
-    def before(func):
+    def before(self, func):
         self._befores.append(func)
 
-    def afters(func):
+    def after(self, func):
         self._afters.append(func)
 
     def __enter__(self):
@@ -28,11 +28,10 @@ class Register:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Only run 'afters' when check has passed
-        if exc_type is not None:
-            return
+        if exc_type is None:
+            for f in self._afters:
+                f()
 
-        for f in self._afters:
-            f()
 
 
 register = Register()
