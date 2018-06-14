@@ -131,7 +131,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.status is Status.Pass:
                         for child in self.child_map[result.name]:
-                            not_done.add(executor.submit(run_check(child.__name__, checks_spec, checks_root)))
+                            not_done.add(executor.submit(run_check(child.__name__, self.checks_spec, checks_root)))
                     else:
                         self._skip_children(result.name, results)
         return results
