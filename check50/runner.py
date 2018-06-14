@@ -118,7 +118,7 @@ class CheckRunner:
             for filename in files:
                 _copy(filename, dst_dir)
 
-            not_done = set(executor.submit(self.run_check(name, self.checks_spec, checks_root))
+            not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
                            for name, _ in self.child_map[None])
             not_passed = []
 
@@ -129,8 +129,8 @@ class CheckRunner:
                     results[result.name] = result
                     if result.status is Status.Pass:
                         for name, _ in self.child_map[result.name]:
-                            not_done.add(executor.submit(self.run_check(
-                                name, self.checks_spec, checks_root)))
+                            not_done.add(executor.submit(
+                                run_check(name, self.checks_spec, checks_root)))
                     else:
                         not_passed.append(result.name)
 
@@ -148,18 +148,19 @@ class CheckRunner:
                                             rationale="can't check until a frown turns upside down")
                 self._skip_children(name, results)
 
-    class run_check:
-        """
-        Hack to get around the fact that `pickle` can't serialize functions that capture their surrounding context
-        This class is essentially a function that reimports the check module and runs the check
-        """
 
-        def __init__(self, check_name, spec, checks_root):
-            self.check_name = check_name
-            self.spec = spec
-            self.checks_root = checks_root
+class run_check:
+    """
+    Hack to get around the fact that `pickle` can't serialize functions that capture their surrounding context
+    This class is essentially a function that reimports the check module and runs the check
+    """
 
-        def __call__(self):
-            mod = importlib.util.module_from_spec(self.spec)
-            self.spec.loader.exec_module(mod)
-            return getattr(mod, self.check_name)(self.checks_root)
+    def __init__(self, check_name, spec, checks_root):
+        self.check_name = check_name
+        self.spec = spec
+        self.checks_root = checks_root
+
+    def __call__(self):
+        mod = importlib.util.module_from_spec(self.spec)
+        self.spec.loader.exec_module(mod)
+        return getattr(mod, self.check_name)(self.checks_root)
