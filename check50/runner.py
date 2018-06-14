@@ -31,15 +31,13 @@ class CheckResult:
     description = attr.ib(default=None)
     status = attr.ib(default=None)
     log = attr.ib(default=[])
-    rationale = attr.ib(default=None)
-    help = attr.ib(default=None)
-    data = attr.ib(default=None)
+    error = attr.ib(default=None)
+    data = attr.ib(default={})
     _pid = attr.ib(default=attr.Factory(lambda: os.getpid()), init=False)
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
         return cls(name=check.__name__, description=check.__doc__, *args, **kwargs)
-
 
 def check(dependency=None):
     """ Decorator for checks. """
@@ -66,11 +64,10 @@ def check(dependency=None):
 
             except Failure as e:
                 result.status = Status.Fail
-                result.help = e.help
-                result.rationale = e.rationale
+                result.error = e.asdict()
             except BaseException as e:
                 result.status = Status.Skip
-                result.rationale = "check50 ran into an error while running checks!"
+                result.error = {"rationale": "check50 ran into an error while running checks!"}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
@@ -106,13 +103,13 @@ class CheckRunner:
 
     def run(self, files):
         # Ensure that dictionary is ordered by check_declaration order (via check_names)
-        results = {name: None for name in check_names}
+        results = {name: None for name in self.check_names}
         executor = futures.ProcessPoolExecutor()
 
         with tempfile.TemporaryDirectory() as checks_root:
+            checks_root = Path(checks_root)
 
             # Setup initial check environment
-            checks_root = Path(checks_root)
             dst_dir = checks_root / "-"
             os.mkdir(dst_dir)
             for filename in files:
@@ -145,7 +142,7 @@ class CheckRunner:
                 results[name] = CheckResult(name=name,
                                             description=description,
                                             status=Status.Skip,
-                                            rationale="can't check until a frown turns upside down")
+                                            error={"rationale": "can't check until a frown turns upside down"})
                 self._skip_children(name, results)
 
 

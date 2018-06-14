@@ -59,11 +59,11 @@ def print_results(results, log=False):
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
             cprint(f":( {result.description}", "red")
-            if result.rationale is not None:
-                cprint(f"    {result.rationale}", "red")
+            if result.error.get("rationale") is not None:
+                cprint(f"    {result.error.get('rationale')}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.rationale or 'check skipped'}", "yellow")
+            cprint(f"    {result.error.get('rationale') or 'check skipped'}", "yellow")
 
         if log:
             for line in result.log:
