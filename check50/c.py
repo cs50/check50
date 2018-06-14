@@ -1,5 +1,6 @@
 import os
 import tempfile
+from pathlib import Path
 import xml.etree.cElementTree as ET
 
 from .api import run, log, Failure
@@ -20,7 +21,7 @@ def compile(file_name, exe_name=None):
 
 def valgrind(command):
     xml_file = tempfile.NamedTemporaryFile()
-    register.after(lambda: _check_valgrind(xml_file))
+    internal.register.after(lambda: _check_valgrind(xml_file))
 
     # ideally we'd like for this whole command not to be logged.
     return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
@@ -48,12 +49,10 @@ def _check_valgrind(xml_file):
         # Find first stack frame within student's code.
         for frame in error.iterfind("stack/frame"):
             obj = frame.find("obj")
-            if obj is not None and os.path.dirname(obj.text) == run_dir:
-                location = frame.find("file"), frame.find("line")
-                if None not in location:
-                    msg.append(
-                        ": (file: {}, line: {})".format(
-                            location[0].text, location[1].text))
+            if obj is not None and Path(internal.run_dir) in Path(obj.text).parents:
+                file, line = frame.find("file"), frame.find("line")
+                if file is not None and line is not None:
+                    msg.append(f": (file: {file.text}, line: {line.text})")
                 break
 
         msg = "".join(msg)
