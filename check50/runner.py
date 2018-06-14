@@ -16,7 +16,6 @@ from . import internal
 from .api import log, Failure, _copy, _log
 
 check_names = []
-checks_root = None
 
 class Status(enum.Enum):
     Pass = True
@@ -44,11 +43,13 @@ def check(dependency=None):
     """ Decorator for checks. """
     def decorator(check):
 
+        # Modules are evaluated from the top of the file down, so check_names will
+        # contain the names of the checks in the order in which they are declared
         check_names.append(check.__name__)
         check._check_dependency = dependency
 
         @functools.wraps(check)
-        def wrapper():
+        def wrapper(checks_root):
             # Result template
             result = CheckResult.from_check(check)
             try:
@@ -80,27 +81,26 @@ def check(dependency=None):
         return wrapper
     return decorator
 
-class fresh_check:
+class run_check:
     """
     Hack to get around the fact that `pickle` can't serialize functions that capture their surrounding context
     This class is essentially a function that reimports the check module and runs the check
     """
-    def __init__(self, check_name, module_name, module_file):
+    def __init__(self, check_name, spec, checks_root):
         self.check_name = check_name
-        self.module_name = module_name
-        self.module_file = module_file
+        self.spec = spec
+        self.checks_root = checks_root
+
     def __call__(self):
-        spec = importlib.util.spec_from_file_location(self.module_name, self.module_file)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return getattr(mod, self.check_name)()
+        mod = importlib.util.module_from_spec(self.spec)
+        self.spec.loader.exec_module(mod)
+        return getattr(mod, self.check_name)(self.checks_root)
 
 
 # Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, check_module):
-        self.module_name = check_module.__name__
-        self.module_file = check_module.__file__
+        self.checks_spec = check_module.__spec__
         self.checks = [check for _, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))]
 
         # map each check to the check(s) that depend on it
@@ -110,10 +110,10 @@ class CheckRunner:
                 self.child_map[check._check_dependency.__name__].add(check)
 
     def run(self, files):
+        # Ensure that dictionary is ordered by check_declaration order (via check_names)
         results = { name : None for name in check_names }
         executor = futures.ProcessPoolExecutor()
 
-        global checks_root
         with tempfile.TemporaryDirectory() as checks_root:
             dst_dir = os.path.join(checks_root, "-")
             os.mkdir(dst_dir)
@@ -121,8 +121,7 @@ class CheckRunner:
             for filename in files:
                 _copy(filename, dst_dir)
 
-
-            not_done = set(executor.submit(fresh_check(check.__name__, self.module_name, self.module_file))
+            not_done = set(executor.submit(run_check(check.__name__, self.checks_spec, checks_root))
                 for check in self.checks if check._check_dependency is None)
 
             while not_done:
@@ -132,7 +131,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.status is Status.Pass:
                         for child in self.child_map[result.name]:
-                            not_done.add(executor.submit(fresh_check(child.__name__, self.module_name, self.module_file)))
+                            not_done.add(executor.submit(run_check(child.__name__, checks_spec, checks_root)))
                     else:
                         self._skip_children(result.name, results)
         return results
