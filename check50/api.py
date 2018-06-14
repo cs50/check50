@@ -74,7 +74,6 @@ def exists(*paths):
             raise Failure(f"{path} not found")
 
 
-
 def import_from(path, name):
     """Helper function to make it easier for a check to import another check."""
     prevpath = sys.path
@@ -243,10 +242,9 @@ class Mismatch(Failure):
         self.expected = expected
         self.actual = actual
 
-
     def asdict(self):
         return dict(expected=self.expected,
-                    actual=self.actual
+                    actual=self.actual,
                     **super().asdict())
 
 
@@ -274,6 +272,7 @@ def _copy(src, dst):
         if os.path.isdir(dst):
             dst = os.path.join(dst, os.path.basename(src))
         shutil.copytree(src, dst)
+
 
 @contextmanager
 def _cd(path):

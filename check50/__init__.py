@@ -17,6 +17,7 @@ def _set_version():
     else:
         __version__ = dist.version
 
+
 # Encapsulated inside a function so its local variables/imports aren't seen by autocompleters
 _set_version()
 del _set_version

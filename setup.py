@@ -14,8 +14,8 @@ setup(
     install_requires=["attrs", "bs4", "pexpect", "requests", "termcolor", "submit50>=2.4.5"],
     keywords=["check", "check50"],
     name="check50",
-    py_modules=["check50", "config"],
     packages=find_packages(),
+    python_requires=">= 3.6",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
     },

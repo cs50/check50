@@ -40,5 +40,4 @@ class Register:
                 f()
 
 
-
 register = Register()
