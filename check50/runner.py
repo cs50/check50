@@ -7,14 +7,13 @@ import multiprocessing as mp
 import traceback
 import tempfile
 import inspect
+import importlib
 
 import attr
 import shutil
-import rq
 
 from . import internal
-from . import api
-from .api import log, Failure, _copy
+from .api import log, Failure, _copy, _log
 
 check_names = []
 checks_root = None
@@ -76,15 +75,32 @@ def check(dependency=None):
             else:
                 result.status = Status.Pass
             finally:
-                result.log = api._log
+                result.log = _log
                 return result
         return wrapper
     return decorator
+
+class fresh_check:
+    """
+    Hack to get around the fact that `pickle` can't serialize functions that capture their surrounding context
+    This class is essentially a function that reimports the check module and runs the check
+    """
+    def __init__(self, check_name, module_name, module_file):
+        self.check_name = check_name
+        self.module_name = module_name
+        self.module_file = module_file
+    def __call__(self):
+        spec = importlib.util.spec_from_file_location(self.module_name, self.module_file)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return getattr(mod, self.check_name)()
 
 
 # Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, check_module):
+        self.module_name = check_module.__name__
+        self.module_file = check_module.__file__
         self.checks = [check for _, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))]
 
         # map each check to the check(s) that depend on it
@@ -105,7 +121,9 @@ class CheckRunner:
             for filename in files:
                 _copy(filename, dst_dir)
 
-            not_done = set(executor.submit(check) for check in self.checks if check._check_dependency is None)
+
+            not_done = set(executor.submit(fresh_check(check.__name__, self.module_name, self.module_file))
+                for check in self.checks if check._check_dependency is None)
 
             while not_done:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
@@ -114,7 +132,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.status is Status.Pass:
                         for child in self.child_map[result.name]:
-                            not_done.add(executor.submit(child))
+                            not_done.add(executor.submit(fresh_check(child.__name__, self.module_name, self.module_file)))
                     else:
                         self._skip_children(result.name, results)
         return results
