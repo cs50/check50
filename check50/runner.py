@@ -76,6 +76,7 @@ def check(dependency=None):
                 result.status = Status.Pass
             finally:
                 result.log = _log
+                result.data = internal._data
                 return result
         return wrapper
     return decorator

@@ -49,6 +49,8 @@ def excepthook(cls, exc, tb):
     if main.args.debug:
         traceback.print_exception(cls, exc, tb)
 
+    sys.exit(1)
+
 
 sys.excepthook = excepthook
 
@@ -117,6 +119,40 @@ def install_requirements(*dirs):
                     requirements[len(checks_dir) + 1:]))
 
 
+def run_submit50(identifier, verbose=False):
+    import submit50
+    submit50.handler.type = "check"
+    signal.signal(signal.SIGINT, submit50.handler)
+
+    submit50.run.verbose = verbose
+    username, commit_hash = submit50.submit("check50", identifier)
+
+    # Wait until payload comes back with check data.
+    print("Checking...", end="")
+    sys.stdout.flush()
+    while pings <= 45
+        pings += 1
+
+        # Query for check results.
+        res = requests.post(f"https://cs50.me/check50/status/{username}/{commit_hash}")
+        if res.status_code != 200:
+            continue
+        payload = res.json()
+        if payload["complete"]:
+            break
+        print(".", end="")
+        sys.stdout.flush()
+        time.sleep(2)
+    else:
+        # Terminate if no response
+        print()
+        raise InternalError(f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
+
+    print()
+    print_results(payload["checks"], config.args.log)
+    print(f"See https://cs50.me/checks/{commit_hash} for more detail.")
+
+
 def main():
     signal.signal(signal.SIGINT, handler)
 
@@ -163,19 +199,8 @@ def main():
             install_requirements(checks_root, check_dir / ".meta50")
         results = CheckRunner(slug, internal.check_dir / "__init__.py").run(main.args.files)
         print_results(results.values(), log=main.args.log)
-
-    # for check_name in check_names:
-        # pprint({check_name : attr.asdict(results[check_name])})
-
-    # Get list of results from TestResult class.
-    # results = result.results
-
-    # Print the results.
-    # if config.args.debug:
-    #    print_json(results)
-    # else:
-    #    print_results(results, log=config.args.log)
-
+    else:
+        run_submit50(main.args.identifier, main.args.verbose)
 
 if __name__ == "__main__":
     main()
