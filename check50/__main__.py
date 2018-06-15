@@ -14,6 +14,7 @@ import time
 
 import attr
 import requests
+import git
 from pexpect.exceptions import EOF
 import shutil
 from termcolor import cprint
@@ -97,22 +98,18 @@ def print_json(results):
     json.dump(output, sys.stdout, cls=Encoder)
 
 
-def clone_checks(repo, branch, checks_root, debug=False):
-    print(checks_root)
+def clone_checks(repo, checks_root, branch, offline=False):
     if os.path.exists(checks_root):
-        commands = [["git", "-C", str(checks_root), "fetch", "--depth=1"],
-                    ["git", "-C", str(checks_root), "checkout", f"origin/{branch}"]]
+        repo = git.Repo(str(checks_root))
+        origin = repo.remotes["origin"]
+        if not offline:
+            origin.fetch()
+        origin.refs[branch].checkout()
+    elif offline:
+        raise FileNotFoundError(checks_root)
     else:
-        commands = [["git", "clone", f"--branch={branch}", "--depth=1", f"https://github.com/{repo}", str(checks_root)]]
-
-    stdout = stderr = None if debug else subprocess.DEVNULL
-
-    # Update checks via git.
-    try:
-        for command in commands:
-            subprocess.check_call(command, stdout=stdout, stderr=stderr)
-    except subprocess.CalledProcessError:
-        raise InternalError("failed to clone checks")
+        repo = git.Repo.clone_from(f"https://github.com/{repo}", str(checks_root), branch=branch, depth=1)
+    return repo
 
 
 def install_requirements(*dirs, debug=False):
@@ -234,9 +231,10 @@ def main():
     if args.local:
         checks_root = Path(args.checkdir) / args.repo
         internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
+        clone_checks(args.repo, checks_root, args.branch, offline=args.offline)
         if not args.offline:
-            clone_checks(args.repo, args.branch, checks_root, debug=args.debug)
             install_requirements(checks_root, internal.check_dir / ".meta50", debug=args.debug)
+
         results = CheckRunner(args.identifier, internal.check_dir / "__init__.py").run(args.files)
     else:
         import submit50
