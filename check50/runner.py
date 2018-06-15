@@ -1,6 +1,7 @@
 import collections
 import concurrent.futures as futures
 import enum
+import json
 import functools
 import os
 import multiprocessing as mp
@@ -29,15 +30,16 @@ class Status(enum.Enum):
 class CheckResult:
     name = attr.ib(default=None)
     description = attr.ib(default=None)
-    status = attr.ib(default=None)
+    status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
     error = attr.ib(default=None)
     data = attr.ib(default={})
-    _pid = attr.ib(default=attr.Factory(lambda: os.getpid()), init=False)
+    _pid = attr.ib(default=attr.Factory(lambda: os.getpid()))
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
         return cls(name=check.__name__, description=check.__doc__, *args, **kwargs)
+
 
 def check(dependency=None):
     """ Decorator for checks. """
@@ -59,9 +61,9 @@ def check(dependency=None):
                 shutil.copytree(src_dir, dst_dir)
                 os.chdir(internal.run_dir)
 
+                # Run registered functions before/after running check
                 with internal.register:
                     check()
-
             except Failure as e:
                 result.status = Status.Fail
                 result.error = e.asdict()
@@ -135,7 +137,7 @@ class CheckRunner:
         for name in not_passed:
             self._skip_children(name, results)
 
-        return results
+        return results.values()
 
     def _skip_children(self, check_name, results):
         for name, description in self.child_map[check_name]:

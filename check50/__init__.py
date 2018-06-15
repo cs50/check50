@@ -1,5 +1,5 @@
 def _set_version():
-    """ Set check50 version. """
+    """ Set check50 __version__ """
     global __version__
     from pkg_resources import get_distribution, DistributionNotFound
     import os
