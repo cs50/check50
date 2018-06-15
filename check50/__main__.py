@@ -2,6 +2,7 @@ import signal
 import os
 import subprocess
 import importlib
+import json
 import sys
 import argparse
 import tempfile
@@ -16,7 +17,9 @@ from pathlib import Path
 import attr
 from termcolor import cprint
 
-from . import internal
+from pexpect.exceptions import EOF
+
+from . import internal, __version__
 from .api import Failure
 from .runner import CheckRunner, check_names, Status
 
@@ -26,6 +29,18 @@ class InternalError(Exception):
 
     def __init__(self, msg):
         self.msg = msg
+
+
+class Encoder(json.JSONEncoder):
+    """Custom class for JSON encoding."""
+
+    def default(self, o):
+        if o == EOF:
+            return "EOF"
+        elif isinstance(o, Status):
+            return o.value
+
+        return o.__dict__
 
 
 def handler(number, frame):
@@ -55,7 +70,7 @@ def excepthook(cls, exc, tb):
 sys.excepthook = excepthook
 
 
-def print_results(results, log=False):
+def print_ansi(results, log=False):
     for result in results:
         if result.status is Status.Pass:
             cprint(f":) {result.description}", "green")
@@ -119,18 +134,18 @@ def install_requirements(*dirs):
                     requirements[len(checks_dir) + 1:]))
 
 
-def run_submit50(identifier, verbose=False):
+def run_submit50(identifier, debug=False):
     import submit50
     submit50.handler.type = "check"
     signal.signal(signal.SIGINT, submit50.handler)
 
-    submit50.run.verbose = verbose
+    submit50.run.verbose = debug
     username, commit_hash = submit50.submit("check50", identifier)
 
     # Wait until payload comes back with check data.
     print("Checking...", end="")
     sys.stdout.flush()
-    while pings <= 45
+    while pings <= 45:
         pings += 1
 
         # Query for check results.
@@ -149,15 +164,21 @@ def run_submit50(identifier, verbose=False):
         raise InternalError(f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
 
     print()
-    print_results(payload["checks"], config.args.log)
-    print(f"See https://cs50.me/checks/{commit_hash} for more detail.")
+    return payload["checks"], commit_hash
+
+
+def print_json(results):
+    output = []
+    for result in results:
+        output.append(attr.asdict(result))
+    json.dump(output, sys.stdout, cls=Encoder)
 
 
 def main():
     signal.signal(signal.SIGINT, handler)
 
     # Parse command line arguments.
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="check50")
     parser.add_argument("identifier")
     parser.add_argument("files", nargs="*", default=os.listdir("."))
     parser.add_argument("-j", "--json",
@@ -180,6 +201,9 @@ def main():
     parser.add_argument("-d", "--debug",
                         action="store_true",
                         help="display the full tracebacks of any errors (also implies --log)")
+    parser.add_argument("-v", "--version", action="version",
+                        version=f"%(prog)s {__version__}")
+    parser.add_argument("--output", "-o", action="store", default="ansi", choices=["ansi", "json"])
 
     main.args = parser.parse_args()
     main.args.checkdir = os.path.abspath(os.path.expanduser(main.args.checkdir))
@@ -198,9 +222,16 @@ def main():
             clone_checks(org, repo, checks_root)
             install_requirements(checks_root, check_dir / ".meta50")
         results = CheckRunner(slug, internal.check_dir / "__init__.py").run(main.args.files)
-        print_results(results.values(), log=main.args.log)
     else:
-        run_submit50(main.args.identifier, main.args.verbose)
+        results, commit_hash = run_submit50(main.args.identifier, main.args.debug)
+
+    if main.args.output == "json":
+        print_json(results.values())
+    else:
+        print_ansi(results.values(), main.args.log)
+
+    if not main.args.local:
+        print(f"See https://cs50.me/checks/{commit_hash} for more detail.")
 
 if __name__ == "__main__":
     main()

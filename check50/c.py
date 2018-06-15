@@ -49,7 +49,7 @@ def _check_valgrind(xml_file):
         # Find first stack frame within student's code.
         for frame in error.iterfind("stack/frame"):
             obj = frame.find("obj")
-            if obj is not None and Path(internal.run_dir) in Path(obj.text).parents:
+            if obj is not None and internal.run_dir in Path(obj.text).parents:
                 file, line = frame.find("file"), frame.find("line")
                 if file is not None and line is not None:
                     msg.append(f": (file: {file.text}, line: {line.text})")
