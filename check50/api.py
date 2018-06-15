@@ -33,6 +33,7 @@ def run(command, env=None):
 _log = []
 internal.register.reset(lambda: _log.clear())
 
+
 def log(line):
     """Add line to check log."""
     _log.append(line)

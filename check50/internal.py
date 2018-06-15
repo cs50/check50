@@ -43,6 +43,7 @@ class Register:
 register = Register()
 
 _data = {}
+
+
 def data(**kwargs):
     _data.update(kwargs)
-
