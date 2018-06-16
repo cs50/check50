@@ -17,7 +17,7 @@ import shutil
 from . import internal
 from .api import log, Failure, _copy, _log
 
-check_names = []
+_check_names = []
 
 
 class Status(enum.Enum):
@@ -32,9 +32,10 @@ class CheckResult:
     description = attr.ib(default=None)
     status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
-    error = attr.ib(default=None)
+    # Better name? This contains information about why check didn't pass (i.e. failed or skipped)
+    failure = attr.ib(default=None)
     data = attr.ib(default={})
-    _pid = attr.ib(default=attr.Factory(lambda: os.getpid()))
+    _pid = attr.ib(default=attr.Factory(os.getpid))
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
@@ -45,9 +46,9 @@ def check(dependency=None):
     """ Decorator for checks. """
     def decorator(check):
 
-        # Modules are evaluated from the top of the file down, so check_names will
+        # Modules are evaluated from the top of the file down, so _check_names will
         # contain the names of the checks in the order in which they are declared
-        check_names.append(check.__name__)
+        _check_names.append(check.__name__)
         check._check_dependency = dependency
 
         @functools.wraps(check)
@@ -66,10 +67,10 @@ def check(dependency=None):
                     check()
             except Failure as e:
                 result.status = Status.Fail
-                result.error = e.asdict()
+                result.failure = e.asdict()
             except BaseException as e:
                 result.status = Status.Skip
-                result.error = {"rationale": "check50 ran into an error while running checks!"}
+                result.failure = {"rationale": "check50 ran into an error while running checks!"}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
@@ -92,11 +93,11 @@ class CheckRunner:
         # Clear check_names, import module, then save check_names. Not thread safe.
         # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
         # but there are a lot of subtelties with using `inspect` or similar here
-        check_names.clear()
+        _check_names.clear()
         check_module = importlib.util.module_from_spec(self.checks_spec)
         self.checks_spec.loader.exec_module(check_module)
         self.check_names = check_names.copy()
-        check_names.clear()
+        _check_names.clear()
 
         # Map each check to tuples containing the names and descriptions of the checks that depend on it
         self.child_map = collections.defaultdict(set)
@@ -145,13 +146,13 @@ class CheckRunner:
                 results[name] = CheckResult(name=name,
                                             description=description,
                                             status=Status.Skip,
-                                            error={"rationale": "can't check until a frown turns upside down"})
+                                            failure={"rationale": "can't check until a frown turns upside down"})
                 self._skip_children(name, results)
 
 
 class run_check:
     """
-    Hack to get around the fact that `pickle` can't serialize functions that capture their surrounding context
+    Hack to get around the fact that `pickle` can't serialize closures.
     This class is essentially a function that reimports the check module and runs the check
     """
 

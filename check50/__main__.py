@@ -27,9 +27,6 @@ from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 
 
-_VERBOSE_ = True
-
-
 class InternalError(Exception):
     """Error during execution of check50."""
 
@@ -37,30 +34,27 @@ class InternalError(Exception):
         self.msg = msg
 
 
-def handler(number, frame):
-    cprint("Check cancelled.", "red")
-    sys.exit(1)
-
-
 def excepthook(cls, exc, tb):
-    # Class is a BaseException, better just quit.
-    if not issubclass(cls, Exception):
-        print()
-        return
-
     if cls is InternalError:
         cprint(exc.msg, "red", file=sys.stderr)
     elif cls is FileNotFoundError:
         cprint(f"{exc.filename} not found", "red", file=sys.stderr)
+    elif cls is KeyboardInterrupt:
+        cprint(f"check cancelled", "red")
+    elif not issubclass(cls, Exception):
+        # Class is some other BaseException, better just let it go
+        return
     else:
         cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
-    if _VERBOSE_:
+    if excepthook.verbose:
         traceback.print_exception(cls, exc, tb)
 
     sys.exit(1)
 
 
+# Assume we should print tracebacks until we get command line arguments
+excepthook.verbose = True
 sys.excepthook = excepthook
 
 
@@ -89,11 +83,11 @@ def print_ansi(results, log=False):
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
             cprint(f":( {result.description}", "red")
-            if result.error.get("rationale") is not None:
-                cprint(f"    {result.error.get('rationale')}", "red")
+            if result.failure.get("rationale") is not None:
+                cprint(f"    {result.failure.get('rationale')}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.error.get('rationale') or 'check skipped'}", "yellow")
+            cprint(f"    {result.failure.get('rationale') or 'check skipped'}", "yellow")
 
         if log:
             for line in result.log:
@@ -139,21 +133,6 @@ def install_requirements(*dirs, verbose=False):
                 f"failed to install dependencies in ({requirements[len(checks_dir) + 1:]})")
 
 
-# TODO: Remove this section when we actually ship
-def _convert_format(old_results):
-    """ Temporarily here to convert old result format to new result format """
-    for result in old_results:
-        result["error"] = {"rationale": result["rationale"], "help": result["helpers"]}
-        del result["rationale"]
-        del result["helpers"]
-        try:
-            result["error"].update(**result["mismatch"])
-            del result["mismatch"]
-        except (KeyError, TypeError):
-            pass
-        yield result
-
-
 def await_results(url, pings=45, sleep=2):
     """Ping {url} until it returns a results payload, timing out after """
     """{pings} pings and waiting {sleep} seconds between pings"""
@@ -176,7 +155,7 @@ def await_results(url, pings=45, sleep=2):
             f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
     print()
 
-    return (CheckResult(**result) for result in _convert_format(payload["checks"]))
+    return (CheckResult(**result) for result in payload["checks"])
 
 
 def apply_config(args):
@@ -215,13 +194,11 @@ def apply_config(args):
 
 def setup_main():
     """main function for check50-setup"""
-    signal.signal(signal.SIGINT, handler)
-
     parser = argparse.ArgumentParser(prog="check50-setup")
     parser.add_argument("url", action="store",
                         help="url of check50 configuration file for your course")
     parser.add_argument("directory", action="store",
-                        default="~/", type=Path)
+                        default="~/", type=Path,
                         help="directory in which to store configuration file (defaults to ~/)")
     args = parser.parse_args()
 
@@ -240,8 +217,6 @@ def setup_main():
 
 
 def main():
-    signal.signal(signal.SIGINT, handler)
-
     # Parse command line arguments.
     parser = argparse.ArgumentParser(prog="check50")
     parser.add_argument("identifier")
@@ -281,9 +256,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Necessary so excepthook knows whether to print tracebacks
-    global _VERBOSE_
-    _VERBOSE_ = args.verbose
+    excepthook.verbose = args.verbose
 
     args.checkdir = args.checkdir.expanduser().resolve()
 
@@ -303,6 +276,7 @@ def main():
             install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
         results = CheckRunner(args.identifier, internal.check_dir / "__init__.py").run(args.files)
     else:
+        raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
         import submit50
         submit50.handler.type = "check"
         signal.signal(signal.SIGINT, submit50.handler)
