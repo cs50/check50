@@ -1,6 +1,7 @@
 import argparse
 import importlib
 import inspect
+import itertools
 import json
 import os
 from pathlib import Path
@@ -18,14 +19,15 @@ import git
 from pexpect.exceptions import EOF
 import shutil
 from termcolor import cprint
+import yaml
 
 
 from . import internal, __version__
 from .api import Failure
-from .runner import CheckRunner, check_names, Status, CheckResult
+from .runner import CheckRunner, Status, CheckResult
 
 
-DEBUG = True
+_VERBOSE_ = True
 
 
 class InternalError(Exception):
@@ -33,18 +35,6 @@ class InternalError(Exception):
 
     def __init__(self, msg):
         self.msg = msg
-
-
-class Encoder(json.JSONEncoder):
-    """Custom class for JSON encoding."""
-
-    def default(self, o):
-        if o == EOF:
-            return "EOF"
-        elif isinstance(o, Status):
-            return o.value
-
-        return o.__dict__
 
 
 def handler(number, frame):
@@ -65,13 +55,32 @@ def excepthook(cls, exc, tb):
     else:
         cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
 
-    if DEBUG:
+    if _VERBOSE_:
         traceback.print_exception(cls, exc, tb)
 
     sys.exit(1)
 
 
 sys.excepthook = excepthook
+
+
+class Encoder(json.JSONEncoder):
+    """Custom class for JSON encoding."""
+
+    def default(self, o):
+        if o == EOF:
+            return "EOF"
+        elif isinstance(o, Status):
+            return o.value
+
+        return o.__dict__
+
+
+def print_json(results):
+    output = []
+    for result in results:
+        output.append(attr.asdict(result))
+    json.dump(output, sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
@@ -91,14 +100,9 @@ def print_ansi(results, log=False):
                 print(f"    {line}")
 
 
-def print_json(results):
-    output = []
-    for result in results:
-        output.append(attr.asdict(result))
-    json.dump(output, sys.stdout, cls=Encoder)
 
-
-def clone_checks(repo, checks_root, branch, offline=False):
+def get_checks(repo, checks_root, branch, offline=False):
+    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub"""
     if os.path.exists(checks_root):
         repo = git.Repo(str(checks_root))
         origin = repo.remotes["origin"]
@@ -112,22 +116,27 @@ def clone_checks(repo, checks_root, branch, offline=False):
     return repo
 
 
-def install_requirements(*dirs, debug=False):
-    stdout = stderr = None if debug else subprocess.DEVNULL
+def install_requirements(*dirs, verbose=False):
+    """Look for a requirements.txt in each dir in {dirs} and install it via pip. """
+    """Suppress pip output unless {verbose} is True."""
+    stdout = stderr = None if verbose else subprocess.DEVNULL
     for dir in dirs:
-        requirements = os.path.join(dir, "requirements.txt")
-        if os.path.exists(requirements):
-            pip = ["pip", "install", "-r", requirements]
+        requirements = dir / "requirements.txt"
 
-            # If we are not in a virtualenv, we need --user
-            if not hasattr(sys, "real_prefix") and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-                pip.append("--user")
+        if not requirements.exists():
+            continue
 
-            try:
-                subprocess.check_call(pip, stdout=stdout, stderr=stderr)
-            except subprocess.CalledProcessError:
-                raise InternalError(
-                    f"failed to install dependencies in ({requirements[len(checks_dir) + 1:]})")
+        pip = ["pip", "install", "-r", str(requirements)]
+
+        # Unless we are in a virtualenv, we need --user
+        if not hasattr(sys, "real_prefix") and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+            pip.append("--user")
+
+        try:
+            subprocess.check_call(pip, stdout=stdout, stderr=stderr)
+        except subprocess.CalledProcessError:
+            raise InternalError(
+                f"failed to install dependencies in ({requirements[len(checks_dir) + 1:]})")
 
 
 # TODO: Remove this section when we actually ship
@@ -170,6 +179,40 @@ def await_results(url, pings=45, sleep=2):
     return (CheckResult(**result) for result in _convert_format(payload["checks"]))
 
 
+def apply_config(args):
+    """Fill in unspecified command line arguments from the config file. """
+    """Config file is found by finding the longest common path in args.files, """
+    """and traversing upwards until .check50.yaml is found."""
+    # Variables to be read from configuration file
+    config_vars = ["branch", "repo"]
+
+    unspecified = [var for var in config_vars if getattr(args, var) is None]
+
+    # All config vars were given on the command line, no need to consult config
+    if not unspecified:
+        return
+
+    # Find configuration file
+    config_dir = Path(os.path.commonpath(args.files))
+    for path in itertools.chain((config_dir,), config_dir.parents):
+        config_file = path / ".check50.yaml"
+        if config_file.exists():
+            break
+    else:
+        raise InternalError(f"could not find configuration file and required arguments {', '.join(unspecified)} were not given")
+
+    with open(config_file) as f:
+        config = yaml.load(f)
+
+    # Apply config file
+    for config_var in unspecified:
+        value = config.get(config_var)
+        if value is not None:
+            setattr(args, config_var, value)
+        else:
+            raise InternalError(f"missing required argument: {config_var}")
+
+
 def main():
     signal.signal(signal.SIGINT, handler)
 
@@ -177,44 +220,43 @@ def main():
     parser = argparse.ArgumentParser(prog="check50")
     parser.add_argument("identifier")
     parser.add_argument("files", nargs="*", default=os.listdir("."))
+    parser.add_argument("--log",
+                        action="store_true",
+                        help="display more detailed information about check results")
+    parser.add_argument("--branch", "-b",
+                        action="store",
+                        help="branch to clone checks from")
+    parser.add_argument("--repo", "-r",
+                        action="store",
+                        help="repo to clone checks from 2018")
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help="run checks locally instead of uploading to cs50")
     parser.add_argument("--offline",
                         action="store_true",
                         help="run checks completely offline (implies --local)")
-    parser.add_argument("--checkdir",
-                        action="store",
-                        default="~/.local/share/check50",
-                        help="specify directory containing the checks "
-                             "(~/.local/share/check50 by default)")
-    parser.add_argument("--log",
-                        action="store_true",
-                        help="display more detailed information about check results")
-    parser.add_argument("-d", "--debug",
-                        action="store_true",
-                        help="display the full tracebacks of any errors (also implies --log)")
-    parser.add_argument("-v", "--version", action="version",
-                        version=f"%(prog)s {__version__}")
     parser.add_argument("--output", "-o",
                         action="store",
                         default="ansi",
                         choices=["ansi", "json"],
                         help="specify output format")
-    parser.add_argument("--branch", "-b",
+    parser.add_argument("--checkdir",
                         action="store",
-                        default="2018/x",
-                        help="branch to clone checks from (2018/x by default)")
-    parser.add_argument("--repo", "-r",
-                        action="store",
-                        default="cs50/checks",
-                        help="repo to clone checks from 2018 (cs50/checks by default)")
-
+                        default="~/.local/share/check50",
+                        help="specify directory containing the checks "
+                             "(~/.local/share/check50 by default)")
+    parser.add_argument("-v", "--verbose",
+                        action="store_true",
+                        help="display the full tracebacks of any errors (also implies --log)")
+    parser.add_argument("-V", "--version",
+                        action="version",
+                        version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
 
-    global DEBUG
-    DEBUG = args.debug
+    # Necessary so excepthook knows whether to print tracebacks
+    global _VERBOSE_
+    _VERBOSE_ = args.verbose
 
     args.checkdir = os.path.abspath(os.path.expanduser(args.checkdir))
     if not os.path.exists(args.checkdir):
@@ -223,25 +265,26 @@ def main():
     if args.offline:
         args.local = True
 
-    if args.debug:
+    if args.verbose:
         args.log = True
 
-    slug = "|".join((args.repo, args.branch, args.identifier))
+    apply_config(args)
 
     if args.local:
         checks_root = Path(args.checkdir) / args.repo
         internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
-        clone_checks(args.repo, checks_root, args.branch, offline=args.offline)
+        get_checks(args.repo, checks_root, args.branch, offline=args.offline)
         if not args.offline:
-            install_requirements(checks_root, internal.check_dir / ".meta50", debug=args.debug)
+            install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
 
         results = CheckRunner(args.identifier, internal.check_dir / "__init__.py").run(args.files)
     else:
+        full_identifier = "|".join((args.repo, args.branch, args.identifier))
         import submit50
         submit50.handler.type = "check"
         signal.signal(signal.SIGINT, submit50.handler)
-        submit50.run.verbose = args.debug
-        username, commit_hash = submit50.submit("check50", slug)
+        submit50.run.verbose = args.verbose
+        username, commit_hash = submit50.submit("check50", full_identifier)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":
