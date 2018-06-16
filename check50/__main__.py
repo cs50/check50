@@ -199,7 +199,7 @@ def apply_config(args):
         if config_file.exists():
             break
     else:
-        raise InternalError(f"could not find configuration file and required arguments {', '.join(unspecified)} were not given")
+        raise InternalError(f"could not find configuration file.\nHave you run check50-setup?")
 
     with open(config_file) as f:
         config = yaml.load(f)
@@ -211,6 +211,32 @@ def apply_config(args):
             setattr(args, config_var, value)
         else:
             raise InternalError(f"missing required argument: {config_var}")
+
+
+def setup_main():
+    """main function for check50-setup"""
+    signal.signal(signal.SIGINT, handler)
+
+    parser = argparse.ArgumentParser(prog="check50-setup")
+    parser.add_argument("url", action="store",
+                        help="url of check50 configuration file for your course")
+    parser.add_argument("directory", action="store",
+                        default="~/", type=Path)
+                        help="directory in which to store configuration file (defaults to ~/)")
+    args = parser.parse_args()
+
+    args.directory = args.directory.expanduser().resolve()
+
+    res = requests.get(url)
+    # Maybe we want to do more validation so e.g. setup-checkc50 google.com doesn't work?
+    if res.status_code != 200:
+        raise InternalError("failed to fetch check50 configuration file")
+
+    if not args.directory.exists():
+        args.directory.mkdir(parents=True)
+
+    with open(args.directory / ".check50.yaml") as f:
+        f.write(res.text)
 
 
 def main():
@@ -243,6 +269,7 @@ def main():
     parser.add_argument("--checkdir",
                         action="store",
                         default="~/.local/share/check50",
+                        type=Path,
                         help="specify directory containing the checks "
                              "(~/.local/share/check50 by default)")
     parser.add_argument("-v", "--verbose",
@@ -258,7 +285,7 @@ def main():
     global _VERBOSE_
     _VERBOSE_ = args.verbose
 
-    args.checkdir = Path(args.checkdir).expanduser().resolve()
+    args.checkdir = args.checkdir.expanduser().resolve()
 
     if args.offline:
         args.local = True

@@ -17,7 +17,8 @@ setup(
     packages=find_packages(),
     python_requires=">= 3.6",
     entry_points={
-        "console_scripts": ["check50=check50.__main__:main"]
+        "console_scripts": ["check50=check50.__main__:main",
+                            "check50-setup=check50.__main__.setup_main"]
     },
     url="https://github.com/cs50/check50",
     version="3.0.0"
