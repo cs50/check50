@@ -193,7 +193,7 @@ def apply_config(args):
         return
 
     # Find configuration file
-    config_dir = Path(os.path.commonpath(args.files))
+    config_dir = Path(os.path.commonpath(args.files)).expanduser().absolute()
     for path in itertools.chain((config_dir,), config_dir.parents):
         config_file = path / ".check50.yaml"
         if config_file.exists():
@@ -258,9 +258,7 @@ def main():
     global _VERBOSE_
     _VERBOSE_ = args.verbose
 
-    args.checkdir = os.path.abspath(os.path.expanduser(args.checkdir))
-    if not os.path.exists(args.checkdir):
-        os.mkdir(args.checkdir)
+    args.checkdir = Path(args.checkdir).expanduser().resolve()
 
     if args.offline:
         args.local = True
@@ -271,19 +269,18 @@ def main():
     apply_config(args)
 
     if args.local:
-        checks_root = Path(args.checkdir) / args.repo
+        checks_root = args.checkdir / args.repo
         internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
         get_checks(args.repo, checks_root, args.branch, offline=args.offline)
         if not args.offline:
             install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
-
         results = CheckRunner(args.identifier, internal.check_dir / "__init__.py").run(args.files)
     else:
-        full_identifier = "|".join((args.repo, args.branch, args.identifier))
         import submit50
         submit50.handler.type = "check"
         signal.signal(signal.SIGINT, submit50.handler)
         submit50.run.verbose = args.verbose
+        full_identifier = "|".join((args.repo, args.branch, args.identifier))
         username, commit_hash = submit50.submit("check50", full_identifier)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 

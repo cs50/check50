@@ -16,7 +16,7 @@ from . import internal
 
 
 def run(command, env=None):
-    """Runs a command with the specified environment."""
+    """Runs a command in the specified environment."""
     log(f"running {command}...")
 
     if env is None:
@@ -86,6 +86,7 @@ def import_from(path, name):
 
 
 def append_code(original, codefile):
+    """Append codefile to original."""
     with open(codefile) as code, open(original, "a") as o:
         o.write("\n")
         o.write(code.read())
