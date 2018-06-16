@@ -1,14 +1,12 @@
 from contextlib import contextmanager
-from functools import wraps
 import hashlib
 import os
-import re
+import shutil
 import signal
 import sys
 import time
 
-import shutil
-from shlex import quote
+import shlex
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
@@ -24,7 +22,7 @@ def run(command, env=None):
 
     # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
     # Workaround from https://github.com/pexpect/pexpect/issues/373
-    command = "bash -c {}".format(quote(command))
+    command = "bash -c {}".format(shlex.quote(command))
     child = pexpect.spawnu(command, encoding="utf-8", echo=False, env=env)
 
     return Process(child)
@@ -63,7 +61,7 @@ def hash(file):
 
 def diff(self, f1, f2):
     """Returns boolean indicating whether or not the given files are different."""
-    return bool(run("diff {} {}".format(quote(f1), quote(f2))).exit())
+    return bool(run("diff {} {}".format(shlex.quote(f1), shlex.quote(f2))).exit())
 
 
 def exists(*paths):

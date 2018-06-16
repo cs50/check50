@@ -1,18 +1,16 @@
 import collections
 import concurrent.futures as futures
 import enum
-import json
 import functools
-import os
-import multiprocessing as mp
-from pathlib import Path
-import traceback
-import tempfile
 import inspect
 import importlib
+import os
+from pathlib import Path
+import shutil
+import tempfile
+import traceback
 
 import attr
-import shutil
 
 from . import internal
 from .api import log, Failure, _copy, _log
@@ -96,7 +94,7 @@ class CheckRunner:
         _check_names.clear()
         check_module = importlib.util.module_from_spec(self.checks_spec)
         self.checks_spec.loader.exec_module(check_module)
-        self.check_names = check_names.copy()
+        self.check_names = _check_names.copy()
         _check_names.clear()
 
         # Map each check to tuples containing the names and descriptions of the checks that depend on it
@@ -106,7 +104,7 @@ class CheckRunner:
             self.child_map[dependency].add((name, check.__doc__))
 
     def run(self, files):
-        # Ensure that dictionary is ordered by check_declaration order (via check_names)
+        # Ensure that dictionary is ordered by check_declaration order (via self.check_names)
         results = {name: None for name in self.check_names}
         executor = futures.ProcessPoolExecutor()
 

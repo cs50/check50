@@ -5,6 +5,7 @@ import itertools
 import json
 import os
 from pathlib import Path
+import shutil
 import signal
 import subprocess
 import sys
@@ -14,10 +15,9 @@ import time
 
 
 import attr
-import requests
 import git
 from pexpect.exceptions import EOF
-import shutil
+import requests
 from termcolor import cprint
 import yaml
 
@@ -96,8 +96,8 @@ def print_ansi(results, log=False):
 
 
 def get_checks(repo, checks_root, branch, offline=False):
-    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub"""
-    if os.path.exists(checks_root):
+    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub."""
+    if checks_root.exists():
         repo = git.Repo(str(checks_root))
         origin = repo.remotes["origin"]
         if not offline:
