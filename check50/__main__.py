@@ -69,10 +69,7 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    output = []
-    for result in results:
-        output.append(attr.asdict(result))
-    json.dump(output, sys.stdout, cls=Encoder)
+    json.dump({"results": [attr.asdict(result) for result in results], "version": __version__}, sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
@@ -93,8 +90,8 @@ def print_ansi(results, log=False):
 
 
 
-def prepare_checks(reponame, checks_root, branch, offline=False, verbose=False):
-    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub.
+def prepare_checks(checks_root, reponame, branch, offline=False, verbose=False):
+    """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}.
     If offline is False, install any check dependencies from requirements.txt.
     NOTE: internal.check_dir must be initialized before running this function in online mode."""
 
@@ -288,11 +285,12 @@ def main():
         if not args.dev:
             checks_root = Path(f"~/.local/share/check50/{args.repo}").expanduser().resolve()
             internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
-            prepare_checks(args.repo, checks_root, args.branch, offline=args.offline, verbose=args.verbose)
+            prepare_checks(checks_root, args.repo, args.branch, offline=args.offline, verbose=args.verbose)
         else:
             internal.check_dir = Path(args.identifier).expanduser().resolve()
         results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
+        # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
         import submit50
         submit50.handler.type = "check"
