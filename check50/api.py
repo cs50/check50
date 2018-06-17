@@ -14,7 +14,8 @@ from . import internal
 
 
 def run(command, env=None):
-    """Runs a command in the specified environment."""
+    """Runs a command in the specified environment.
+    Returns a Process object representing the spawned child process"""
     log(f"running {command}...")
 
     if env is None:
@@ -38,15 +39,14 @@ def log(line):
 
 
 def include(*paths):
-    """Copies a file from the check directory to the current directory."""
+    """Copies all given files from the check directory to the current directory."""
     cwd = os.getcwd()
-    with _cd(internal.check_dir):
-        for path in paths:
-            _copy(path, cwd)
+    for path in paths:
+        _copy((internal.check_dir / path).absolute(), cwd)
 
 
 def hash(file):
-    """Hashes a file using SHA-256."""
+    """Hashes file using SHA-256."""
 
     exists(file)
     log(f"Hashing {file}...")
@@ -65,19 +65,19 @@ def diff(self, f1, f2):
 
 
 def exists(*paths):
-    """Asserts that all paths exist."""
+    """Asserts that all given paths exist."""
     for path in paths:
         log(f"Checking that {path} exists...")
         if not os.path.exists(path):
             raise Failure(f"{path} not found")
 
 
+# TODO: This is kinda a hack, consider ways around it?
 def import_from(path, name):
-    """Helper function to make it easier for a check to import another check."""
+    """Import `name` from directory `path`"""
     prevpath = sys.path
     try:
-        with _cd(internal.check_dir):
-            sys.path.insert(0, os.path.abspath(path))
+        sys.path.insert(0, str((internal.check_dir / path).absolute()))
         return __import__(name)
     finally:
         sys.path = prevpath
@@ -264,21 +264,10 @@ def _raw(s):
 
 
 def _copy(src, dst):
-    """Copy src to dst, copying recursively if src is a directory"""
+    """Copy src to dst, copying recursively if src is a directory."""
     try:
         shutil.copy(src, dst)
     except IsADirectoryError:
         if os.path.isdir(dst):
             dst = os.path.join(dst, os.path.basename(src))
         shutil.copytree(src, dst)
-
-
-@contextmanager
-def _cd(path):
-    """can be used with a `with` statement to temporarily change directories"""
-    cwd = os.getcwd()
-    try:
-        os.chdir(path)
-        yield
-    finally:
-        os.chdir(cwd)

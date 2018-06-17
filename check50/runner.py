@@ -31,7 +31,7 @@ class CheckResult:
     status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
     # Better name? This contains information about why check didn't pass (i.e. failed or skipped)
-    failure = attr.ib(default=None)
+    why = attr.ib(default=None)
     data = attr.ib(default={})
     _pid = attr.ib(default=attr.Factory(os.getpid))
 
@@ -55,9 +55,9 @@ def check(dependency=None):
             result = CheckResult.from_check(check)
             try:
                 # Setup check environment
-                dst_dir = internal.run_dir = checks_root / check.__name__
+                internal.run_dir = checks_root / check.__name__
                 src_dir = checks_root / (dependency.__name__ if dependency else "-")
-                shutil.copytree(src_dir, dst_dir)
+                shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
                 # Run registered functions before/after running check
@@ -65,10 +65,10 @@ def check(dependency=None):
                     check()
             except Failure as e:
                 result.status = Status.Fail
-                result.failure = e.asdict()
+                result.why = e.asdict()
             except BaseException as e:
                 result.status = Status.Skip
-                result.failure = {"rationale": "check50 ran into an error while running checks!"}
+                result.why = {"rationale": "check50 ran into an error while running checks!"}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
@@ -86,11 +86,12 @@ def check(dependency=None):
 # Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, checks_path):
+        # TODO: Naming the module "checks" is arbitray. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
 
         # Clear check_names, import module, then save check_names. Not thread safe.
         # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
-        # but there are a lot of subtelties with using `inspect` or similar here
+        # but there are a lot of subtleties with using `inspect` or similar here
         _check_names.clear()
         check_module = importlib.util.module_from_spec(self.checks_spec)
         self.checks_spec.loader.exec_module(check_module)
@@ -103,8 +104,14 @@ class CheckRunner:
             dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
             self.child_map[dependency].add((name, check.__doc__))
 
+        # TODO: Check for deadlocks (Khan's algorithm?)
+
     def run(self, files):
-        # Ensure that dictionary is ordered by check_declaration order (via self.check_names)
+        """Run checks concurrently.
+        Returns a list of CheckResults ordered by declaration order of the checks in the imported module"""
+
+        # Ensure that dictionary is ordered by check declaration order (via self.check_names)
+        # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
         results = {name: None for name in self.check_names}
         executor = futures.ProcessPoolExecutor()
 
@@ -114,9 +121,10 @@ class CheckRunner:
             # Setup initial check environment
             dst_dir = checks_root / "-"
             os.mkdir(dst_dir)
-            for filename in files:
+            for filename in map(Path, files):
                 _copy(filename, dst_dir)
 
+            # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
                            for name, _ in self.child_map[None])
             not_passed = []
@@ -139,20 +147,19 @@ class CheckRunner:
         return results.values()
 
     def _skip_children(self, check_name, results):
+        """Recursively skip the children of check_name (presumably because check_name did not pass)."""
         for name, description in self.child_map[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name,
                                             description=description,
                                             status=Status.Skip,
-                                            failure={"rationale": "can't check until a frown turns upside down"})
+                                            why={"rationale": "can't check until a frown turns upside down"})
                 self._skip_children(name, results)
 
 
 class run_check:
-    """
-    Hack to get around the fact that `pickle` can't serialize closures.
-    This class is essentially a function that reimports the check module and runs the check
-    """
+    """Hack to get around the fact that `pickle` can't serialize closures.
+    This class is essentially a function that reimports the check module and runs the check."""
 
     def __init__(self, check_name, spec, checks_root):
         self.check_name = check_name

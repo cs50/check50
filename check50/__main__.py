@@ -78,15 +78,14 @@ def print_ansi(results, log=False):
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
             cprint(f":( {result.description}", "red")
-            if result.failure.get("rationale") is not None:
-                cprint(f"    {result.failure.get('rationale')}", "red")
+            if result.why.get("rationale") is not None:
+                cprint(f"    {result.why['rationale']}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.failure.get('rationale') or 'check skipped'}", "yellow")
+            cprint(f"    {result.why.get('rationale') or 'check skipped'}", "yellow")
 
         if log:
-            for line in result.log:
-                print(f"    {line}")
+            print(*(f"   {line}" for line in result.log), sep="\n")
 
 
 
@@ -165,7 +164,8 @@ def await_results(url, pings=45, sleep=2):
             f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
     print()
 
-    return (CheckResult(**result) for result in payload["checks"])
+    # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
+    return (CheckResult(**result) for result in payload["checks"]["results"])
 
 
 def apply_config(args):
@@ -249,7 +249,7 @@ def main():
                         help="branch to clone checks from")
     parser.add_argument("--repo", "-r",
                         action="store",
-                        help="repo to clone checks from 2018")
+                        help="repo to clone checks from")
     parser.add_argument("-o", "--output",
                         action="store",
                         default="ansi",
@@ -272,7 +272,6 @@ def main():
     if args.verbose:
         args.log = True
 
-    # --dev => --offline and disables configuration files
     if args.dev:
         args.offline = True
     else:
@@ -282,12 +281,12 @@ def main():
         args.local = True
 
     if args.local:
-        if not args.dev:
-            checks_root = Path(f"~/.local/share/check50/{args.repo}").expanduser().resolve()
+        if args.dev:
+            internal.check_dir = Path(args.identifier).expanduser().absolute()
+        else:
+            checks_root = Path(f"~/.local/share/check50/{args.repo}").expanduser().absolute()
             internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
             prepare_checks(checks_root, args.repo, args.branch, offline=args.offline, verbose=args.verbose)
-        else:
-            internal.check_dir = Path(args.identifier).expanduser().resolve()
         results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
         # TODO: Remove this before we ship
