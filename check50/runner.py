@@ -85,8 +85,8 @@ def check(dependency=None):
 
 # Probably shouldn't be a class
 class CheckRunner:
-    def __init__(self, module_name, module_file):
-        self.checks_spec = importlib.util.spec_from_file_location(module_name, module_file)
+    def __init__(self, checks_path):
+        self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
 
         # Clear check_names, import module, then save check_names. Not thread safe.
         # Ideally, there'd be a better way to extract declaration order than @check mutating global state,

@@ -13,14 +13,12 @@ import tempfile
 import traceback
 import time
 
-
 import attr
 import git
 from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
 import yaml
-
 
 from . import internal, __version__
 from .api import Failure
@@ -95,24 +93,39 @@ def print_ansi(results, log=False):
 
 
 
-def get_checks(repo, checks_root, branch, offline=False):
-    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub."""
+def prepare_checks(reponame, checks_root, branch, offline=False, verbose=False):
+    """If {checks_root}/{repo} exists, update it and checkout {branch}, else clone it from GitHub.
+    If offline is False, install any check dependencies from requirements.txt.
+    NOTE: internal.check_dir must be initialized before running this function in online mode."""
+
     if checks_root.exists():
         repo = git.Repo(str(checks_root))
         origin = repo.remotes["origin"]
-        if not offline:
-            origin.fetch()
-        origin.refs[branch].checkout()
+        try:
+            if not offline:
+                origin.fetch()
+        except git.exc.GitError:
+            raise InternalError(f"failed to fetch checks from remote repository")
+
+        try:
+            origin.refs[branch].checkout()
+        except IndexError:
+            raise InternalError(f"no branch {branch} in repository {reponame}")
     elif offline:
-        raise FileNotFoundError(checks_root)
+        raise InternalError("invalid identifier")
     else:
-        repo = git.Repo.clone_from(f"https://github.com/{repo}", str(checks_root), branch=branch, depth=1)
-    return repo
+        try:
+            repo = git.Repo.clone_from(f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
+        except git.exc.GitError:
+            raise InternalError("failed to clone checks")
+
+    if not offline:
+        install_requirements(checks_root, internal.check_dir / ".meta50", verbose=verbose)
 
 
 def install_requirements(*dirs, verbose=False):
-    """Look for a requirements.txt in each dir in {dirs} and install it via pip. """
-    """Suppress pip output unless {verbose} is True."""
+    """Look for a requirements.txt in each dir in {dirs} and install it via pip.
+    Suppress pip output unless {verbose} is True."""
     stdout = stderr = None if verbose else subprocess.DEVNULL
     for dir in dirs:
         requirements = dir / "requirements.txt"
@@ -134,8 +147,8 @@ def install_requirements(*dirs, verbose=False):
 
 
 def await_results(url, pings=45, sleep=2):
-    """Ping {url} until it returns a results payload, timing out after """
-    """{pings} pings and waiting {sleep} seconds between pings"""
+    """Ping {url} until it returns a results payload, timing out after
+    {pings} pings and waiting {sleep} seconds between pings."""
 
     print("Checking...", end="", flush=True)
     for _ in range(pings):
@@ -159,9 +172,9 @@ def await_results(url, pings=45, sleep=2):
 
 
 def apply_config(args):
-    """Fill in unspecified command line arguments from the config file. """
-    """Config file is found by finding the longest common path in args.files, """
-    """and traversing upwards until .check50.yaml is found."""
+    """Fill in unspecified command line arguments from the config file.
+    Config file is found by finding the longest common path in args.files,
+    and traversing upwards until .check50.yaml is found."""
     # Variables to be read from configuration file
     config_vars = ["branch", "repo"]
 
@@ -217,10 +230,20 @@ def setup_main():
 
 
 def main():
-    # Parse command line arguments.
     parser = argparse.ArgumentParser(prog="check50")
+
     parser.add_argument("identifier")
-    parser.add_argument("files", nargs="*", default=os.listdir("."))
+    parser.add_argument("files", nargs="*")
+    parser.add_argument("-d", "--dev",
+                        action="store_true",
+                        help="run check50 in development mode (implies --offline).\n"
+                             "causes IDENTIFIER to be interpreted as a literal path to a checks package")
+    parser.add_argument("--offline",
+                        action="store_true",
+                        help="run checks completely offline (implies --local)")
+    parser.add_argument("-l", "--local",
+                        action="store_true",
+                        help="run checks locally instead of uploading to cs50")
     parser.add_argument("--log",
                         action="store_true",
                         help="display more detailed information about check results")
@@ -230,23 +253,11 @@ def main():
     parser.add_argument("--repo", "-r",
                         action="store",
                         help="repo to clone checks from 2018")
-    parser.add_argument("-l", "--local",
-                        action="store_true",
-                        help="run checks locally instead of uploading to cs50")
-    parser.add_argument("--offline",
-                        action="store_true",
-                        help="run checks completely offline (implies --local)")
-    parser.add_argument("--output", "-o",
+    parser.add_argument("-o", "--output",
                         action="store",
                         default="ansi",
                         choices=["ansi", "json"],
-                        help="specify output format")
-    parser.add_argument("--checkdir",
-                        action="store",
-                        default="~/.local/share/check50",
-                        type=Path,
-                        help="specify directory containing the checks "
-                             "(~/.local/share/check50 by default)")
+                        help="format of check results")
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help="display the full tracebacks of any errors (also implies --log)")
@@ -258,23 +269,29 @@ def main():
 
     excepthook.verbose = args.verbose
 
-    args.checkdir = args.checkdir.expanduser().resolve()
-
-    if args.offline:
-        args.local = True
+    if not args.files:
+        args.files = os.listdir(".")
 
     if args.verbose:
         args.log = True
 
-    apply_config(args)
+    # --dev => --offline and disables configuration files
+    if args.dev:
+        args.offline = True
+    else:
+        apply_config(args)
+
+    if args.offline:
+        args.local = True
 
     if args.local:
-        checks_root = args.checkdir / args.repo
-        internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
-        get_checks(args.repo, checks_root, args.branch, offline=args.offline)
-        if not args.offline:
-            install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
-        results = CheckRunner(args.identifier, internal.check_dir / "__init__.py").run(args.files)
+        if not args.dev:
+            checks_root = Path(f"~/.local/share/check50/{args.repo}").expanduser().resolve()
+            internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
+            prepare_checks(args.repo, checks_root, args.branch, offline=args.offline, verbose=args.verbose)
+        else:
+            internal.check_dir = Path(args.identifier).expanduser().resolve()
+        results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
         import submit50
