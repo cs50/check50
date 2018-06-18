@@ -217,7 +217,7 @@ def setup_main():
 
     args.directory = args.directory.expanduser().resolve()
 
-    res = requests.get(url)
+    res = requests.get(args.url)
     # Maybe we want to do more validation so e.g. setup-checkc50 google.com doesn't work?
     if res.status_code != 200:
         raise InternalError("failed to fetch check50 configuration file")
@@ -225,7 +225,7 @@ def setup_main():
     if not args.directory.exists():
         args.directory.mkdir(parents=True)
 
-    with open(args.directory / ".check50.yaml") as f:
+    with open(args.directory / ".check50.yaml", "w") as f:
         f.write(res.text)
 
 

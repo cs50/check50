@@ -49,9 +49,12 @@ def check(dependency=None):
         check._check_dependency = dependency
 
         @functools.wraps(check)
-        def wrapper(checks_root):
+        def wrapper(checks_root, dependency_state):
             # Result template
             result = CheckResult.from_check(check)
+            # any shared (returned) state
+            state = None
+
             try:
                 # Setup check environment
                 internal.run_dir = checks_root / check.__name__
@@ -61,7 +64,10 @@ def check(dependency=None):
 
                 # Run registered functions before/after running check
                 with internal.register:
-                    check()
+                    if len(inspect.getargspec(check).args) > 0:
+                        state = check(dependency_state)
+                    else:
+                        state = check()
             except Failure as e:
                 result.status = Status.Fail
                 result.why = e.asdict()
@@ -77,7 +83,7 @@ def check(dependency=None):
             finally:
                 result.log = _log
                 result.data = internal._data
-                return result
+                return result, state
         return wrapper
     return decorator
 
@@ -131,12 +137,12 @@ class CheckRunner:
             while not_done:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
                 for future in done:
-                    result = future.result()
+                    result, state = future.result()
                     results[result.name] = result
                     if result.status is Status.Pass:
                         for name, _ in self.child_map[result.name]:
                             not_done.add(executor.submit(
-                                run_check(name, self.checks_spec, checks_root)))
+                                run_check(name, self.checks_spec, checks_root, state)))
                     else:
                         not_passed.append(result.name)
 
@@ -160,12 +166,13 @@ class run_check:
     """Hack to get around the fact that `pickle` can't serialize closures.
     This class is essentially a function that reimports the check module and runs the check."""
 
-    def __init__(self, check_name, spec, checks_root):
+    def __init__(self, check_name, spec, checks_root, state=None):
         self.check_name = check_name
         self.spec = spec
         self.checks_root = checks_root
+        self.state = state
 
     def __call__(self):
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
-        return getattr(mod, self.check_name)(self.checks_root)
+        return getattr(mod, self.check_name)(self.checks_root, self.state)
