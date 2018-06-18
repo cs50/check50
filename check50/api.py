@@ -5,6 +5,7 @@ import shutil
 import signal
 import sys
 import time
+import importlib
 
 import shlex
 import pexpect
@@ -30,7 +31,7 @@ def run(command, env=None):
 
 
 _log = []
-internal.register.reset(_log.clear)
+internal.register.reset(lambda: _log.clear())
 
 
 def log(line):
@@ -72,15 +73,18 @@ def exists(*paths):
             raise Failure(f"{path} not found")
 
 
-# TODO: This is kinda a hack, consider ways around it?
-def import_from(path, name):
-    """Import `name` from directory `path`"""
-    prevpath = sys.path
+def checks_module(path):
+    """Retrieve a Python module/package from (relative) path"""
+    prev_path = sys.path
+
+    module_name = path.split(os.sep)[-1]
+    parent_dir = os.sep.join(path.split(os.sep)[:-1])
+
     try:
-        sys.path.insert(0, str((internal.check_dir / path).absolute()))
-        return __import__(name)
+        sys.path.insert(0, str((internal.check_dir / parent_dir).absolute()))
+        return importlib.reload(__import__(module_name))
     finally:
-        sys.path = prevpath
+        sys.path = prev_path
 
 
 def append_code(original, codefile):
