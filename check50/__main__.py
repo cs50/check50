@@ -196,7 +196,7 @@ def main():
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help="run check50 in development mode (implies --offline).\n"
+                        help="run check50 in development mode (implies --offline and --verbose).\n"
                              "causes IDENTIFIER to be interpreted as a literal path to a checks package")
     parser.add_argument("--offline",
                         action="store_true",
@@ -224,10 +224,15 @@ def main():
 
     args = parser.parse_args()
 
-    excepthook.verbose = args.verbose
-
     if not args.files:
         args.files = os.listdir(".")
+
+    if args.dev:
+        args.offline = True
+        args.verbose = True
+
+    if args.offline:
+        args.local = True
 
     if args.verbose:
         # Show all git output in verbose mode.
@@ -236,14 +241,9 @@ def main():
         # Setting it this way is technically undocumented, but convenient.
         git.Git.GIT_PYTHON_TRACE = "full"
         logging.basicConfig(level=logging.INFO)
-
         args.log = True
 
-    if args.dev:
-        args.offline = True
-
-    if args.offline:
-        args.local = True
+    excepthook.verbose = args.verbose
 
     if args.local:
         if args.dev:
