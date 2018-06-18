@@ -19,7 +19,6 @@ import git
 from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
-import yaml
 
 from . import internal, __version__
 from .api import Failure
@@ -91,10 +90,32 @@ def print_ansi(results, log=False):
             print(*(f"   {line}" for line in result.log), sep="\n")
 
 
-def prepare_checks(checks_root, reponame, branch, offline=False, verbose=False):
-    """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}.
-    If offline is False, install any check dependencies from requirements.txt.
-    NOTE: internal.check_dir must be initialized before running this function in online mode."""
+def parse_identifier(identifier):
+    # Find second "/" in identifier
+    idx = identifier.find("/", identifier.find("/") + 1)
+    if idx == -1:
+        raise InternalError("invalid identifier")
+
+    repo, remainder = identifier[:idx], identifier[idx+1:]
+
+    try:
+        branches = (line.split("\t")[1].replace("refs/heads/", "")
+                        for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
+    except git.GitError:
+        raise InternalError("invalid identifier")
+
+    for branch in branches:
+        if remainder.startswith(f"{branch}/"):
+            break
+    else:
+        raise InternalError("invalid identifier")
+
+    problem = remainder[len(branch)+1:]
+    return repo, branch, problem
+
+
+def prepare_checks(checks_root, reponame, branch, offline=False):
+    """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}."""
 
     if checks_root.exists():
         repo = git.Repo(str(checks_root))
@@ -116,9 +137,6 @@ def prepare_checks(checks_root, reponame, branch, offline=False, verbose=False):
             repo = git.Repo.clone_from(f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
         except git.exc.GitError:
             raise InternalError("failed to clone checks")
-
-    if not offline:
-        install_requirements(checks_root, internal.check_dir / ".meta50", verbose=verbose)
 
 
 def install_requirements(*dirs, verbose=False):
@@ -171,64 +189,6 @@ def await_results(url, pings=45, sleep=2):
     return (CheckResult(**result) for result in payload["checks"]["results"])
 
 
-def apply_config(args):
-    """Fill in unspecified command line arguments from the config file.
-    Config file is found by finding the longest common path in args.files,
-    and traversing upwards until .check50.yaml is found."""
-    # Variables to be read from configuration file
-    config_vars = ["branch", "repo"]
-
-    unspecified = [var for var in config_vars if getattr(args, var) is None]
-
-    # All config vars were given on the command line, no need to consult config
-    if not unspecified:
-        return
-
-    # Find configuration file
-    config_dir = Path(os.path.commonpath(args.files)).expanduser().absolute()
-    for path in itertools.chain((config_dir,), config_dir.parents):
-        config_file = path / ".check50.yaml"
-        if config_file.exists():
-            break
-    else:
-        raise InternalError(f"could not find configuration file.\nHave you run check50-setup?")
-
-    with open(config_file) as f:
-        config = yaml.load(f)
-
-    # Apply config file
-    for config_var in unspecified:
-        value = config.get(config_var)
-        if value is not None:
-            setattr(args, config_var, value)
-        else:
-            raise InternalError(f"missing required argument: {config_var}")
-
-
-def setup_main():
-    """main function for check50-setup"""
-    parser = argparse.ArgumentParser(prog="check50-setup")
-    parser.add_argument("url", action="store",
-                        help="url of check50 configuration file for your course")
-    parser.add_argument("directory", action="store",
-                        default="~/", type=Path,
-                        help="directory in which to store configuration file (defaults to ~/)")
-    args = parser.parse_args()
-
-    args.directory = args.directory.expanduser().resolve()
-
-    res = requests.get(args.url)
-    # Maybe we want to do more validation so e.g. setup-checkc50 google.com doesn't work?
-    if res.status_code != 200:
-        raise InternalError("failed to fetch check50 configuration file")
-
-    if not args.directory.exists():
-        args.directory.mkdir(parents=True)
-
-    with open(args.directory / ".check50.yaml", "w") as f:
-        f.write(res.text)
-
-
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
@@ -247,9 +207,6 @@ def main():
     parser.add_argument("--log",
                         action="store_true",
                         help="display more detailed information about check results")
-    parser.add_argument("--branch", "-b",
-                        action="store",
-                        help="branch to clone checks from")
     parser.add_argument("--repo", "-r",
                         action="store",
                         help="repo to clone checks from")
@@ -277,15 +234,13 @@ def main():
         # This is supposed to be done by setting the GIT_PYTHON_TRACE env variable,
         # but GitPython checks this once when it is imported, not when it is used.
         # Setting it this way is technically undocumented, but convenient.
-        git.cmd.Git.GIT_PYTHON_TRACE = "full"
+        git.Git.GIT_PYTHON_TRACE = "full"
         logging.basicConfig(level=logging.INFO)
 
         args.log = True
 
     if args.dev:
         args.offline = True
-    else:
-        apply_config(args)
 
     if args.offline:
         args.local = True
@@ -294,9 +249,14 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.identifier).expanduser().absolute()
         else:
-            checks_root = Path(f"~/.local/share/check50/{args.repo}").expanduser().absolute()
-            internal.check_dir = checks_root / args.identifier.replace("/", os.sep)
-            prepare_checks(checks_root, args.repo, args.branch, offline=args.offline, verbose=args.verbose)
+            repo, branch, problem = parse_identifier(args.identifier)
+            checks_root = Path(f"~/.local/share/check50/{repo}").expanduser().absolute()
+            prepare_checks(checks_root, repo, branch, offline=args.offline)
+            internal.check_dir = checks_root / problem.replace("/", os.sep)
+            if not args.offline:
+                install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
+
+
         results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
         # TODO: Remove this before we ship
@@ -305,8 +265,7 @@ def main():
         submit50.handler.type = "check"
         signal.signal(signal.SIGINT, submit50.handler)
         submit50.run.verbose = args.verbose
-        full_identifier = "|".join((args.repo, args.branch, args.identifier))
-        username, commit_hash = submit50.submit("check50", full_identifier)
+        username, commit_hash = submit50.submit("check50", args.identifier)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":
