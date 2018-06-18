@@ -87,7 +87,8 @@ def print_ansi(results, log=False):
             cprint(f"    {result.why.get('rationale') or 'check skipped'}", "yellow")
 
         if log:
-            print(*(f"   {line}" for line in result.log), sep="\n")
+            for line in result.log:
+                print(f"    {line}")
 
 
 def parse_identifier(identifier):
