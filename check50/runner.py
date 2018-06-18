@@ -64,7 +64,7 @@ def check(dependency=None):
 
                 # Run registered functions before/after running check
                 with internal.register:
-                    if len(inspect.getargspec(check).args) > 0:
+                    if inspect.getargspec(check).args:
                         state = check(dependency_state)
                     else:
                         state = check()
