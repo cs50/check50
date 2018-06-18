@@ -3,6 +3,7 @@ import importlib
 import inspect
 import itertools
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -69,7 +70,9 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    json.dump({"results": [attr.asdict(result) for result in results], "version": __version__}, sys.stdout, cls=Encoder)
+    json.dump({"results": [attr.asdict(result) for result in results],
+               "version": __version__},
+               sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
@@ -164,6 +167,7 @@ def await_results(url, pings=45, sleep=2):
     print()
 
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
+    # (otherwise we may not be able to parse results)
     return (CheckResult(**result) for result in payload["checks"]["results"])
 
 
@@ -269,6 +273,13 @@ def main():
         args.files = os.listdir(".")
 
     if args.verbose:
+        # Show all git output in verbose mode.
+        # This is supposed to be done by setting the GIT_PYTHON_TRACE env variable,
+        # but GitPython checks this once when it is imported, not when it is used.
+        # Setting it this way is technically undocumented, but convenient.
+        git.cmd.Git.GIT_PYTHON_TRACE = "full"
+        logging.basicConfig(level=logging.INFO)
+
         args.log = True
 
     if args.dev:

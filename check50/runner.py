@@ -30,7 +30,6 @@ class CheckResult:
     description = attr.ib(default=None)
     status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
-    # Better name? This contains information about why check didn't pass (i.e. failed or skipped)
     why = attr.ib(default=None)
     data = attr.ib(default={})
     _pid = attr.ib(default=attr.Factory(os.getpid))
