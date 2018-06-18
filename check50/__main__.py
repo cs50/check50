@@ -88,7 +88,6 @@ def print_ansi(results, log=False):
             print(*(f"   {line}" for line in result.log), sep="\n")
 
 
-
 def prepare_checks(checks_root, reponame, branch, offline=False, verbose=False):
     """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}.
     If offline is False, install any check dependencies from requirements.txt.

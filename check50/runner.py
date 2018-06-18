@@ -121,7 +121,7 @@ class CheckRunner:
             # Setup initial check environment
             dst_dir = checks_root / "-"
             os.mkdir(dst_dir)
-            for filename in map(Path, files):
+            for filename in files:
                 _copy(filename, dst_dir)
 
             # Start all checks that have no dependencies

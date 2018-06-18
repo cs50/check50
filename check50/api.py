@@ -90,6 +90,7 @@ def append_code(original, codefile):
         o.write(code.read())
 
 
+# TODO: Add docstrings to methods
 class Process:
     """ Wrapper class for pexpect child process. """
 
