@@ -26,17 +26,15 @@ class Status(enum.Enum):
 
 @attr.s(slots=True)
 class CheckResult:
-    name = attr.ib(default=None)
     description = attr.ib(default=None)
     status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
     why = attr.ib(default=None)
     data = attr.ib(default={})
-    _pid = attr.ib(default=attr.Factory(os.getpid))
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
-        return cls(name=check.__name__, description=check.__doc__, *args, **kwargs)
+        return cls(description=check.__doc__, *args, **kwargs)
 
 
 def check(dependency=None):
@@ -83,7 +81,7 @@ def check(dependency=None):
             finally:
                 result.log = _log
                 result.data = internal._data
-                return result, state
+                return check.__name__, result, state
         return wrapper
     return decorator
 
@@ -137,26 +135,25 @@ class CheckRunner:
             while not_done:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
                 for future in done:
-                    result, state = future.result()
-                    results[result.name] = result
+                    name, result, state = future.result()
+                    results[name] = result
                     if result.status is Status.Pass:
-                        for name, _ in self.child_map[result.name]:
+                        for child_name, _ in self.child_map[name]:
                             not_done.add(executor.submit(
-                                run_check(name, self.checks_spec, checks_root, state)))
+                                run_check(child_name, self.checks_spec, checks_root, state)))
                     else:
-                        not_passed.append(result.name)
+                        not_passed.append(name)
 
         for name in not_passed:
             self._skip_children(name, results)
 
-        return results.values()
+        return results
 
     def _skip_children(self, check_name, results):
         """Recursively skip the children of check_name (presumably because check_name did not pass)."""
         for name, description in self.child_map[check_name]:
             if results[name] is None:
-                results[name] = CheckResult(name=name,
-                                            description=description,
+                results[name] = CheckResult(description=description,
                                             status=Status.Skip,
                                             why={"rationale": "can't check until a frown turns upside down"})
                 self._skip_children(name, results)

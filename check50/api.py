@@ -31,7 +31,7 @@ def run(command, env=None):
 
 
 _log = []
-internal.register.reset(lambda : _log.clear())
+internal.register.before_every(_log.clear)
 
 
 def log(line):
