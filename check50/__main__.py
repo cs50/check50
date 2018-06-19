@@ -19,6 +19,7 @@ import git
 from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
+import yaml
 
 from . import internal, __version__
 from .api import Failure
@@ -30,6 +31,12 @@ class InternalError(Exception):
 
     def __init__(self, msg):
         self.msg = msg
+
+
+class InvalidIdentifier(InternalError):
+    def __init__(self, identifier=None):
+        self.identifier = identifier
+        super().__init__("invalid identifier{f': {identifier}' if identifier else ''}")
 
 
 def excepthook(cls, exc, tb):
@@ -69,13 +76,13 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    json.dump({"results": [attr.asdict(result) for result in results],
+    json.dump({"results": {name : attr.asdict(result) for name, result in results.items()},
                "version": __version__},
                sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
-    for result in results:
+    for result in results.values():
         if result.status is Status.Pass:
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
@@ -95,7 +102,7 @@ def parse_identifier(identifier):
     # Find second "/" in identifier
     idx = identifier.find("/", identifier.find("/") + 1)
     if idx == -1:
-        raise InternalError("invalid identifier")
+        raise InvalidIdentifier(identifier)
 
     repo, remainder = identifier[:idx], identifier[idx+1:]
 
@@ -103,13 +110,13 @@ def parse_identifier(identifier):
         branches = (line.split("\t")[1].replace("refs/heads/", "")
                         for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
     except git.GitError:
-        raise InternalError("invalid identifier")
+        raise InvalidIdentifier(identifier)
 
     for branch in branches:
         if remainder.startswith(f"{branch}/"):
             break
     else:
-        raise InternalError("invalid identifier")
+        raise InvalidIdentifier(identifier)
 
     problem = remainder[len(branch)+1:]
     return repo, branch, problem
@@ -127,12 +134,9 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
         except git.exc.GitError:
             raise InternalError(f"failed to fetch checks from remote repository")
 
-        try:
             origin.refs[branch].checkout()
-        except IndexError:
-            raise InternalError(f"no branch {branch} in repository {reponame}")
     elif offline:
-        raise InternalError("invalid identifier")
+        raise InvalidIdentifier(identifier)
     else:
         try:
             repo = git.Repo.clone_from(f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
@@ -256,7 +260,6 @@ def main():
             internal.check_dir = checks_root / problem.replace("/", os.sep)
             if not args.offline:
                 install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
-
 
         results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
