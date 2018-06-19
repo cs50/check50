@@ -21,7 +21,7 @@ def compile(file_name, exe_name=None):
 
 def valgrind(command):
     xml_file = tempfile.NamedTemporaryFile()
-    internal.register.after(lambda: _check_valgrind(xml_file))
+    internal.register.after_check(lambda: _check_valgrind(xml_file))
 
     # ideally we'd like for this whole command not to be logged.
     return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
