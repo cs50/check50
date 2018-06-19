@@ -13,21 +13,21 @@ run_dir = None
 
 class Register:
     def __init__(self):
-        self._before_everies = set()
-        self._after_everies = set()
-        self._after_checks = set()
+        self._before_everies = []
+        self._after_everies = []
+        self._after_checks = []
 
     def after_check(self, func):
         """run func once at the end of the check, then discard func"""
-        self._after_checks.add(func)
+        self._after_checks.append(func)
 
     def after_every(self, func):
         """run func at the end of every check"""
-        self._after_everies.add(func)
+        self._after_everies.append(func)
 
     def before_every(self, func):
         """run func at the start of every check"""
-        self._before_everies.add(func)
+        self._before_everies.append(func)
 
     def __enter__(self):
         for f in self._before_everies:
