@@ -10,16 +10,21 @@ CC = "clang"
 CFLAGS = "-std=c11 -ggdb3 -lcs50 -lm"
 
 
-def compile(file_name, exe_name=None):
+def compile(file_name, exe_name=None, compiler=CC, compilers_flags=CFLAGS):
+    f"""
+    compile file_name to exe_name (file_name minus .c by default)
+    uses compiler: {CC} with compilers_flags: {CFLAGS} by default
+    """
     if exe_name is None and file_name.endswith(".c"):
         exe_name = file_name.split(".c")[0]
 
     out_flag = f"-o {exe_name}" if exe_name is not None else ""
 
-    run(f"{CC} {file_name} {out_flag} {CFLAGS}").exit(0)
+    run(f"{compiler} {file_name} {out_flag} {compilers_flags}").exit(0)
 
 
 def valgrind(command):
+    """run command with valgrind, checks for valgrind errors at the end of the check"""
     xml_file = tempfile.NamedTemporaryFile()
     internal.register.after(lambda: _check_valgrind(xml_file))
 
