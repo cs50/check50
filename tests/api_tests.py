@@ -61,8 +61,49 @@ class TestProcessStdin(Base):
         process.kill()
 
 class TestProcessStdout(Base):
-    def test_noStdout(self):
-        pass
+    def test_noOut(self):
+        process = check50.run(f"python ./{self.filename}")
+        out = process.stdout(timeout=.1)
+        self.assertEqual(out, "")
+        self.assertFalse(process.process.isalive())
+        process.kill()
+
+        self.write("print('foo')")
+        process = check50.run(f"python ./{self.filename}")
+        out = process.stdout()
+        self.assertEqual(out, "foo\n")
+        self.assertFalse(process.process.isalive())
+        process.kill()
+
+    def test_out(self):
+        process = check50.run(f"python ./{self.filename}")
+        with self.assertRaises(check50.Failure):
+            process.stdout("foo")
+        self.assertFalse(process.process.isalive())
+        process.kill()
+
+        self.write("print('foo')")
+        process = check50.run(f"python ./{self.filename}")
+        process.stdout("foo\n")
+        self.assertTrue(process.process.isalive())
+        process.kill()
+
+    def test_outs(self):
+        self.write("print('foo')\nprint('bar')\n")
+        process = check50.run(f"python ./{self.filename}")
+        process.stdout("foo\n")
+        process.stdout("bar")
+        process.stdout("\n")
+        self.assertTrue(process.process.isalive())
+        process.kill()
+
+    def test_out_regex(self):
+        self.write("print('foo')")
+        process = check50.run(f"python ./{self.filename}")
+        process.stdout(".o.")
+        process.stdout("\n")
+        self.assertTrue(process.process.isalive())
+        process.kill()
 
 class TestExit(Base):
     def test_exit(self):
