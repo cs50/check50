@@ -15,11 +15,11 @@ class Register:
     def __init__(self):
         self._before_everies = set()
         self._after_everies = set()
-        self._after_check = set()
+        self._after_checks = set()
 
     def after_check(self, func):
         """run func once at the end of the check, then discard func"""
-        self._after_onces.add(func)
+        self._after_checks.add(func)
 
     def after_every(self, func):
         """run func at the end of every check"""
@@ -38,8 +38,8 @@ class Register:
         if exc_type is not None:
             return
 
-        while self._after_check:
-            self._after_onces.pop()()
+        while self._after_checks:
+            self._after_checks.pop()()
 
         for f in self._after_everies:
             f()
@@ -48,7 +48,7 @@ class Register:
 register = Register()
 
 _data = {}
-register.reset(_data.clear)
+register.before_every(_data.clear)
 
 def data(**kwargs):
     _data.update(kwargs)
