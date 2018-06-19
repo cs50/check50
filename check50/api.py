@@ -31,7 +31,7 @@ def run(command, env=None):
 
 
 _log = []
-internal.register.reset(lambda: _log.clear())
+internal.register.reset(lambda : _log.clear())
 
 
 def log(line):
@@ -73,7 +73,7 @@ def exists(*paths):
             raise Failure(f"{path} not found")
 
 
-def checks_module(path):
+def import_module(path):
     """Retrieve a Python module/package from (relative) path"""
     prev_path = sys.path
 
