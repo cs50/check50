@@ -113,6 +113,11 @@ class Process:
         self.process = proc
 
     def stdin(self, line, prompt=False, timeout=3):
+        """
+        Send line to stdin
+        If prompt is set to True (False by default) expect a prompt, any character in stdout
+            waits until timeout for a prompt
+        """
         if line == EOF:
             log("sending EOF...")
         else:
@@ -133,6 +138,12 @@ class Process:
         return self
 
     def stdout(self, output=None, str_output=None, regex=True, timeout=3):
+        """
+        Retrieve all output from stdout until timeout (3 sec by default)
+        If output (str / File obj) is given, matches stdout until output is matched, or raises Mismatch
+        If str_output is given, use str_output (human readable form of output) in Mismatch if raised
+        If regex is set to False (True by default) perform an exact match otherwise match with regex
+        """
         if output is None:
             return self._wait(timeout)._output
 
@@ -174,8 +185,8 @@ class Process:
 
     def reject(self, timeout=1):
         """
-        check that the process survives for timeout (1 second by default)
-        usecase: check that program rejected input and is now waiting on new input
+        Check that the process survives for timeout (1 second by default)
+        Usecase: check that program rejected input and is now waiting on new input
         """
         log("checking that input was rejected...")
         try:
@@ -188,6 +199,10 @@ class Process:
         return self
 
     def exit(self, code=None, timeout=5):
+        """
+        Wait for eof or until timeout (5 sec by default), returns the exitcode
+        If code is given, matches exitcode vs code and raises Failure incase of mismatch
+        """
         self._wait(timeout)
 
         if code is None:
@@ -199,6 +214,7 @@ class Process:
         return self
 
     def kill(self):
+        """Kill the process"""
         self.process.close(force=True)
         return self
 
