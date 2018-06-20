@@ -291,9 +291,11 @@ def main():
             internal.check_dir = checks_root / problem.replace("/", os.sep)
 
         options = parse_config(internal.check_dir)
+
         if not args.offline:
             install_requirements(internal.check_dir / options["requirements"], verbose=args.verbose)
-        checks_file = (internal.check_dir / options["checks"]).expanduser().absolute()
+
+        checks_file = (internal.check_dir / options["checks"]).absolute()
 
         with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
             results = CheckRunner(checks_file, locale=options["locale"]).run(args.files)
