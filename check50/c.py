@@ -7,20 +7,25 @@ from .api import run, log, Failure
 from . import internal
 
 CC = "clang"
-CFLAGS = "-std=c11 -ggdb3 -lcs50 -lm"
+CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 
-def compile(file_name, exe_name=None, compiler=CC, compilers_flags=CFLAGS):
+def compile(file_name, exe_name=None, cc=CC, **cflags):
     f"""
     compile file_name to exe_name (file_name minus .c by default)
     uses compiler: {CC} with compilers_flags: {CFLAGS} by default
     """
     if exe_name is None and file_name.endswith(".c"):
-        exe_name = file_name.split(".c")[0]
+        exe_name = Path(file_name).stem
 
-    out_flag = f"-o {exe_name}" if exe_name is not None else ""
+    flags = CFLAGS.copy()
+    flags.update(cflags)
+    flags = " ".join(f"-{flag}" + (f"={value}" if isinstance(value , str) else "")
+                     for flag, value in flags.items() if value)
 
-    run(f"{compiler} {file_name} {out_flag} {compilers_flags}").exit(0)
+    out_flag = f" -o {exe_name} " if exe_name is not None else " "
+
+    run(f"{cc} {file_name}{out_flag}{flags}").exit(0)
 
 
 def valgrind(command):
