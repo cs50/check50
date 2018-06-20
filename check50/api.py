@@ -73,7 +73,7 @@ def exists(*paths):
             raise Failure(f"{path} not found")
 
 
-def import_module(path):
+def import_checks(path):
     """Retrieve a Python module/package from (relative) path"""
     prev_path = sys.path
 
