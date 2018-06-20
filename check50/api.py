@@ -39,6 +39,12 @@ def log(line):
     _log.append(line)
 
 
+_data = {}
+internal.register.before_every(_data.clear)
+def data(**kwargs):
+    _data.update(kwargs)
+
+
 def include(*paths):
     """Copies all given files from the check directory to the current directory."""
     cwd = os.getcwd()

@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import importlib
 import inspect
 import itertools
@@ -36,11 +37,11 @@ class InternalError(Exception):
 class InvalidIdentifier(InternalError):
     def __init__(self, identifier=None):
         self.identifier = identifier
-        super().__init__("invalid identifier{f': {identifier}' if identifier else ''}")
+        super().__init__(f"invalid identifier{f': {identifier}' if identifier else ''}")
 
 
 def excepthook(cls, exc, tb):
-    if cls is InternalError:
+    if issubclass(cls, InternalError):
         cprint(exc.msg, "red", file=sys.stderr)
     elif cls is FileNotFoundError:
         cprint(f"{exc.filename} not found", "red", file=sys.stderr)
@@ -144,27 +145,31 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
             raise InternalError("failed to clone checks")
 
 
-def install_requirements(*dirs, verbose=False):
+def install_requirements(requirements, verbose=False):
     """Look for a requirements.txt in each dir in {dirs} and install it via pip.
     Suppress pip output unless {verbose} is True."""
+
+    if not requirements:
+        return
+
     stdout = stderr = None if verbose else subprocess.DEVNULL
-    for dir in dirs:
-        requirements = dir / "requirements.txt"
 
-        if not requirements.exists():
-            continue
+    requirements = Path(requirements).expanduser().absolute()
 
-        pip = ["pip", "install", "-r", str(requirements)]
+    if not requirements.exists():
+        raise FileNotFoundError(requirements)
 
-        # Unless we are in a virtualenv, we need --user
-        if not hasattr(sys, "real_prefix") and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-            pip.append("--user")
+    pip = ["pip", "install", "-r", requirements]
 
-        try:
-            subprocess.check_call(pip, stdout=stdout, stderr=stderr)
-        except subprocess.CalledProcessError:
-            raise InternalError(
-                f"failed to install dependencies in ({requirements[len(checks_dir) + 1:]})")
+    # Unless we are in a virtualenv, we need --user
+    if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
+        pip.append("--user")
+
+    try:
+        subprocess.check_call(pip, stdout=stdout, stderr=stderr)
+    except subprocess.CalledProcessError:
+        raise InternalError(
+            f"failed to install dependencies from {requirements}")
 
 
 def await_results(url, pings=45, sleep=2):
@@ -192,6 +197,32 @@ def await_results(url, pings=45, sleep=2):
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
     return (CheckResult(**result) for result in payload["checks"]["results"])
+
+
+def parse_config(check_dir):
+    config_file = check_dir / ".check50.yaml"
+
+    try:
+        with open(config_file) as f:
+            config = yaml.load(f)
+    except (FileNotFoundError, yaml.YAMLError):
+        raise InvalidIdentifier()
+
+
+    options = {
+        "checks": "__init__.py",
+        "requirements": False,
+        "locale": False,
+    }
+
+    if config is not None:
+        options.update(config)
+
+    # Haven't implemented config-file checks
+    if isinstance(options["checks"], dict):
+        raise NotImplementedError()
+
+    return options
 
 
 def main():
@@ -258,17 +289,14 @@ def main():
             checks_root = Path(f"~/.local/share/check50/{repo}").expanduser().absolute()
             prepare_checks(checks_root, repo, branch, offline=args.offline)
             internal.check_dir = checks_root / problem.replace("/", os.sep)
-            if not args.offline:
-                install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
 
-        # TODO only here for demo purposes, pending .check50.yaml implementation, remove me!
-        if args.dev and internal.check_dir.name == "config":
-            src = internal.compile(internal.check_dir / ".check50.yaml")
+        options = parse_config(internal.check_dir)
+        if not args.offline:
+            install_requirements(internal.check_dir / options["requirements"], verbose=args.verbose)
+        checks_file = (internal.check_dir / options["checks"]).expanduser().absolute()
 
-            with open(internal.check_dir / "__init__.py", "w") as f:
-                f.write(src)
-
-        results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
+        with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
+            results = CheckRunner(checks_file, locale=options["locale"]).run(args.files)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")

@@ -13,7 +13,7 @@ import traceback
 import attr
 
 from . import internal
-from .api import log, Failure, _copy, _log
+from .api import log, Failure, _copy, _log, _data
 
 _check_names = []
 
@@ -80,7 +80,7 @@ def check(dependency=None):
                 result.status = Status.Pass
             finally:
                 result.log = _log
-                result.data = internal._data
+                result.data = _data
                 return check.__name__, result, state
         return wrapper
     return decorator
@@ -88,7 +88,11 @@ def check(dependency=None):
 
 # Probably shouldn't be a class
 class CheckRunner:
-    def __init__(self, checks_path):
+    def __init__(self, checks_path, locale=None):
+
+        if locale:
+            raise NotImplementedError("check50 does not yet support internationalization")
+
         # TODO: Naming the module "checks" is arbitray. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
 
