@@ -77,12 +77,12 @@ def import_module(path):
     """Retrieve a Python module/package from (relative) path"""
     prev_path = sys.path
 
-    module_name = path.split(os.sep)[-1]
-    parent_dir = os.sep.join(path.split(os.sep)[:-1])
+    path = internal.check_dir / path
+    module_name = path.name
 
     try:
-        sys.path.insert(0, str((internal.check_dir / parent_dir).absolute()))
-        return importlib.reload(__import__(module_name))
+        sys.path.insert(0, str(path.absolute().parent))
+        return importlib.reload(__import__(path.name))
     finally:
         sys.path = prev_path
 
