@@ -3,6 +3,7 @@ Functions that allow "simple" YAML checks to be converted into standard python c
 """
 
 import re
+import shlex
 
 def _run(arg):
     return f'.run("{arg}")'
@@ -13,7 +14,7 @@ def _stdin(arg):
         arg = r"\n".join(arg)
 
     arg = arg.replace("\n", r"\n").replace("\t", r"\t")
-    return f'.stdin("{arg}", prompt=False)'
+    return f'.stdin({shlex.quote(arg)}, prompt=False)'
 
 
 def _stdout(arg):
@@ -21,7 +22,7 @@ def _stdout(arg):
         arg = r"\n".join(arg)
 
     arg = arg.replace("\n", r"\n").replace("\t", r"\t")
-    return f'.stdout("{arg}")'
+    return f'.stdout({shlex.quote(arg)})'
 
 
 def _exit(arg):
