@@ -77,9 +77,9 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    json.dump({"results": {name : attr.asdict(result) for name, result in results.items()},
+    json.dump({"results": {name: attr.asdict(result) for name, result in results.items()},
                "version": __version__},
-               sys.stdout, cls=Encoder)
+              sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
@@ -109,7 +109,7 @@ def parse_identifier(identifier):
 
     try:
         branches = (line.split("\t")[1].replace("refs/heads/", "")
-                        for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
+                    for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
     except git.GitError:
         raise InvalidIdentifier(identifier)
 
@@ -140,7 +140,8 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
         raise InvalidIdentifier(identifier)
     else:
         try:
-            repo = git.Repo.clone_from(f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
+            repo = git.Repo.clone_from(
+                f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
         except git.exc.GitError:
             raise InternalError("failed to clone checks")
 
@@ -207,7 +208,6 @@ def parse_config(check_dir):
             config = yaml.load(f)
     except (FileNotFoundError, yaml.YAMLError):
         raise InvalidIdentifier()
-
 
     options = {
         "checks": "__init__.py",

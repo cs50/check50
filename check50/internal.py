@@ -44,4 +44,3 @@ class Register:
 
 
 register = Register()
-

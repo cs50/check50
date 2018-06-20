@@ -41,6 +41,8 @@ def log(line):
 
 _data = {}
 internal.register.before_every(_data.clear)
+
+
 def data(**kwargs):
     _data.update(kwargs)
 
