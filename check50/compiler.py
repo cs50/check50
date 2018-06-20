@@ -14,28 +14,30 @@ def _stdout(arg):
     return f'.stdout("{re.escape(arg)}")'
 
 def _exit(arg):
+    if arg is None:
+        return ".exit()"
+
     try:
         arg = int(arg)
     except ValueError:
         raise InvalidArgument(f"exit command only accepts integers, not {arg}")
     return f'.exit({arg})'
 
-COMMANDS = {([("run", _run), ("stdin", _stdin), ("stdout", _stdout), ("exit", _exit)])}
+COMMANDS = {"run" : _run, "stdin" : _stdin, "stdout" : _stdout, "exit" : _exit}
 
 def compile(checks):
     """returns compiled check50 checks from config file checks in path"""
 
     out = ["import check50"]
 
-    for check_name in checks
-        out.append("\n")
-        out.append(_compile_check(check_name, content[check_name]))
+    for name, check in checks.items():
+        out.append(_compile_check(name, check))
 
-    return "\n".join(out)
+    return "\n\n".join(out)
 
 def _compile_check(name, check):
     indent = " " * 4
-    out = ["@check50.check()", "def {name}():", '{indent}"""{name}"""']
+    out = ["@check50.check()", f"def {name}():", f'{indent}"""{name}"""']
 
     for run in check:
         _validate(name, run)
@@ -49,7 +51,7 @@ def _compile_check(name, check):
                 line.append(COMMANDS[command_name](run[command_name]))
         out.append("".join(line))
 
-    return out
+    return "\n".join(out)
 
 def _validate(name, run):
     for key in run:
