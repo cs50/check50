@@ -118,13 +118,13 @@ class TestExit(Base):
         exit_code = self.process.exit()
         self.assertEqual(exit_code, 1)
 
-class TestKill(Base):
+class TestProcessKill(Base):
     def test_kill(self):
         self.runpy()
         self.process.kill()
         self.assertFalse(self.process.process.isalive())
 
-class TestReject(Base):
+class TestProcessReject(Base):
     def test_reject(self):
         self.write("input()")
         self.runpy()
