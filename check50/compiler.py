@@ -3,7 +3,6 @@ Functions that allow "simple" YAML checks to be converted into standard python c
 """
 
 import re
-import shlex
 
 def _run(arg):
     return f'.run("{arg}")'
@@ -13,16 +12,15 @@ def _stdin(arg):
     if isinstance(arg, list):
         arg = r"\n".join(arg)
 
-    arg = arg.replace("\n", r"\n").replace("\t", r"\t")
-    return f'.stdin({shlex.quote(arg)}, prompt=False)'
+    arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
+    return f'.stdin("{arg}", prompt=False)'
 
 
 def _stdout(arg):
     if isinstance(arg, list):
         arg = r"\n".join(arg)
-
-    arg = arg.replace("\n", r"\n").replace("\t", r"\t")
-    return f'.stdout({shlex.quote(arg)})'
+    arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
+    return f'.stdout("{arg}")'
 
 
 def _exit(arg):
@@ -52,8 +50,15 @@ def compile(checks):
 
 def _compile_check(name, check):
     indent = " " * 4
+
+    check_name = name.replace(' ', '_').replace('-', '_')
+
+    if not re.match(re.compile("[a-zA-Z_][a-zA-Z0-9_]*"), check_name):
+        raise CompileError(f"{name} is not a valid name for a check, " +\
+            "checks can start with a letter/space/dash followed by only letters/digits/underscores/spaces/dashes")
+
     out = ["@check50.check()",
-           f"def {name.replace(' ', '_').replace('-', '_')}():",
+           f"def {check_name}():",
            f'{indent}"""{name}"""']
 
     for run in check:
