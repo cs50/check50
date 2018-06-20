@@ -52,10 +52,13 @@ def _compile_check(name, check):
     indent = " " * 4
 
     check_name = name.replace(' ', '_').replace('-', '_')
+    if check_name[0].isdigit():
+        check_name = f"_{check_name}"
 
-    if not re.match(re.compile("[a-zA-Z_][a-zA-Z0-9_]*"), check_name):
-        raise CompileError(f"{name} is not a valid name for a check, " +\
-            "checks can start with a letter/space/dash followed by only letters/digits/underscores/spaces/dashes")
+
+    if not re.match("\w+", check_name):
+        raise CompileError(f"{name} is not a valid name for a check, " \
+            "check names should consist only of alphanumeric characters, underscores, and spaces")
 
     out = ["@check50.check()",
            f"def {check_name}():",
