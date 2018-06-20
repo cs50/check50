@@ -132,17 +132,16 @@ class Process:
             pass
         return self
 
-    def stdout(self, output=None, str_output=None, timeout=3):
+    def stdout(self, output=None, str_output=None, regex=True, timeout=3):
         if output is None:
             return self._wait(timeout)._output
 
-        # Files should be interpreted literally, anything else shouldn't be.
         try:
             output = output.read()
         except AttributeError:
-            expect = self.process.expect
-        else:
-            expect = self.process.expect_exact
+            pass
+
+        expect = self.process.expect if regex else self.process.expect_exact
 
         if str_output is None:
             str_output = output
