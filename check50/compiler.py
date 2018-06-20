@@ -13,14 +13,14 @@ def _stdin(arg):
         arg = r"\n".join(arg)
 
     arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
-    return f'.stdin("{arg}", prompt=False)'
+    return f'.stdin("{arg}")'
 
 
 def _stdout(arg):
     if isinstance(arg, list):
         arg = r"\n".join(arg)
     arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
-    return f'.stdout("{arg}")'
+    return f'.stdout("{arg}", regex=False)'
 
 
 def _exit(arg):

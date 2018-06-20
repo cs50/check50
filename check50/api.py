@@ -112,7 +112,7 @@ class Process:
     def __init__(self, proc):
         self.process = proc
 
-    def stdin(self, line, prompt=True, timeout=3):
+    def stdin(self, line, prompt=False, timeout=3):
         if line == EOF:
             log("sending EOF...")
         else:
