@@ -7,7 +7,7 @@ import check50.api
 
 class Base(unittest.TestCase):
     def setUp(self):
-        self.filename = "dummy.py"
+        self.filename = "foo.py"
         self.write("")
         self.process = None
 
@@ -93,12 +93,50 @@ class TestProcessStdout(Base):
         self.process.stdout("\n")
         self.assertTrue(self.process.process.isalive())
 
-    def test_out_regex(self):
+    def test_outRegex(self):
         self.write("print('foo')")
         self.runpy()
         self.process.stdout(".o.")
         self.process.stdout("\n")
         self.assertTrue(self.process.process.isalive())
+
+    def test_outNoRegex(self):
+        self.write("print('foo')")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(".o.", regex=False)
+        self.assertFalse(self.process.process.isalive())
+
+class TestProcessStdoutFile(Base):
+    def setUp(self):
+        super().setUp()
+        self.txt_filename = "foo.txt"
+        with open(self.txt_filename, "w") as f:
+            f.write("foo")
+
+    def tearDown(self):
+        super().tearDown()
+        os.remove(self.txt_filename)
+
+    def test_file(self):
+        self.write("print('bar')")
+        self.runpy()
+        with open(self.txt_filename, "r") as f:
+            with self.assertRaises(check50.Failure):
+                self.process.stdout(f, regex=False)
+
+        self.write("print('foo')")
+        self.runpy()
+        with open(self.txt_filename, "r") as f:
+            self.process.stdout(f, regex=False)
+
+    def test_file_regex(self):
+        self.write("print('bar')")
+        with open(self.txt_filename, "w") as f:
+            f.write(".a.")
+        self.runpy()
+        with open(self.txt_filename, "r") as f:
+            self.process.stdout(f)
 
 class TestExit(Base):
     def test_exit(self):
