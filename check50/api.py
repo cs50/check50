@@ -22,10 +22,13 @@ def run(command, env=None):
     if env is None:
         env = {}
 
+    full_env = os.environ.copy()
+    full_env.update(env)
+
     # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
     # Workaround from https://github.com/pexpect/pexpect/issues/373
     command = "bash -c {}".format(shlex.quote(command))
-    child = pexpect.spawnu(command, encoding="utf-8", echo=False, env=env)
+    child = pexpect.spawnu(command, encoding="utf-8", echo=False, env=full_env)
 
     return Process(child)
 

@@ -4,7 +4,6 @@ Functions that allow "simple" YAML checks to be converted into standard python c
 
 import re
 
-
 def _run(arg):
     return f'.run("{arg}")'
 
@@ -12,13 +11,17 @@ def _run(arg):
 def _stdin(arg):
     if isinstance(arg, list):
         arg = r"\n".join(arg)
+
+    arg = arg.replace("\n", r"\n").replace("\t", r"\t")
     return f'.stdin("{arg}", prompt=False)'
 
 
 def _stdout(arg):
     if isinstance(arg, list):
         arg = r"\n".join(arg)
-    return f'.stdout("{re.escape(arg)}")'
+
+    arg = arg.replace("\n", r"\n").replace("\t", r"\t")
+    return f'.stdout("{arg}")'
 
 
 def _exit(arg):
@@ -48,7 +51,9 @@ def compile(checks):
 
 def _compile_check(name, check):
     indent = " " * 4
-    out = ["@check50.check()", f"def {name}():", f'{indent}"""{name}"""']
+    out = ["@check50.check()",
+           f"def {name.replace(' ', '_').replace('-', '_')}():",
+           f'{indent}"""{name}"""']
 
     for run in check:
         _validate(name, run)

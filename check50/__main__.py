@@ -25,6 +25,7 @@ import yaml
 from . import internal, __version__
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
+from . import compiler
 
 
 class InternalError(Exception):
@@ -218,9 +219,12 @@ def parse_config(check_dir):
     if config is not None:
         options.update(config)
 
-    # Haven't implemented config-file checks
+
     if isinstance(options["checks"], dict):
-        raise NotImplementedError()
+        check = compiler.compile(options["checks"])
+        with open(check_dir / "__init__.py", "w") as f:
+            f.write(compiler.compile(options["checks"]))
+        options["checks"] = "__init__.py"
 
     return options
 
