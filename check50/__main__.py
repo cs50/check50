@@ -261,6 +261,13 @@ def main():
             if not args.offline:
                 install_requirements(checks_root, internal.check_dir / ".meta50", verbose=args.verbose)
 
+        # TODO only here for demo purposes, pending .check50.yaml implementation, remove me!
+        if args.dev and internal.check_dir.name == "config":
+            src = internal.compile(internal.check_dir / ".check50.yaml")
+
+            with open(internal.check_dir / "__init__.py", "w") as f:
+                f.write(src)
+
         results = CheckRunner(internal.check_dir / "__init__.py").run(args.files)
     else:
         # TODO: Remove this before we ship

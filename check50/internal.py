@@ -1,7 +1,9 @@
 """
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
-
+import yaml
+import re
+from collections import OrderedDict
 from contextlib import contextmanager
 
 # Directory containing the check and its associated files
@@ -51,4 +53,84 @@ _data = {}
 register.before_every(_data.clear)
 
 def data(**kwargs):
+    """adds any key-value pairs to the data object of the json payload of a check"""
     _data.update(kwargs)
+
+
+def _run(arg):
+    return f'.run("{arg}")'
+
+def _stdin(arg):
+    if isinstance(arg, list):
+        arg = "\\n".join(arg)
+    return f'.stdin("{arg}", prompt=False)'
+
+def _stdout(arg):
+    if isinstance(arg, list):
+        arg = "\\n".join(arg)
+    return f'.stdout("{re.escape(arg)}")'
+
+def _exit(arg):
+    try:
+        arg = int(arg)
+    except ValueError:
+        raise InvalidArgument(f"exit command only accepts integers, not {arg}")
+    return f'.exit({arg})'
+
+COMMANDS = OrderedDict([("run", _run), ("stdin", _stdin), ("stdout", _stdout), ("exit", _exit)])
+
+def compile(path):
+    """returns compiled check50 checks from config file checks in path"""
+    with open(path) as f:
+        try:
+            content = yaml.load(f)
+        except yaml.scanner.ScannerError as e:
+            raise CompileError(str(e))
+
+    out = "import check50\n"
+
+    for check_name in content:
+        out += "\n" + _compile_check(check_name, content[check_name])
+
+    return out
+
+def _compile_check(name, content):
+    indent = "    "
+    out = f'@check50.check()\ndef {name}():\n{indent}"""{name}"""'
+
+    for run in content:
+        _validate(name, run)
+        _preprocess(run)
+
+        out += f"\n{indent}check50"
+
+        for command_name in COMMANDS:
+            if command_name in run:
+                out += COMMANDS[command_name](run[command_name])
+
+    return f"{out}\n"
+
+def _validate(name, run):
+    for key in run:
+        if key not in COMMANDS:
+            raise UnsupportedCommand(f"{key} is not a valid command in check {name}, use only: {COMMANDS.keys()}")
+
+    for required_command in ["run"]:
+        if required_command not in run:
+            raise MissingCommand(f"Missing {required_command} in check {name}")
+
+def _preprocess(run):
+    if "exit" not in run:
+        run["exit"] = 0
+
+class CompileError(Exception):
+    pass
+
+class UnsupportedCommand(CompileError):
+    pass
+
+class MissingCommand(CompileError):
+    pass
+
+class InvalidArgument(CompileError):
+    pass
