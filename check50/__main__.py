@@ -151,9 +151,6 @@ def install_requirements(requirements, verbose=False):
     """Look for a requirements.txt in each dir in {dirs} and install it via pip.
     Suppress pip output unless {verbose} is True."""
 
-    if not requirements:
-        return
-
     stdout = stderr = None if verbose else subprocess.DEVNULL
 
     requirements = Path(requirements).expanduser().absolute()
@@ -296,7 +293,7 @@ def main():
 
         options = parse_config(internal.check_dir)
 
-        if not args.offline:
+        if not args.offline and options["requirements"]:
             install_requirements(internal.check_dir / options["requirements"], verbose=args.verbose)
 
         checks_file = (internal.check_dir / options["checks"]).absolute()
