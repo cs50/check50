@@ -138,7 +138,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
 
             origin.refs[branch].checkout()
     elif offline:
-        raise InvalidIdentifier(identifier)
+        raise InvalidIdentifier()
     else:
         try:
             repo = git.Repo.clone_from(
