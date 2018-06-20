@@ -173,6 +173,10 @@ class Process:
         return self
 
     def reject(self, timeout=1):
+        """
+        check that the process survives for timeout (1 second by default)
+        usecase: check that program rejected input and is now waiting on new input
+        """
         log("checking that input was rejected...")
         try:
             self._wait(timeout)

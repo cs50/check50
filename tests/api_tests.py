@@ -9,13 +9,19 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.filename = "dummy.py"
         self.write("")
+        self.process = None
 
     def tearDown(self):
         os.remove(self.filename)
+        if self.process and self.process.process.isalive():
+            self.process.kill()
 
     def write(self, source):
         with open(self.filename, "w") as f:
             f.write(source)
+
+    def runpy(self):
+        self.process = check50.run(f"python3 ./{self.filename}")
 
 class TestExists(Base):
     def test_fileDoesNotExist(self):
@@ -27,96 +33,110 @@ class TestExists(Base):
 
 class TestRun(Base):
     def test_returnsProcess(self):
-        process = check50.run(f"python ./{self.filename}")
+        process = check50.run("python3 ./{self.filename}")
         self.assertIsInstance(process, check50.api.Process)
-        process.kill()
 
 class TestProcessKill(Base):
     def test_kill(self):
-        process = check50.run(f"python ./{self.filename}")
-        self.assertTrue(process.process.isalive())
-        process.kill()
-        self.assertFalse(process.process.isalive())
+        self.runpy()
+        self.assertTrue(self.process.process.isalive())
+        self.process.kill()
+        self.assertFalse(self.process.process.isalive())
 
 class TestProcessStdin(Base):
     def test_expectPrompt_noPrompt(self):
         self.write("x = input()")
-        process = check50.run(f"python ./{self.filename}")
+        self.runpy()
         with self.assertRaises(check50.Failure):
-            process.stdin("bar")
-        process.kill()
+            self.process.stdin("bar", prompt=True)
 
     def test_expectPrompt(self):
         self.write("x = input('foo')")
-        process = check50.run(f"python ./{self.filename}")
-        process.stdin("bar")
-        self.assertTrue(process.process.isalive())
-        process.kill()
+        self.runpy()
+        self.process.stdin("bar", prompt=True)
+        self.assertTrue(self.process.process.isalive())
 
     def test_noPrompt(self):
         self.write("x = input()\n")
-        process = check50.run(f"python ./{self.filename}")
-        process.stdin("bar", prompt=False)
-        self.assertTrue(process.process.isalive())
-        process.kill()
+        self.runpy()
+        self.process.stdin("bar")
+        self.assertTrue(self.process.process.isalive())
 
 class TestProcessStdout(Base):
     def test_noOut(self):
-        process = check50.run(f"python ./{self.filename}")
-        out = process.stdout(timeout=.1)
+        self.runpy()
+        out = self.process.stdout(timeout=.1)
         self.assertEqual(out, "")
-        self.assertFalse(process.process.isalive())
-        process.kill()
+        self.assertFalse(self.process.process.isalive())
 
         self.write("print('foo')")
-        process = check50.run(f"python ./{self.filename}")
-        out = process.stdout()
+        self.runpy()
+        out = self.process.stdout()
         self.assertEqual(out, "foo\n")
-        self.assertFalse(process.process.isalive())
-        process.kill()
+        self.assertFalse(self.process.process.isalive())
 
     def test_out(self):
-        process = check50.run(f"python ./{self.filename}")
+        self.runpy()
         with self.assertRaises(check50.Failure):
-            process.stdout("foo")
-        self.assertFalse(process.process.isalive())
-        process.kill()
+            self.process.stdout("foo")
+        self.assertFalse(self.process.process.isalive())
 
         self.write("print('foo')")
-        process = check50.run(f"python ./{self.filename}")
-        process.stdout("foo\n")
-        self.assertTrue(process.process.isalive())
-        process.kill()
+        self.runpy()
+        self.process.stdout("foo\n")
 
     def test_outs(self):
         self.write("print('foo')\nprint('bar')\n")
-        process = check50.run(f"python ./{self.filename}")
-        process.stdout("foo\n")
-        process.stdout("bar")
-        process.stdout("\n")
-        self.assertTrue(process.process.isalive())
-        process.kill()
+        self.runpy()
+        self.process.stdout("foo\n")
+        self.process.stdout("bar")
+        self.process.stdout("\n")
+        self.assertTrue(self.process.process.isalive())
 
     def test_out_regex(self):
         self.write("print('foo')")
-        process = check50.run(f"python ./{self.filename}")
-        process.stdout(".o.")
-        process.stdout("\n")
-        self.assertTrue(process.process.isalive())
-        process.kill()
+        self.runpy()
+        self.process.stdout(".o.")
+        self.process.stdout("\n")
+        self.assertTrue(self.process.process.isalive())
 
 class TestExit(Base):
     def test_exit(self):
         self.write("sys.exit(1)")
-        process = check50.run(f"python ./{self.filename}")
+        self.runpy()
         with self.assertRaises(check50.Failure):
-            process.exit(0)
-        process.kill()
+            self.process.exit(0)
+        self.process.kill()
 
         self.write("sys.exit(1)")
-        process = check50.run(f"python ./{self.filename}")
-        process.exit(1)
-        process.kill()
+        self.runpy()
+        self.process.exit(1)
+
+    def test_noExit(self):
+        self.write("sys.exit(1)")
+        self.runpy()
+        exit_code = self.process.exit()
+        self.assertEqual(exit_code, 1)
+
+class TestKill(Base):
+    def test_kill(self):
+        self.runpy()
+        self.process.kill()
+        self.assertFalse(self.process.process.isalive())
+
+class TestReject(Base):
+    def test_reject(self):
+        self.write("input()")
+        self.runpy()
+        self.process.reject()
+        self.process.stdin("foo")
+        with self.assertRaises(check50.Failure):
+            self.process.reject()
+
+    def test_noReject(self):
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.reject()
 
 if __name__ == '__main__':
     unittest.main()
