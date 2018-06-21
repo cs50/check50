@@ -89,3 +89,37 @@ class TestStdoutPy(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello")
         process.close(force=True)
+
+class TestStdinPy(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process.expect_exact(":(")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("foo.py not found")
+        process.expect_exact(":|")
+        process.expect_exact("prints hello name")
+        process.expect_exact("can't check until a frown turns upside down")
+        process.close(force=True)
+
+    def test_with_empty_file(self):
+        with open("foo.py", "w") as f:
+            pass
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name")
+        process.expect_exact("expected \"hello bar\", not \"\"")
+        process.close(force=True)
+
+    def test_with_correct_file(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name")
+        process.close(force=True)
