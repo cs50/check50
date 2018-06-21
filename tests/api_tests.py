@@ -96,6 +96,32 @@ class TestImportChecks(Base):
         self.assertEqual(mod.__name__, "baz")
         self.assertEqual(mod.qux, 0)
 
+class TestAppendCode(Base):
+    def setUp(self):
+        super().setUp()
+        self.other_filename = "bar.py"
+        with open(self.other_filename, "w") as f:
+            f.write("baz")
+
+    def test_emptyAppend(self):
+        check50.append_code(self.filename, self.other_filename)
+        with open(self.filename, "r") as f1, open(self.other_filename, "r") as f2:
+            self.assertEqual(f1.read(), f"\n{f2.read()}")
+
+    def test_append(self):
+        with open(self.other_filename, "r") as f:
+            old_content2 = f.read()
+
+        self.write("qux")
+        check50.append_code(self.filename, self.other_filename)
+        with open(self.filename, "r") as f1, open(self.other_filename, "r") as f2:
+            content1 = f1.read()
+            content2 = f2.read()
+
+        self.assertNotEqual(content1, content2)
+        self.assertEqual(content2, old_content2)
+        self.assertEqual(content1, "qux\nbaz")
+
 class TestRun(Base):
     def test_returnsProcess(self):
         process = check50.run("python3 ./{self.filename}")
@@ -199,7 +225,7 @@ class TestProcessStdoutFile(Base):
         with open(self.txt_filename, "r") as f:
             self.process.stdout(f)
 
-class TestExit(Base):
+class TestProcessExit(Base):
     def test_exit(self):
         self.write("sys.exit(1)")
         self.runpy()
