@@ -159,3 +159,62 @@ class TestStdinPromptPy(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
         process.close(force=True)
+
+class TestStdinMultiline(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining) (prompt)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
+
+    def test_with_empty_file(self):
+        with open("foo.py", "w") as f:
+            pass
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining) (prompt)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
+
+    def test_with_incorrect_file(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (non chaining) (prompt)")
+        process.expect_exact("expected prompt for input, found none")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining)")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
+
+    def test_with_correct_file(self):
+        with open("foo.py", "w") as f:
+            f.write('for _ in range(2):\n    name = input("prompt")\n    print("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name (non chaining)")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name (non chaining) (prompt)")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name (chaining)")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
