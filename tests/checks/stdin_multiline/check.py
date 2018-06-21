@@ -18,4 +18,4 @@ def prints_hello_name_chaining():
 @check50.check()
 def prints_hello_name_chaining_order():
     """prints hello name (chaining) (order)"""
-    check50.run("python3 foo.py").stdin("bar").stdout("hello bar").stdin("baz").stdout("hello baz")
+    check50.run("python3 foo.py").stdin("bar").stdin("baz").stdout("hello bar").stdout("hello baz")
