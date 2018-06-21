@@ -135,8 +135,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
                 origin.fetch()
         except git.exc.GitError:
             raise InternalError(f"failed to fetch checks from remote repository")
-
-            origin.refs[branch].checkout()
+        origin.refs[branch].checkout()
     elif offline:
         raise InvalidIdentifier()
     else:
