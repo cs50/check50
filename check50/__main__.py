@@ -207,7 +207,7 @@ def parse_config(check_dir):
 
     try:
         with open(config_file) as f:
-            config = yaml.load(f)
+            config = yaml.safe_load(f)
     except (FileNotFoundError, yaml.YAMLError):
         raise InvalidIdentifier()
 

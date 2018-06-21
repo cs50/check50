@@ -24,7 +24,7 @@ class Base(unittest.TestCase):
 
 class TestCompile(Base):
     def test_one_complete_check(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar:
     - run: python3 foo.py
@@ -45,7 +45,7 @@ def bar():
         self.assertEqual(result, expectation)
 
     def test_multiple_checks(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar:
     - run: python3 foo.py
@@ -72,7 +72,7 @@ def baz():
         self.assertEqual(result, expectation)
 
     def test_multiline(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar:
     - run: python3 foo.py
@@ -97,7 +97,7 @@ def bar():
         self.assertEqual(result, expectation)
 
     def test_number_in_name(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   0bar:
     - run: python3 foo.py
@@ -108,7 +108,7 @@ def bar():
         self.assertTrue("\"\"\"0bar\"\"\"" in result)
 
     def test_space_in_name(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar baz:
     - run: python3 foo.py
@@ -119,7 +119,7 @@ def bar():
         self.assertTrue("\"\"\"bar baz\"\"\"" in result)
 
     def test_dash_in_name(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar-baz:
     - run: python3 foo.py
@@ -130,7 +130,7 @@ def bar():
         self.assertTrue("\"\"\"bar-baz\"\"\"" in result)
 
     def test_missing_exit(self):
-        checks = yaml.load(\
+        checks = yaml.safe_load(\
 """checks:
   bar:
     - run: python3 foo.py
