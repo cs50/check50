@@ -31,6 +31,25 @@ class TestExists(Base):
     def test_fileExists(self):
         check50.exists(self.filename)
 
+class TestDiff(Base):
+    def setUp(self):
+        super().setUp()
+        self.txt_filename = "foo.txt"
+        with open(self.txt_filename, "w") as f:
+            f.write("foo")
+
+    def tearDown(self):
+        super().tearDown()
+        os.remove(self.txt_filename)
+
+    def test_noDiff(self):
+        self.write("foo")
+        self.assertFalse(check50.diff(self.txt_filename, self.filename))
+
+    def test_diff(self):
+        self.write("bar")
+        self.assertTrue(check50.diff(self.txt_filename, self.filename))
+
 class TestRun(Base):
     def test_returnsProcess(self):
         process = check50.run("python3 ./{self.filename}")

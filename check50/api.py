@@ -71,7 +71,7 @@ def hash(file):
         return sha256.hexdigest()
 
 
-def diff(self, f1, f2):
+def diff(f1, f2):
     """Returns boolean indicating whether or not the given files are different."""
     return bool(run("diff {} {}".format(shlex.quote(f1), shlex.quote(f2))).exit())
 
