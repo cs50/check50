@@ -100,7 +100,7 @@ def print_ansi(results, log=False):
                 print(f"    {line}")
 
 
-def parse_identifier(identifier):
+def parse_identifier(identifier, offline=False):
     # Find second "/" in identifier
     idx = identifier.find("/", identifier.find("/") + 1)
     if idx == -1:
@@ -109,8 +109,11 @@ def parse_identifier(identifier):
     repo, remainder = identifier[:idx], identifier[idx+1:]
 
     try:
-        branches = (line.split("\t")[1].replace("refs/heads/", "")
-                    for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
+        if offline:
+            branches = map(str, git.Repo(f"~/.local/share/check50/{repo}").branches)
+        else:
+            branches = (line.split("\t")[1].replace("refs/heads/", "")
+                        for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
     except git.GitError:
         raise InvalidIdentifier(identifier)
 
@@ -285,7 +288,7 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.identifier).expanduser().absolute()
         else:
-            repo, branch, problem = parse_identifier(args.identifier)
+            repo, branch, problem = parse_identifier(args.identifier, offline=args.offline)
             checks_root = Path(f"~/.local/share/check50/{repo}").expanduser().absolute()
             prepare_checks(checks_root, repo, branch, offline=args.offline)
             internal.check_dir = checks_root / problem.replace("/", os.sep)
