@@ -60,3 +60,43 @@ class TestExitPy(Base):
             process.close(force=True)
         finally:
             os.remove("foo.py")
+
+class TestStdoutPy(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process.expect_exact(":(")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("foo.py not found")
+        process.expect_exact(":|")
+        process.expect_exact("prints hello")
+        process.expect_exact("can't check until a frown turns upside down")
+        process.close(force=True)
+
+    def test_with_empty_file(self):
+        with open("foo.py", "w") as f:
+            pass
+
+        try:
+            process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+            process.expect_exact(":)")
+            process.expect_exact("foo.py exists")
+            process.expect_exact(":(")
+            process.expect_exact("prints hello")
+            process.expect_exact("expected \"hello\", not \"\"")
+            process.close(force=True)
+        finally:
+            os.remove("foo.py")
+
+    def test_with_correct_file(self):
+        with open("foo.py", "w") as f:
+            f.write('print("hello")')
+
+        try:
+            process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+            process.expect_exact(":)")
+            process.expect_exact("foo.py exists")
+            process.expect_exact(":)")
+            process.expect_exact("prints hello")
+            process.close(force=True)
+        finally:
+            os.remove("foo.py")
