@@ -74,6 +74,28 @@ class TestDiff(Base):
         self.write("bar")
         self.assertTrue(check50.diff(self.txt_filename, self.filename))
 
+class TestImportChecks(Base):
+    def setUp(self):
+        super().setUp()
+        self._old_check_dir = check50.internal.check_dir
+        os.mkdir("bar")
+        with open("./bar/baz.py", "w") as f:
+            f.write("qux = 0")
+        check50.internal.check_dir = pathlib.Path(".").absolute()
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.check_dir = self._old_check_dir
+
+    def test_simpleImport(self):
+        mod = check50.import_checks("foo")
+        self.assertEqual(mod.__name__, "foo")
+
+    def test_relativeImport(self):
+        mod = check50.import_checks("./bar/baz")
+        self.assertEqual(mod.__name__, "baz")
+        self.assertEqual(mod.qux, 0)
+
 class TestRun(Base):
     def test_returnsProcess(self):
         process = check50.run("python3 ./{self.filename}")
