@@ -42,3 +42,5 @@ class TestRegisterBeforeEvery(unittest.TestCase):
 
         with check50.internal.register:
             self.assertEqual(l, ["foo", "foo"])
+
+        self.assertEqual(l, ["foo", "foo"])

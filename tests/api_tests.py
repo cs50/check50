@@ -52,11 +52,11 @@ class TestInclude(Base):
         self.assertTrue(os.path.isfile(check50.internal.check_dir / "baz.txt"))
 
 class TestExists(Base):
-    def test_fileDoesNotExist(self):
+    def test_file_does_not_exist(self):
         with self.assertRaises(check50.Failure):
             check50.exists("i_do_not_exist")
 
-    def test_fileExists(self):
+    def test_file_exists(self):
         check50.exists(self.filename)
 
 class TestDiff(Base):
@@ -66,7 +66,7 @@ class TestDiff(Base):
         with open(self.txt_filename, "w") as f:
             f.write("foo")
 
-    def test_noDiff(self):
+    def test_no_diff(self):
         self.write("foo")
         self.assertFalse(check50.diff(self.txt_filename, self.filename))
 
@@ -87,11 +87,11 @@ class TestImportChecks(Base):
         super().tearDown()
         check50.internal.check_dir = self._old_check_dir
 
-    def test_simpleImport(self):
+    def test_simple_import(self):
         mod = check50.import_checks("foo")
         self.assertEqual(mod.__name__, "foo")
 
-    def test_relativeImport(self):
+    def test_relative_import(self):
         mod = check50.import_checks("./bar/baz")
         self.assertEqual(mod.__name__, "baz")
         self.assertEqual(mod.qux, 0)
@@ -103,7 +103,7 @@ class TestAppendCode(Base):
         with open(self.other_filename, "w") as f:
             f.write("baz")
 
-    def test_emptyAppend(self):
+    def test_empty_append(self):
         check50.append_code(self.filename, self.other_filename)
         with open(self.filename, "r") as f1, open(self.other_filename, "r") as f2:
             self.assertEqual(f1.read(), f"\n{f2.read()}")
@@ -123,7 +123,7 @@ class TestAppendCode(Base):
         self.assertEqual(content1, "qux\nbaz")
 
 class TestRun(Base):
-    def test_returnsProcess(self):
+    def test_returns_process(self):
         process = check50.run("python3 ./{self.filename}")
         self.assertIsInstance(process, check50.api.Process)
 
@@ -135,26 +135,26 @@ class TestProcessKill(Base):
         self.assertFalse(self.process.process.isalive())
 
 class TestProcessStdin(Base):
-    def test_expectPrompt_noPrompt(self):
+    def test_expect_prompt_no_prompt(self):
         self.write("x = input()")
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.stdin("bar", prompt=True)
 
-    def test_expectPrompt(self):
+    def test_expect_prompt(self):
         self.write("x = input('foo')")
         self.runpy()
         self.process.stdin("bar", prompt=True)
         self.assertTrue(self.process.process.isalive())
 
-    def test_noPrompt(self):
+    def test_no_prompt(self):
         self.write("x = input()\n")
         self.runpy()
         self.process.stdin("bar")
         self.assertTrue(self.process.process.isalive())
 
 class TestProcessStdout(Base):
-    def test_noOut(self):
+    def test_no_out(self):
         self.runpy()
         out = self.process.stdout(timeout=.1)
         self.assertEqual(out, "")
@@ -184,14 +184,14 @@ class TestProcessStdout(Base):
         self.process.stdout("\n")
         self.assertTrue(self.process.process.isalive())
 
-    def test_outRegex(self):
+    def test_out_regex(self):
         self.write("print('foo')")
         self.runpy()
         self.process.stdout(".o.")
         self.process.stdout("\n")
         self.assertTrue(self.process.process.isalive())
 
-    def test_outNoRegex(self):
+    def test_out_no_regex(self):
         self.write("print('foo')")
         self.runpy()
         with self.assertRaises(check50.Failure):
@@ -237,7 +237,7 @@ class TestProcessExit(Base):
         self.runpy()
         self.process.exit(1)
 
-    def test_noExit(self):
+    def test_no_exit(self):
         self.write("sys.exit(1)")
         self.runpy()
         exit_code = self.process.exit()
@@ -258,7 +258,7 @@ class TestProcessReject(Base):
         with self.assertRaises(check50.Failure):
             self.process.reject()
 
-    def test_noReject(self):
+    def test_no_reject(self):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.reject()
