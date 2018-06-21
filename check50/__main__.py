@@ -91,6 +91,8 @@ def print_ansi(results, log=False):
             cprint(f":( {result.description}", "red")
             if result.why.get("rationale") is not None:
                 cprint(f"    {result.why['rationale']}", "red")
+            if result.why.get("help") is not None:
+                cprint(f"    {result.why['help']}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
             cprint(f"    {result.why.get('rationale') or 'check skipped'}", "yellow")
