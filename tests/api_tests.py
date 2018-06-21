@@ -7,7 +7,7 @@ import check50
 import check50.api
 import check50.internal
 
-WORKING_DIRECTORY = pathlib.Path(__file__).parent / "temp_api_tests"
+WORKING_DIRECTORY = pathlib.Path(__file__).parent / f"temp_{__name__}"
 
 class Base(unittest.TestCase):
     def setUp(self):
