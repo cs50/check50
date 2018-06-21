@@ -1,20 +1,30 @@
 import unittest
 import os
+import pathlib
 import shutil
 import sys
 import check50
 import check50.api
+import check50.internal
+
+WORKING_DIRECTORY = pathlib.Path(__file__).parent / "temp_api_tests"
 
 class Base(unittest.TestCase):
     def setUp(self):
+        os.mkdir(WORKING_DIRECTORY)
+        os.chdir(WORKING_DIRECTORY)
+
         self.filename = "foo.py"
         self.write("")
+
         self.process = None
 
     def tearDown(self):
-        os.remove(self.filename)
         if self.process and self.process.process.isalive():
             self.process.kill()
+
+        if os.path.isdir(WORKING_DIRECTORY):
+            shutil.rmtree(WORKING_DIRECTORY)
 
     def write(self, source):
         with open(self.filename, "w") as f:
@@ -22,6 +32,24 @@ class Base(unittest.TestCase):
 
     def runpy(self):
         self.process = check50.run(f"python3 ./{self.filename}")
+
+class TestInclude(Base):
+    def setUp(self):
+        super().setUp()
+        self._old_check_dir = check50.internal.check_dir
+        os.mkdir("bar")
+        with open("./bar/baz.txt", "w") as f:
+            pass
+        check50.internal.check_dir = pathlib.Path("./bar").absolute()
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.check_dir = self._old_check_dir
+
+    def test_include(self):
+        check50.include("baz.txt")
+        self.assertTrue(os.path.isfile(pathlib.Path(".").absolute() / "baz.txt"))
+        self.assertTrue(os.path.isfile(check50.internal.check_dir / "baz.txt"))
 
 class TestExists(Base):
     def test_fileDoesNotExist(self):
@@ -37,10 +65,6 @@ class TestDiff(Base):
         self.txt_filename = "foo.txt"
         with open(self.txt_filename, "w") as f:
             f.write("foo")
-
-    def tearDown(self):
-        super().tearDown()
-        os.remove(self.txt_filename)
 
     def test_noDiff(self):
         self.write("foo")
@@ -132,10 +156,6 @@ class TestProcessStdoutFile(Base):
         self.txt_filename = "foo.txt"
         with open(self.txt_filename, "w") as f:
             f.write("foo")
-
-    def tearDown(self):
-        super().tearDown()
-        os.remove(self.txt_filename)
 
     def test_file(self):
         self.write("print('bar')")
