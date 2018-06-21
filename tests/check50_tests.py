@@ -123,3 +123,39 @@ class TestStdinPy(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
         process.close(force=True)
+
+class TestStdinPromptPy(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name")
+        process.close(force=True)
+
+    def test_with_empty_file(self):
+        with open("foo.py", "w") as f:
+            pass
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name")
+        process.expect_exact("expected prompt for input, found none")
+        process.close(force=True)
+
+    def test_with_incorrect_file(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process.expect_exact(":(")
+        process.expect_exact("prints hello name")
+        process.expect_exact("expected prompt for input, found none")
+        process.close(force=True)
+
+    def test_with_correct_file(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input("prompt")\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name")
+        process.close(force=True)
