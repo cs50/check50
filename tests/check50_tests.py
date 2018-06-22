@@ -218,3 +218,44 @@ class TestStdinMultiline(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello name (chaining) (order)")
         process.close(force=True)
+
+class TestCompileExit(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
+        process.expect_exact(":(")
+        process.expect_exact("exit")
+        process.close(force=True)
+
+    def test_with_correct_file(self):
+        with open("foo.py", "w") as f:
+            pass
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
+        process.expect_exact(":)")
+        process.expect_exact("exit")
+        process.close(force=True)
+
+class TestCompileStd(Base):
+    def test_no_file(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process.expect_exact(":(")
+        process.expect_exact("std")
+        process.close(force=True)
+
+    def test_with_incorrect_stdout(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process.expect_exact(":)")
+        process.expect_exact("std")
+        process.close(force=True)
+
+    def test_correct(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint(name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process.expect_exact(":)")
+        process.expect_exact("std")
+        process.close(force=True)
