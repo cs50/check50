@@ -222,7 +222,6 @@ def parse_config(check_dir):
 
 
     if isinstance(options["checks"], dict):
-        check = compiler.compile(options["checks"])
         with open(check_dir / "__init__.py", "w") as f:
             f.write(compiler.compile(options["checks"]))
         options["checks"] = "__init__.py"
