@@ -44,3 +44,7 @@ class TestRegisterBeforeEvery(unittest.TestCase):
             self.assertEqual(l, ["foo", "foo"])
 
         self.assertEqual(l, ["foo", "foo"])
+
+
+if __name__ == "__main__":
+    unittest.main()

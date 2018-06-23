@@ -1,25 +1,24 @@
 import unittest
 import os
-import shutil
 import yaml
 import pathlib
 import check50
-import check50.compiler
-
-WORKING_DIRECTORY = pathlib.Path(__file__).parent / f"temp_{__name__}"
+import check50.simple
+import tempfile
 
 class Base(unittest.TestCase):
+
+    config_file = ".check50.yaml"
+
     def setUp(self):
-        os.mkdir(WORKING_DIRECTORY)
-        os.chdir(WORKING_DIRECTORY)
-        self.filename = ".check50.yaml"
+        self.working_directory = tempfile.TemporaryDirectory()
+        os.chdir(self.working_directory.name)
 
     def tearDown(self):
-        if os.path.isdir(WORKING_DIRECTORY):
-            shutil.rmtree(WORKING_DIRECTORY)
+        self.working_directory.cleanup()
 
     def write(self, source):
-        with open(self.filename, "w") as f:
+        with open(self.config_file, "w") as f:
             f.write(source)
 
 class TestCompile(Base):
@@ -41,7 +40,7 @@ def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdin("baz").stdout("baz", regex=False).exit(0)"""
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
 
     def test_multiple_checks(self):
@@ -68,7 +67,7 @@ def baz():
     \"\"\"baz\"\"\"
     check50.run("python3 foo.py").exit(0)"""
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
 
     def test_multiline(self):
@@ -93,7 +92,7 @@ def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdin("foo\\nbar").stdout("baz\\nqux", regex=False).exit(0)"""
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
 
     def test_number_in_name(self):
@@ -103,7 +102,7 @@ def bar():
     - run: python3 foo.py
 """)["checks"]
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertTrue("def _0bar" in result)
         self.assertTrue("\"\"\"0bar\"\"\"" in result)
 
@@ -114,7 +113,7 @@ def bar():
     - run: python3 foo.py
 """)["checks"]
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertTrue("def bar_baz" in result)
         self.assertTrue("\"\"\"bar baz\"\"\"" in result)
 
@@ -125,7 +124,7 @@ def bar():
     - run: python3 foo.py
 """)["checks"]
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertTrue("def bar_baz" in result)
         self.assertTrue("\"\"\"bar-baz\"\"\"" in result)
 
@@ -136,5 +135,9 @@ def bar():
     - run: python3 foo.py
 """)["checks"]
 
-        result = check50.compiler.compile(checks)
+        result = check50.simple.compile(checks)
         self.assertTrue(".exit()" in result)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3,16 +3,17 @@ import os
 import pathlib
 import shutil
 import sys
+import tempfile
+
 import check50
 import check50.api
 import check50.internal
 
-WORKING_DIRECTORY = pathlib.Path(__file__).parent / f"temp_{__name__}"
 
 class Base(unittest.TestCase):
     def setUp(self):
-        os.mkdir(WORKING_DIRECTORY)
-        os.chdir(WORKING_DIRECTORY)
+        self.working_directory = tempfile.TemporaryDirectory()
+        os.chdir(self.working_directory.name)
 
         self.filename = "foo.py"
         self.write("")
@@ -22,9 +23,7 @@ class Base(unittest.TestCase):
     def tearDown(self):
         if self.process and self.process.process.isalive():
             self.process.kill()
-
-        if os.path.isdir(WORKING_DIRECTORY):
-            shutil.rmtree(WORKING_DIRECTORY)
+        self.working_directory.cleanup()
 
     def write(self, source):
         with open(self.filename, "w") as f:
@@ -48,8 +47,8 @@ class TestInclude(Base):
 
     def test_include(self):
         check50.include("baz.txt")
-        self.assertTrue(os.path.isfile(pathlib.Path(".").absolute() / "baz.txt"))
-        self.assertTrue(os.path.isfile(check50.internal.check_dir / "baz.txt"))
+        self.assertTrue((pathlib.Path(".").absolute() / "baz.txt").exists())
+        self.assertTrue((check50.internal.check_dir / "baz.txt").exists())
 
 class TestExists(Base):
     def test_file_does_not_exist(self):

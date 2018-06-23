@@ -25,7 +25,7 @@ import yaml
 from . import internal, __version__
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
-from . import compiler
+from . import simple
 
 
 class InternalError(Exception):
@@ -223,7 +223,7 @@ def parse_config(check_dir):
 
     if isinstance(options["checks"], dict):
         with open(check_dir / "__init__.py", "w") as f:
-            f.write(compiler.compile(options["checks"]))
+            f.write(simple.compile(options["checks"]))
         options["checks"] = "__init__.py"
 
     return options

@@ -3,18 +3,17 @@ import pexpect
 import pathlib
 import shutil
 import os
+import tempfile
 
-WORKING_DIRECTORY = pathlib.Path(__file__).parent / f"temp_{__name__}"
-CHECKS_DIRECTORY = pathlib.Path(__file__).parent / "checks"
+CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
 class Base(unittest.TestCase):
     def setUp(self):
-        os.mkdir(WORKING_DIRECTORY)
-        os.chdir(WORKING_DIRECTORY)
+        self.working_directory = tempfile.TemporaryDirectory()
+        os.chdir(self.working_directory.name)
 
     def tearDown(self):
-        if os.path.isdir(WORKING_DIRECTORY):
-            shutil.rmtree(WORKING_DIRECTORY)
+        self.working_directory.cleanup()
 
 class TestExists(Base):
     def test_no_file(self):
@@ -259,3 +258,7 @@ class TestCompileStd(Base):
         process.expect_exact(":)")
         process.expect_exact("std")
         process.close(force=True)
+
+
+if __name__ == "__main__":
+    unittest.main()

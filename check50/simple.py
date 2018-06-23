@@ -1,8 +1,20 @@
 """
-Functions that allow "simple" YAML checks to be converted into standard python checks
+Functions that compile "simple" YAML checks into our standard python checks
 """
 
 import re
+
+
+def compile(checks):
+    """returns compiled check50 checks from config file checks in path"""
+
+    out = ["import check50"]
+
+    for name, check in checks.items():
+        out.append(_compile_check(name, check))
+
+    return "\n\n".join(out)
+
 
 def _run(arg):
     return f'.run("{arg}")'
@@ -35,17 +47,6 @@ def _exit(arg):
 
 
 COMMANDS = {"run": _run, "stdin": _stdin, "stdout": _stdout, "exit": _exit}
-
-
-def compile(checks):
-    """returns compiled check50 checks from config file checks in path"""
-
-    out = ["import check50"]
-
-    for name, check in checks.items():
-        out.append(_compile_check(name, check))
-
-    return "\n\n".join(out)
 
 
 def _compile_check(name, check):
