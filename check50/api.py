@@ -28,7 +28,7 @@ def run(command, env=None):
     # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
     # Workaround from https://github.com/pexpect/pexpect/issues/373
     command = "bash -c {}".format(shlex.quote(command))
-    child = pexpect.spawnu(command, encoding="utf-8", echo=False, env=full_env)
+    child = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
 
     return Process(child)
 
