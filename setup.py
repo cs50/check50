@@ -46,7 +46,7 @@ setup(
         "Topic :: Utilities"
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
-    install_requires=["argparse", "bs4", "pexpect", "requests", "backports.shutil_which", "six", "termcolor", "submit50>=2.4.5"],
+    install_requires=["argparse", "bs4", "pexpect>=4.0", "requests", "backports.shutil_which", "six", "termcolor", "submit50>=2.4.5"],
     keywords=["check", "check50"],
     name="check50",
     py_modules=["check50", "config"],
