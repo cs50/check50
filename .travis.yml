@@ -3,8 +3,8 @@ python: 3.6
 branches:
   except: "/^v\\d/"
 before_install:
-    sudo apt-get -qq update
-    sudo apt-get -qq install valgrind
+    - sudo apt-get -qq update
+    - sudo apt-get -qq install valgrind
 install: pip install --upgrade .
 script:
 - pip install .
