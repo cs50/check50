@@ -110,22 +110,28 @@ def parse_identifier(identifier, offline=False):
 
     repo, remainder = identifier[:idx], identifier[idx+1:]
 
-    try:
-        if offline:
-            branches = map(str, git.Repo(f"~/.local/share/check50/{repo}").branches)
+    def parse_branch(offline):
+        try:
+            if not offline:
+                try:
+                    return parse_branch(offline=True)
+                except InvalidIdentifier:
+                    branches = (line.split("\t")[1].replace("refs/heads/", "")
+                                for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
+            else:
+                branches = map(str, git.Repo(f"~/.local/share/check50/{repo}").branches)
+        except git.GitError:
+            raise InvalidIdentifier(identifier)
+
+        for branch in branches:
+            if remainder.startswith(f"{branch}/"):
+                return branch, remainder[len(branch)+1:]
         else:
-            branches = (line.split("\t")[1].replace("refs/heads/", "")
-                        for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
-    except git.GitError:
-        raise InvalidIdentifier(identifier)
+            raise InvalidIdentifier(identifier)
 
-    for branch in branches:
-        if remainder.startswith(f"{branch}/"):
-            break
-    else:
-        raise InvalidIdentifier(identifier)
 
-    problem = remainder[len(branch)+1:]
+    branch, problem = parse_branch(offline)
+
     return repo, branch, problem
 
 
@@ -137,8 +143,8 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
         origin = repo.remotes["origin"]
         try:
             if not offline:
-                origin.fetch()
-        except git.exc.GitError:
+                origin.fetch(branch)
+        except git.GitError:
             raise InternalError(f"failed to fetch checks from remote repository")
         origin.refs[branch].checkout()
     elif offline:
