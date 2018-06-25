@@ -10,13 +10,16 @@ import check50
 import check50.c
 import check50.internal
 
-DEPENDENCIES_INSTALLED = shutil.which("clang") and shutil.which("valgrind")
+CLANG_INSTALLED = bool(shutil.which("clang"))
+VALGRIND_INSTALLED = bool(shutil.which("valgrind"))
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
 class Base(unittest.TestCase):
     def setUp(self):
-        if not DEPENDENCIES_INSTALLED:
-            raise unittest.SkipTest("clang and/or valgrind are not installed")
+        if not CLANG_INSTALLED:
+            raise unittest.SkipTest("clang not installed")
+        if not VALGRIND_INSTALLED:
+            raise unittest.SkipTest("valgrind not installed")
 
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
@@ -41,8 +44,6 @@ class TestCompile(Base):
 class TestValgrind(Base):
     def setUp(self):
         super().setUp()
-        if not DEPENDENCIES_INSTALLED:
-            raise unittest.SkipTest("clang and/or valgrind are not installed")
         if not (sys.platform == "linux" or sys.platform == "linux2"):
             raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
 
