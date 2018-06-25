@@ -1,3 +1,4 @@
+import check50
 import re
 import os
 import sys
@@ -25,7 +26,7 @@ class App:
             sys.path[0] = os.path.abspath(dir or ".")
             mod = imp.load_source(name, file)
         except FileNotFoundError:
-            raise Fail("could not find {}".format(file))
+            raise check50.Failure(f"could not find {file}")
         finally:
             # restore sys.path
             sys.path[0] = prevpath
@@ -33,7 +34,7 @@ class App:
         try:
             app = mod.app
         except AttributeError:
-            raise Fail("{} does not contain an app".format(file))
+            raise check50.Failure("{} does not contain an app".format(file))
 
         # initialize flask client
         app.testing = True
@@ -56,7 +57,7 @@ class App:
 
         log(f"checking that status code {code} is returned...")
         if code != self.response.status_code:
-            raise Fail("expected status code {}, but got {}".format(
+            raise check50.Failure("expected status code {}, but got {}".format(
                 code, self.response.status_code))
         return self
 
@@ -67,14 +68,15 @@ class App:
     def content(self, output=None, str_output=None, **kwargs):
         """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
         if self.response.mimetype != "text/html":
-            raise Fail("expected request to return HTML, but it returned {}".format(
+            raise check50.Failure("expected request to return HTML, but it returned {}".format(
                 self.response.mimetype))
 
         return self._search_page(
             output,
             str_output,
             BeautifulSoup(self.response.data, "html.parser"),
-            lambda regex, content, **kwargs: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)))
+            lambda regex, content, **kwargs: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)),
+            **kwargs)
 
     def _send(self, method, route, data, params, **kwargs):
         """Send request of type `method` to `route`"""
@@ -86,7 +88,7 @@ class App:
         except BaseException as e:  # Catch all exceptions thrown by app
             # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
             log(f"exception raised in application: {type(e).__name__}: {e}")
-            raise Fail("application raised an exception (see log for details)")
+            raise check50.Failure("application raised an exception (see log for details)")
 
         return self
 
@@ -99,9 +101,9 @@ class App:
 
         log(f"checking that \"{str_output}\" is in page")
         regex = re.compile(output)
-
+        
         if not match_fn(regex, content, **kwargs):
-            raise Fail(f"expected to find \"{str_output}\" in page, but it wasn't found")
+            raise check50.Failure(f"expected to find \"{str_output}\" in page, but it wasn't found")
 
         return self
 
