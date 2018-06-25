@@ -6,7 +6,7 @@ import re
 
 
 def compile(checks):
-    """returns compiled check50 checks from config file checks in path"""
+    """returns compiled check50 checks from simple YAML checks in path"""
 
     out = ["import check50"]
 
