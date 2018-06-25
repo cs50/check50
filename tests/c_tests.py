@@ -1,6 +1,7 @@
 import pexpect
 import unittest
 import sys
+import shutil
 import os
 import functools
 import tempfile
@@ -9,13 +10,7 @@ import check50
 import check50.c
 import check50.internal
 
-try:
-    pexpect.spawn("which clang").expect_exact("clang")
-    pexpect.spawn("which valgrind").expect_exact("valgrind")
-    DEPENDENCIES_INSTALLED = True
-except (pexpect.exceptions.EOF, pexpect.exceptions.ExceptionPexpect):
-    DEPENDENCIES_INSTALLED = False
-
+DEPENDENCIES_INSTALLED = shutil.which("clang") and shutil.which("valgrind")
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
 class Base(unittest.TestCase):
@@ -42,6 +37,38 @@ class TestCompile(Base):
 
         self.assertTrue(os.path.isfile("hello"))
         check50.run("./hello").stdout("hello, world!", regex=False)
+
+class TestValgrind(Base):
+    def setUp(self):
+        super().setUp()
+        if not DEPENDENCIES_INSTALLED:
+            raise unittest.SkipTest("clang and/or valgrind are not installed")
+        if not (sys.platform == "linux" or sys.platform == "linux2"):
+            raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
+
+    def test_no_leak(self):
+        with open("foo.c", "w") as f:
+            src = 'int main() {}'
+            f.write(src)
+
+        check50.c.compile("foo.c")
+        with check50.internal.register:
+            check50.c.valgrind("./foo").exit()
+
+    def test_leak(self):
+        with open("leak.c", "w") as f:
+            src =   '#include <stdlib.h>\n'\
+                    'void leak() {malloc(sizeof(int));}\n'\
+                    'int main() {\n'\
+                    '    leak();\n'\
+                    '}'
+            f.write(src)
+
+        check50.c.compile("leak.c")
+        with self.assertRaises(check50.Failure):
+            with check50.internal.register:
+                check50.c.valgrind("./leak").exit()
+
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])

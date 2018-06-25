@@ -259,42 +259,5 @@ class TestCompileStd(Base):
         process.expect_exact("std")
         process.close(force=True)
 
-"""
-class TestValgrind(Base):
-    try:
-        pexpect.spawn("which clang").expect_exact("clang")
-        pexpect.spawn("which valgrind").expect_exact("valgrind")
-        DEPENDENCIES_INSTALLED = True
-    except (pexpect.exceptions.EOF, pexpect.exceptions.ExceptionPexpect):
-        DEPENDENCIES_INSTALLED = False
-
-    def setUp(self):
-        super().setUp()
-        if not self.DEPENDENCIES_INSTALLED:
-            raise unittest.SkipTest("clang and/or valgrind are not installed")
-
-    def test_no_leak(self):
-        with open("foo.c", "w") as f:
-            src = 'int main() {}'
-            f.write(src)
-
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/c_valgrind")
-        process.expect_exact(":)")
-    ``
-    def test_leak(self):
-        with open("leak.c", "w") as f:
-            src =   '#include <stdlib.h>\n'\
-                    'void leak() {malloc(sizeof(int));}\n'\
-                    'int main() {\n'\
-                    '    leak();\n'\
-                    '}'
-            print(src)
-            f.write(src)
-
-        check50.c.compile("leak.c")
-        with check50.internal.register:
-            check50.c.valgrind("./leak")
-"""
-
 if __name__ == "__main__":
     unittest.main()
