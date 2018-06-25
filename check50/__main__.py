@@ -138,23 +138,20 @@ def parse_identifier(identifier, offline=False):
 def prepare_checks(checks_root, reponame, branch, offline=False):
     """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}."""
 
-    if checks_root.exists():
-        repo = git.Repo(str(checks_root))
-        origin = repo.remotes["origin"]
-        try:
-            if not offline:
-                origin.fetch(branch)
-        except git.GitError:
-            raise InternalError(f"failed to fetch checks from remote repository")
-        origin.refs[branch].checkout()
-    elif offline:
-        raise InvalidIdentifier()
-    else:
-        try:
-            repo = git.Repo.clone_from(
-                f"https://github.com/{reponame}", str(checks_root), branch=branch, depth=1)
-        except git.exc.GitError:
-            raise InternalError("failed to clone checks")
+    try:
+        origin = git.Repo(str(checks_root)).remotes["origin"]
+    except git.GitError:
+        if offline:
+            raise InvalidIdentifier()
+        origin = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
+
+    try:
+        if not offline:
+            origin.fetch(branch)
+    except git.GitError:
+        raise InternalError(f"failed to fetch checks from remote repository")
+
+    origin.refs[branch].checkout()
 
 
 def install_requirements(requirements, verbose=False):
