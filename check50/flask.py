@@ -63,7 +63,18 @@ class App:
 
     def raw_content(self, output=None, str_output=None):
         """Searches for `output` regex match within content of page, regardless of mimetype."""
-        return self._search_page(output, str_output, self.response.data, lambda regex, content: regex.search(content.decode()))
+        if output is None:
+            return content
+
+        if str_output is None:
+            str_output = output
+
+        log(f"checking that \"{str_output}\" is in page")
+
+        if not re.compile(output).search(self.response.data.decode()):
+            raise check50.Failure(f"expected to find \"{str_output}\" in page, but it wasn't found")
+
+        return self
 
     def content(self, output=None, str_output=None, **kwargs):
         """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
@@ -71,12 +82,22 @@ class App:
             raise check50.Failure("expected request to return HTML, but it returned {}".format(
                 self.response.mimetype))
 
-        return self._search_page(
-            output,
-            str_output,
-            BeautifulSoup(self.response.data, "html.parser"),
-            lambda regex, content, **kwargs: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)),
-            **kwargs)
+        if output is None:
+            return content
+
+        if str_output is None:
+            str_output = output
+
+        tag_str = f" in tag {kwargs['name']}" if "name" in kwargs else ""
+        log(f"checking that \"{str_output}\" is in page" + tag_str)
+
+        content = BeautifulSoup(self.response.data, "html.parser").find_all(**kwargs)
+        regex = re.compile(output)
+
+        if not any(regex.search(str(tag)) for tag in content):
+            raise check50.Failure(f"expected to find \"{str_output}\" in page{tag_str}, but it wasn't found")
+
+        return self
 
     def _send(self, method, route, data, params, **kwargs):
         """Send request of type `method` to `route`"""
@@ -89,21 +110,6 @@ class App:
             # TODO: Change Finance starter code for edX and remove this as well as app.testing = True in __init__
             log(f"exception raised in application: {type(e).__name__}: {e}")
             raise check50.Failure("application raised an exception (see log for details)")
-
-        return self
-
-    def _search_page(self, output, str_output, content, match_fn, **kwargs):
-        if output is None:
-            return content
-
-        if str_output is None:
-            str_output = output
-
-        log(f"checking that \"{str_output}\" is in page")
-        regex = re.compile(output)
-        
-        if not match_fn(regex, content, **kwargs):
-            raise check50.Failure(f"expected to find \"{str_output}\" in page, but it wasn't found")
 
         return self
 
