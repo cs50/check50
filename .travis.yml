@@ -8,6 +8,7 @@ before_install:
 install: pip install --upgrade .
 script:
 - pip install .
+- pip install flask
 - python -m tests
 deploy:
 - provider: releases
