@@ -23,7 +23,7 @@ def _set_builtins():
     builtins.check = check
 
 
-# Encapsulated inside a function so its local variables/imports aren't seen by autocompleters
+# Encapsulated inside a function so their local variables/imports aren't seen by autocompleters
 _set_version()
 _set_builtins()
 

@@ -192,7 +192,7 @@ class Process:
         try:
             self._wait(timeout)
         except Failure as e:
-            if not isinstance(e.__context__, TIMEOUT):
+            if not isinstance(e.__cause__, TIMEOUT):
                 raise
         else:
             raise Failure("expected program to reject input, but it did not")
@@ -235,9 +235,7 @@ class Process:
             else:
                 out.append(bytes)
         else:
-            e = Failure("timed out while waiting for program to exit")
-            e.__context__ = TIMEOUT(timeout)
-            raise e
+            raise Failure("timed out while waiting for program to exit") from TIMEOUT(timeout)
 
         # Read any remaining data in pipe.
         while True:
