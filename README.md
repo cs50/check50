@@ -151,8 +151,20 @@ The `bar` check runs two commands in order in the terminal. First `python3 bar.p
 
 We encourage you to play around with the example above by copying its code to your checks git repo. Then try to write a `bar.py` and `foo.py` that make you pass these tests.
 
+In case you want to check for multiline input, you can make use of YAML's `|` operator like so:
+
+```YAML
+checks:
+  multiline hello world:
+    run: python3 multi_hello.py
+    stdout: | # expect Hello\nWorld! in stdout
+      Hello
+      World!
+    exit: 0
+```
+
 ### Python checks
-If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the `YAML` checks. # TODO
+If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the `YAML` checks.
 
 ## Writing extensions
 
