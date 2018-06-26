@@ -1,6 +1,6 @@
 import check50
 
-@check50.check()
+@check()
 def exists():
     """foo.py exists"""
     check50.exists("foo.py")

@@ -35,7 +35,7 @@ class TestCompile(Base):
         expectation = \
 """import check50
 
-@check50.check()
+@check()
 def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdin("baz").stdout("baz", regex=False).exit(0)"""
@@ -57,12 +57,12 @@ def bar():
         expectation = \
 """import check50
 
-@check50.check()
+@check()
 def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").exit(0)
 
-@check50.check()
+@check()
 def baz():
     \"\"\"baz\"\"\"
     check50.run("python3 foo.py").exit(0)"""
@@ -87,7 +87,7 @@ def baz():
         expectation = \
 """import check50
 
-@check50.check()
+@check()
 def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdin("foo\\nbar").stdout("baz\\nqux", regex=False).exit(0)"""

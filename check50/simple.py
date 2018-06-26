@@ -61,7 +61,7 @@ def _compile_check(name, check):
         raise CompileError(f"{name} is not a valid name for a check, " \
             "check names should consist only of alphanumeric characters, underscores, and spaces")
 
-    out = ["@check50.check()",
+    out = ["@check()",
            f"def {check_name}():",
            f'{indent}"""{name}"""']
 
