@@ -1,4 +1,5 @@
 import collections
+from contextlib import contextmanager
 import concurrent.futures as futures
 import enum
 import functools
@@ -7,6 +8,7 @@ import importlib
 import os
 from pathlib import Path
 import shutil
+import signal
 import tempfile
 import traceback
 
@@ -37,7 +39,26 @@ class CheckResult:
         return cls(description=check.__doc__, *args, **kwargs)
 
 
-def check(dependency=None):
+class Timeout(Failure):
+    def __init__(self, seconds):
+        super().__init__(rationale=f"check timed out after {seconds} second{'s' if seconds > 1 else ''}")
+
+
+@contextmanager
+def _timeout(seconds):
+    def _handle_timeout(*args):
+        raise Timeout(seconds)
+
+    signal.signal(signal.SIGALRM, _handle_timeout)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        signal.alarm(0)
+
+
+def check(dependency=None, timeout=60):
     """ Decorator for checks. """
     def decorator(check):
 
@@ -61,11 +82,9 @@ def check(dependency=None):
                 os.chdir(internal.run_dir)
 
                 # Run registered functions before/after running check
-                with internal.register:
-                    if inspect.getargspec(check).args:
-                        state = check(dependency_state)
-                    else:
-                        state = check()
+                with internal.register, _timeout(seconds=timeout):
+                    args = (dependency_state,) if inspect.getargspec(check).args else ()
+                    state = check(*args)
             except Failure as e:
                 result.status = Status.Fail
                 result.why = e.asdict()
@@ -150,7 +169,6 @@ class CheckRunner:
 
         for name in not_passed:
             self._skip_children(name, results)
-
         return results
 
     def _skip_children(self, check_name, results):

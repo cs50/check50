@@ -17,10 +17,15 @@ def _set_version():
     else:
         __version__ = dist.version
 
+def _set_builtins():
+    import builtins
+    from .runner import check
+    builtins.check = check
+
 
 # Encapsulated inside a function so its local variables/imports aren't seen by autocompleters
 _set_version()
-del _set_version
+_set_builtins()
 
 from .api import (
         append_code,
@@ -34,5 +39,3 @@ from .api import (
         run,
         Failure, Mismatch
 )
-
-from .runner import check
