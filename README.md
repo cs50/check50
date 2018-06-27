@@ -66,17 +66,17 @@ Check50 will look for an owner called `cs50`, a repo called `problems`, a branch
 ### Creating a git repo
 To get you started, the first thing you need to do is [register with Github](https://github.com/join). Once you have done so, or if you already have an account with Github, [create a new git repo](https://github.com/new). Make sure to think of a good name for your repo, as this is what students will be typing. Also make sure your repo is set to public, it is initialised with a README, and finally add a Python `.gitignore`. Ultimately you should have something looking like this:
 
-![](docs/repo.png)
+![](img/repo.png)
 
 ### Creating a check and running it
 
 Your new repo should live at `https://github.com/<user>/<repo>`, which is `https://github.com/cs50/example_checks` in our example. Once you have created your new repo, create a new file by clicking the `Create new file` button:
 
-![](docs/new_file.png)
+![](img/new_file.png)
 
 Then continue by creating the following `.check50.yaml` file. All indentation is done by 2 spaces, as per `.yaml` syntax.
 
-![](docs/new_yaml.png)
+![](img/new_yaml.png)
 
 Or in text, if you want to quickly copy-paste:
 
@@ -90,7 +90,7 @@ checks:
 
 Note that you should create a directory like in the example above by typing: `example/.check50.yaml`. Once you have populated the file with the code above. Scroll down the page and hit the commit button:
 
-![](docs/commit.png)
+![](img/commit.png)
 
 That's it! You know have a repo that check50 can use to check whether a python file called `hello.py` prints `Hello, world!` and exits with a `0` as exit code. To try it, simply execute:
 
