@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import errno
@@ -247,6 +248,7 @@ def print_json(results):
             pass
 
         output.append(obj)
+
     print(json.dumps(output, cls=Encoder))
 
 
@@ -772,10 +774,7 @@ class Checks(unittest.TestCase):
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
         cmd = "bash -c {}".format(quote(cmd))
-        if sys.version_info < (3, 0):
-            child = pexpect.spawn(cmd, echo=False, env=env)
-        else:
-            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
+        child = pexpect.spawn(cmd, echo=False, encoding="utf-8", env=env)
 
         self.children.append(Child(self, child))
         return self.children[-1]
