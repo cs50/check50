@@ -83,7 +83,7 @@ def _validate(name, run):
     for key in run:
         if key not in COMMANDS:
             raise UnsupportedCommand(
-                f"{key} is not a valid command in check {name}, use only: {COMMANDS.keys()}")
+                f"{key} is not a valid command in check {name}, use only: {list(COMMANDS.keys())}")
 
     for required_command in ["run"]:
         if required_command not in run:

@@ -156,11 +156,11 @@ In case you want to check for multiline input, you can make use of YAML's `|` op
 ```YAML
 checks:
   multiline hello world:
-    run: python3 multi_hello.py
-    stdout: | # expect Hello\nWorld! in stdout
-      Hello
-      World!
-    exit: 0
+    - run: python3 multi_hello.py
+      stdout: | # expect Hello\nWorld!\n in stdout
+        Hello
+        World!
+      exit: 0
 ```
 
 ### Python checks

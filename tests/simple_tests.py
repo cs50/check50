@@ -70,7 +70,7 @@ def baz():
         result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
 
-    def test_multiline(self):
+    def test_multi(self):
         checks = yaml.safe_load(\
 """checks:
   bar:
@@ -91,6 +91,28 @@ def baz():
 def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdin("foo\\nbar").stdout("baz\\nqux", regex=False).exit(0)"""
+
+        result = check50.simple.compile(checks)
+        self.assertEqual(result, expectation)
+
+    def test_multiline(self):
+        checks = yaml.safe_load(\
+"""checks:
+  bar:
+    - run: python3 foo.py
+      stdout: |
+        Hello
+        World!
+      exit: 0
+""")["checks"]
+
+        expectation = \
+"""import check50
+
+@check()
+def bar():
+    \"\"\"bar\"\"\"
+    check50.run("python3 foo.py").stdout("Hello\\nWorld!\\n", regex=False).exit(0)"""
 
         result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
