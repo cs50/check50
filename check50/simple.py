@@ -80,6 +80,9 @@ def _compile_check(name, check):
 
 
 def _validate(name, run):
+    if isinstance(run, str) and run == "run":
+        raise CompileError("You forgot a - in front of run")
+        
     for key in run:
         if key not in COMMANDS:
             raise UnsupportedCommand(
