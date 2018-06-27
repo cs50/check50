@@ -16,6 +16,7 @@ def app(file):
 
 
 class App:
+    """A flask app wrapper"""
     def __init__(self, path):
         dir, file = os.path.split(path)
         name, _ = os.path.splitext(file)

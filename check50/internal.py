@@ -8,8 +8,7 @@ check_dir = None
 # Temporary directory in which check is being run
 run_dir = None
 
-
-class Register:
+class _Register:
     def __init__(self):
         self._before_everies = []
         self._after_everies = []
@@ -43,4 +42,4 @@ class Register:
             f()
 
 
-register = Register()
+register = _Register()

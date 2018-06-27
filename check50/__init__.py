@@ -28,14 +28,14 @@ _set_version()
 _set_builtins()
 
 from .api import (
+        exists,
+        run,
         append_code,
         data, _data,
         diff,
-        exists,
         hash,
         import_checks,
         include,
         log, _log,
-        run,
         Failure, Mismatch
 )
