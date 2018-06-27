@@ -10,19 +10,13 @@ Welcome to check50's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   api
 
 
-Indices and tables
-==================
+.. Indices and tables
+.. ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-Hello world!
-
-.. automodule:: check50
-   :members: exists, run, Process.stdin
-
-.. autoclass:: check50.api.Process
-   :members: stdin
+.. * :ref:`genindex`
+.. * :ref:`api`
+.. * :ref:`modindex`
+.. * :ref:`search`
