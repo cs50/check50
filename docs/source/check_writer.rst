@@ -133,6 +133,24 @@ In case you want to check for multiline input, you can make use of YAML's ``|`` 
             World!
           exit: 0
 
+Developing locally
+******************
+
+To write checks on your own machine, rather than on the Github webpage, you can clone the repo via:
+
+.. code-block:: bash
+
+    git clone https://github.com/<owner>/<repo>
+
+Where ``<owner>`` is your Github username, and ``<repo>`` is the name of your checks repository. Head on over to the new directory git just created, and open up `.check50.yaml` with your favorite editor.
+
+Now you're all set to write new checks locally. Just remember to ``git add``, ``git commit`` and ``git push`` when you're done writing checks. Quick refresher:
+
+.. code-block:: bash
+
+    git add .check50.yaml
+    git commit -m "wrote some awesome new checks!"
+    git push
 
 Python checks
 *************
