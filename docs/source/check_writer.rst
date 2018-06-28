@@ -144,7 +144,19 @@ To write checks on your own machine, rather than on the Github webpage, you can 
 
 Where ``<owner>`` is your Github username, and ``<repo>`` is the name of your checks repository. Head on over to the new directory git just created, and open up `.check50.yaml` with your favorite editor.
 
-Now you're all set to write new checks locally. Just remember to ``git add``, ``git commit`` and ``git push`` when you're done writing checks. Quick refresher:
+To run the cloned checks locally, check50 comes with a ``--dev`` mode. That will let you target a local checks repo, rather than a github repo. So if your checks live in ``/Users/cs50/Documents/example_checks``, you would execute check50 like so:
+
+.. code-block:: bash
+
+    check50 --dev /Users/cs50/Documents/example_checks/example
+
+This runs the `example` check from ``/Users/cs50/Documents/example_checks``. You can also specify a relative path, so if your current working directory is ``/Users/cs50/Documents/solutions``, you can execute check50 like so:
+
+.. code-block:: bash
+
+    check50 --dev ../example_checks/example
+
+Now you're all set to develop new checks locally. Just remember to ``git add``, ``git commit`` and ``git push`` when you're done writing checks. Quick refresher:
 
 .. code-block:: bash
 
@@ -152,7 +164,55 @@ Now you're all set to write new checks locally. Just remember to ``git add``, ``
     git commit -m "wrote some awesome new checks!"
     git push
 
-Python checks
-*************
+Writing Python checks
+*********************
 
-If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the YAML checks.
+If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the YAML checks. To get these, please make sure you have cloned the repo (via ``git clone`` ), and thus have the checks locally. First we need to run the .YAML checks once, so that check50 compiles the checks to Python. To do this execute:
+
+.. code-block:: bash
+
+    check50 --dev <checks_dir>/<check>
+
+Where ``<checks_dir>`` is the local git repo of your checks, and ``<check>`` is the directory in which ``.check50.yaml`` lives. Alternatively you could navigate to this directory and simply call:
+
+.. code-block:: bash
+
+    check50 --dev .
+
+As a result you should now find a file called ``checks.py`` in check directory. This is the result of the check50's compilation from YAML to Python. For instance, if your ``.check50.yaml`` contains the following:
+
+.. code-block:: yaml
+
+    checks:
+      hello world:
+        - run: python3 hello.py
+          stdout: Hello, world!
+          exit: 0
+
+You should now find the following ``checks.py``:
+
+.. code-block:: python
+
+    import check50
+
+    @check()
+    def hello_world():
+        """hello world"""
+        check50.run("python3 hello.py").stdout("Hello, world!", regex=False).exit(0)
+
+Check50 will by default ignore and overwrite what is in ``checks.py`` for as long as there are checks in ``.check50.yaml``. To change this you have to edit ``.check50.yaml`` to:
+
+.. code-block:: yaml
+
+    checks: checks.py
+
+By doing so you are effectively telling check50 to look in ``checks.py`` for checks. If you want, you can rename ``checks.py`` to anything else, as long as you tell check50 where to look via ``.check50.yaml``. To test whether everything is still in working order, run check50 again with:
+
+.. code-block:: bash
+
+    check50 --dev <checks_dir>/<check>
+
+You should see the same results as the YAML checks gave you. Now that there are no YAML checks in ``.check50.yaml`` and check50 knows where to look for Python checks, you can start writing Python checks. You can find documentation in :ref:`api`, and examples of Python checks below.
+
+Python check examples
+*********************
