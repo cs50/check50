@@ -262,7 +262,7 @@ Check50 uses its check decorator to tag functions as checks. You can pass anothe
 
 The above check breaks out of check50's API by calling ``stdout()`` on line 9 with no args, effectively retrieving all output from stdout in a string. Then there is some plain Python code, matching the output through Python's builtin regex module ``re`` against a regular expression with the expected outcome. If it doesn't match, a help message is provided only if there is a newline missing at the end. This help message is provided through an optional argument ``help`` passed to check50's ``Mismatch`` exception.
 
-You can share state between checks if you make them dependent on each other. By default file state is shared, allowing you to for instance test compilation in one check, and then depend on the result of the compilation in follow up checks.
+You can share state between checks if you make them dependent on each other. By default file state is shared, allowing you to for instance test compilation in one check, and then depend on the result of the compilation in dependent checks.
 
 .. code-block:: Python
     :linenos:
@@ -273,13 +273,12 @@ You can share state between checks if you make them dependent on each other. By 
     @check50.check()
     def compiles():
         """hello.c compiles"""
-        check50.exists("hello.c")
         check50.c.compile("hello.c")
 
     @check50.check(compiles)
     def prints_hello():
         """prints "hello, world\\n" """
-        actual = check50.run("./hello").stdout("[Hh]ello, world!?\n", regex=True).exit(0)
+        check50.run("./hello").stdout("[Hh]ello, world!?\n", regex=True).exit(0)
 
 You can also share Python state between checks by returning what you want to share from a check. It's dependent can accept this by accepting an additional argument.
 
@@ -299,7 +298,11 @@ You can also share Python state between checks by returning what you want to sha
 Python check examples
 *********************
 
-Below you will find examples of Python checks. You can try them yourself by copying them to ``checks.py`` and running:
+Below you will find examples of Python checks. Don't forget to |cs50_checks| for more examples. You can try them yourself by copying them to ``checks.py`` and running:
+
+.. |cs50_checks| raw:: html
+
+   <a href="https://github.com/cs50/problems" target="_blank">checkout CS50's own checks</a>
 
 .. code-block:: bash
 
@@ -317,12 +320,73 @@ Check whether a file exists:
         """hello.py exists"""
         check50.exists("hello.py")
 
-Check stdout for an exact string
+Check stdout for an exact string:
 
 .. code-block:: python
     :linenos:
 
     @check50.check(exists)
     def prints_hello_world():
-        """prints hello world"""
+        """prints Hello, world!"""
         check50.run("python3 hello.py").stdout("Hello, world!", regex=False).exit(0)
+
+Check stdout for a rough match:
+
+.. code-block:: python
+    :linenos:
+
+    @check50.check(exists)
+    def prints_hello():
+        """prints "hello, world\\n" """
+        # regex=True by default :)
+        check50.run("python3 hello.py").stdout("[Hh]ello, world!?\n").exit(0)
+
+Put something in stdin, expect it in stdout:
+
+.. code-block:: python
+    :linenos:
+
+    import check50
+
+    @check50.check()
+    def id():
+        """id.py prints what you give it"""
+        check50.run("python3 hello.py").stdin("foo").stdout("foo").stdin("bar").stdout("bar")
+
+Be helpful, check for common mistakes:
+
+.. code-block:: python
+    :linenos:
+
+    import check50
+    import re
+
+    def coins(num):
+        # regex that matches `num` not surrounded by any other numbers
+        # (so coins(2) won't match e.g. 123)
+        return fr"(?<!\d){num}(?!\d)"
+
+    @check50.check()
+    def test420():
+        """input of 4.2 yields output of 18"""
+        expected = "18\n"
+        actual = check50.run("python3 cash.py").stdin("4.2").stdout()
+        if not re.search(coins(18), actual):
+            help = None
+            if re.search(coins(22), actual):
+                help = "did you forget to round your input to the nearest cent?"
+            raise check50.Mismatch(expected, actual, help=help)
+
+Create your own assertions:
+
+.. code-block:: python
+    :linenos:
+
+    import check50
+
+    @check50.check()
+    def atleast_one_match()
+        """matches either foo, bar or baz"""
+        output = check50.run("python3 qux.py").stdout()
+        if not any(answer in output for answer in ["foo", "bar", "baz"]):
+            raise check50.Failure("no match found")
