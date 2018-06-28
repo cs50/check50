@@ -3,6 +3,9 @@ Additional check50 internals exposed to extension writers in addition to the sta
 """
 
 import importlib
+from pathlib import Path
+import sys
+
 import yaml
 
 from . import simple
@@ -76,6 +79,7 @@ def parse_config(check_dir):
 
 
 def import_file(name, path):
+    prevpath = sys.path
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

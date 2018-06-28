@@ -54,7 +54,7 @@ def include(*paths):
     """Copies all given files from the check directory to the current directory."""
     cwd = os.getcwd()
     for path in paths:
-        _copy((internal.check_dir / path).absolute(), cwd)
+        _copy((internal.check_dir / path).resolve(), cwd)
 
 
 def hash(file):
@@ -86,11 +86,13 @@ def exists(*paths):
 
 def import_checks(path):
     """Retrieve a Python module/package from (relative) path"""
-    dir = (internal.check_dir / path).absolute()
+    dir = internal.check_dir / path
     name = dir.name
 
     file = internal.parse_config(dir)["checks"]
-    return internal.import_file(name, dir / file)
+    mod = internal.import_file(name, (dir / file).resolve())
+    sys.modules[name] = mod
+    return mod
 
 
 
