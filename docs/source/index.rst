@@ -7,6 +7,7 @@ Welcome to check50's documentation!
    :caption: Contents:
 
    api
+   check_writer
 
 .. Indices and tables
 .. ==================
