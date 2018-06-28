@@ -44,6 +44,7 @@ Then continue by creating the following `.check50.yaml` file. All indentation is
 Or in text, if you want to quickly copy-paste:
 
 .. code-block:: yaml
+    :linenos:
 
     checks:
       hello world:
@@ -75,6 +76,7 @@ To get you started, and to cover the basics of input/output checking, check50 le
 YAML checks in check50 all live in `.check50.yaml` and start with a top-level record called ``checks``. The ``checks`` record contains all checks, where the name of the check is the name of the YAML record. Like so:
 
 .. code-block:: yaml
+    :linenos:
 
     checks:
       hello world: # define a check named hello world
@@ -88,6 +90,7 @@ YAML checks in check50 all live in `.check50.yaml` and start with a top-level re
 This code snippet defines three checks, named ``hello world``, ``foo`` and ``bar`` respectively. These checks should contain a list of ``run`` records, that can each contain a combination of ``stdin``, ``stdout`` and ``exit``. See below:
 
 .. code-block:: yaml
+    :linenos:
 
     checks:
       hello world:
@@ -124,6 +127,7 @@ We encourage you to play around with the example above by copying its code to yo
 In case you want to check for multiline input, you can make use of YAML's ``|`` operator like so:
 
 .. code-block:: yaml
+    :linenos:
 
     checks:
       multiline hello world:
@@ -164,8 +168,8 @@ Now you're all set to develop new checks locally. Just remember to ``git add``, 
     git commit -m "wrote some awesome new checks!"
     git push
 
-Writing Python checks
-*********************
+Getting started with Python checks
+**********************************
 
 If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the YAML checks. To get these, please make sure you have cloned the repo (via ``git clone`` ), and thus have the checks locally. First we need to run the .YAML checks once, so that check50 compiles the checks to Python. To do this execute:
 
@@ -182,6 +186,7 @@ Where ``<checks_dir>`` is the local git repo of your checks, and ``<check>`` is 
 As a result you should now find a file called ``checks.py`` in check directory. This is the result of the check50's compilation from YAML to Python. For instance, if your ``.check50.yaml`` contains the following:
 
 .. code-block:: yaml
+    :linenos:
 
     checks:
       hello world:
@@ -192,10 +197,11 @@ As a result you should now find a file called ``checks.py`` in check directory. 
 You should now find the following ``checks.py``:
 
 .. code-block:: python
+    :linenos:
 
     import check50
 
-    @check()
+    @check50.check()
     def hello_world():
         """hello world"""
         check50.run("python3 hello.py").stdout("Hello, world!", regex=False).exit(0)
@@ -214,5 +220,109 @@ By doing so you are effectively telling check50 to look in ``checks.py`` for che
 
 You should see the same results as the YAML checks gave you. Now that there are no YAML checks in ``.check50.yaml`` and check50 knows where to look for Python checks, you can start writing Python checks. You can find documentation in :ref:`api`, and examples of Python checks below.
 
+Python check specification
+**************************
+
+A Python check is made up as follows:
+
+.. code-block:: Python
+    :linenos:
+
+    import check50 # import the check50 module
+
+    @check50.check() # tag the function below as check50 check
+    def exists(): # the name of the check
+        """description""" # this is what you will see when running check50
+        check50.exists("hello.py") # the actual check
+
+    @check50.check(exists) # only run this check if the exists check has passed
+    def prints_hello():
+        """prints "hello, world\\n" """
+        check50.run("python3 hello.py").stdout("[Hh]ello, world!?\n", regex=True).exit(0)
+
+Check50 uses its check decorator to tag functions as checks. You can pass another check as argument to specify a dependency. Docstrings are used as check descriptions, this is what will ultimately be shown when running check50. The checks themselves are just Python code. Check50 comes with a simple API to run programs, send input to stdin, and check or retrieve output from stdout. A check fails if a ``check50.Failure`` exception or an exception inheriting from ``check50.Failure`` like ``check50.Mismatch`` is thrown. This allows you to write your own custom check code like so:
+
+.. code-block:: Python
+    :linenos:
+
+    import check50
+
+    @check50.check()
+    def prints_hello():
+        """prints "hello, world\\n" """
+        from re import match
+
+        expected = "[Hh]ello, world!?\n"
+        actual = check50.run("python3 hello.py").stdout()
+        if not match(expected, actual):
+            help = None
+            if match(expected[:-1], actual):
+                help = r"did you forget a newline ('\n') at the end of your printf string?"
+            raise check50.Mismatch("hello, world\n", actual, help=help)
+
+The above check breaks out of check50's API by calling ``stdout()`` on line 9 with no args, effectively retrieving all output from stdout in a string. Then there is some plain Python code, matching the output through Python's builtin regex module ``re`` against a regular expression with the expected outcome. If it doesn't match, a help message is provided only if there is a newline missing at the end. This help message is provided through an optional argument ``help`` passed to check50's ``Mismatch`` exception.
+
+You can share state between checks if you make them dependent on each other. By default file state is shared, allowing you to for instance test compilation in one check, and then depend on the result of the compilation in follow up checks.
+
+.. code-block:: Python
+    :linenos:
+
+    import check50
+    import check50.c
+
+    @check50.check()
+    def compiles():
+        """hello.c compiles"""
+        check50.exists("hello.c")
+        check50.c.compile("hello.c")
+
+    @check50.check(compiles)
+    def prints_hello():
+        """prints "hello, world\\n" """
+        actual = check50.run("./hello").stdout("[Hh]ello, world!?\n", regex=True).exit(0)
+
+You can also share Python state between checks by returning what you want to share from a check. It's dependent can accept this by accepting an additional argument.
+
+.. code-block:: Python
+    :linenos:
+
+    import check50
+
+    @check50.check()
+    def foo():
+        return 1
+
+    @check50.check(foo)
+    def bar(state)
+        print(state) # prints 1
+
 Python check examples
 *********************
+
+Below you will find examples of Python checks. You can try them yourself by copying them to ``checks.py`` and running:
+
+.. code-block:: bash
+
+    check50 --dev <checks_dir>/<check>
+
+Check whether a file exists:
+
+.. code-block:: python
+    :linenos:
+
+    import check50
+
+    @check50.check()
+    def exists():
+        """hello.py exists"""
+        check50.exists("hello.py")
+
+Check stdout for an exact string
+
+.. code-block:: python
+    :linenos:
+
+    @check50.check(exists)
+    def prints_hello_world():
+        """prints hello world"""
+        check50.run("python3 hello.py").stdout("Hello, world!", regex=False).exit(0)
