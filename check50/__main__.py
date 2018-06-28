@@ -22,7 +22,7 @@ import requests
 from termcolor import cprint
 import yaml
 
-from . import internal, __version__
+from . import internal, __version__, simple
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 from . import simple
@@ -143,7 +143,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
     except git.GitError:
         if offline:
             raise InvalidIdentifier()
-        origin = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
+        repo = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
 
     try:
         if not offline:
@@ -203,33 +203,6 @@ def await_results(url, pings=45, sleep=2):
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
     return (CheckResult(**result) for result in payload["checks"]["results"])
-
-
-def parse_config(check_dir):
-    config_file = check_dir / ".check50.yaml"
-
-    try:
-        with open(config_file) as f:
-            config = yaml.safe_load(f)
-    except (FileNotFoundError, yaml.YAMLError):
-        raise InvalidIdentifier()
-
-    options = {
-        "checks": "__init__.py",
-        "requirements": False,
-        "locale": False,
-    }
-
-    if config is not None:
-        options.update(config)
-
-
-    if isinstance(options["checks"], dict):
-        with open(check_dir / "__init__.py", "w") as f:
-            f.write(simple.compile(options["checks"]))
-        options["checks"] = "__init__.py"
-
-    return options
 
 
 def main():
@@ -297,7 +270,10 @@ def main():
             prepare_checks(checks_root, repo, branch, offline=args.offline)
             internal.check_dir = checks_root / problem.replace("/", os.sep)
 
-        options = parse_config(internal.check_dir)
+        try:
+            options = internal.parse_config(internal.check_dir)
+        except (FileNotFoundError, yaml.YAMLError):
+            raise InvalidIdentifier(args.identifier)
 
         if not args.offline and options["requirements"]:
             install_requirements(internal.check_dir / options["requirements"], verbose=args.verbose)

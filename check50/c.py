@@ -10,13 +10,19 @@ CC = "clang"
 CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 
-def compile(file_name, exe_name=None, cc=CC, **cflags):
-    f"""
-    compile file_name to exe_name (file_name minus .c by default)
+def compile(*files, exe_name=None, cc=CC, **cflags):
+    """
+    compile files to exe_name (files[0] minus .c by default)
     uses compiler: {CC} with compilers_flags: {CFLAGS} by default
     """
-    if exe_name is None and file_name.endswith(".c"):
-        exe_name = Path(file_name).stem
+
+    if not files:
+        raise RuntimeError("compile requires at least one file")
+
+    if exe_name is None and files[0].endswith(".c"):
+        exe_name = Path(files[0]).stem
+
+    files = " ".join(files)
 
     flags = CFLAGS.copy()
     flags.update(cflags)
@@ -25,7 +31,7 @@ def compile(file_name, exe_name=None, cc=CC, **cflags):
 
     out_flag = f" -o {exe_name} " if exe_name is not None else " "
 
-    run(f"{cc} {file_name}{out_flag}{flags}").exit(0)
+    run(f"{cc} {files}{out_flag}{flags}").exit(0)
 
 
 def valgrind(command):

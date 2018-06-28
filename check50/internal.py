@@ -2,6 +2,11 @@
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
 
+import importlib
+import yaml
+
+from . import simple
+
 # Directory containing the check and its associated files
 check_dir = None
 
@@ -44,3 +49,34 @@ class Register:
 
 
 register = Register()
+
+
+def parse_config(check_dir):
+    config_file = check_dir / ".check50.yaml"
+
+    with open(config_file) as f:
+        config = yaml.safe_load(f)
+
+    options = {
+        "checks": "__init__.py",
+        "requirements": False,
+        "locale": False,
+    }
+
+    if config is not None:
+        options.update(config)
+
+
+    if isinstance(options["checks"], dict):
+        with open(check_dir / "__init__.py", "w") as f:
+            f.write(simple.compile(options["checks"]))
+        options["checks"] = "__init__.py"
+
+    return options
+
+
+def import_file(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod

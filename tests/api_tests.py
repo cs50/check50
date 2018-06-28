@@ -78,8 +78,6 @@ class TestImportChecks(Base):
         super().setUp()
         self._old_check_dir = check50.internal.check_dir
         os.mkdir("bar")
-        with open("./bar/baz.py", "w") as f:
-            f.write("qux = 0")
         check50.internal.check_dir = pathlib.Path(".").absolute()
 
     def tearDown(self):
@@ -87,39 +85,22 @@ class TestImportChecks(Base):
         check50.internal.check_dir = self._old_check_dir
 
     def test_simple_import(self):
-        mod = check50.import_checks("foo")
-        self.assertEqual(mod.__name__, "foo")
+        with open(".check50.yaml", "w") as f:
+            f.write("checks: foo.py")
+        mod = check50.import_checks(".")
+        self.assertEqual(mod.__name__, pathlib.Path(self.working_directory.name).name)
 
     def test_relative_import(self):
-        mod = check50.import_checks("./bar/baz")
-        self.assertEqual(mod.__name__, "baz")
+        with open("./bar/baz.py", "w") as f:
+            f.write("qux = 0")
+
+        with open("./bar/.check50.yaml", "w") as f:
+            f.write("checks: baz.py")
+
+        mod = check50.import_checks("./bar")
+        self.assertEqual(mod.__name__, "bar")
         self.assertEqual(mod.qux, 0)
 
-class TestAppendCode(Base):
-    def setUp(self):
-        super().setUp()
-        self.other_filename = "bar.py"
-        with open(self.other_filename, "w") as f:
-            f.write("baz")
-
-    def test_empty_append(self):
-        check50.append_code(self.filename, self.other_filename)
-        with open(self.filename, "r") as f1, open(self.other_filename, "r") as f2:
-            self.assertEqual(f1.read(), f"\n{f2.read()}")
-
-    def test_append(self):
-        with open(self.other_filename, "r") as f:
-            old_content2 = f.read()
-
-        self.write("qux")
-        check50.append_code(self.filename, self.other_filename)
-        with open(self.filename, "r") as f1, open(self.other_filename, "r") as f2:
-            content1 = f1.read()
-            content2 = f2.read()
-
-        self.assertNotEqual(content1, content2)
-        self.assertEqual(content2, old_content2)
-        self.assertEqual(content1, "qux\nbaz")
 
 class TestRun(Base):
     def test_returns_process(self):
@@ -155,7 +136,7 @@ class TestProcessStdin(Base):
 class TestProcessStdout(Base):
     def test_no_out(self):
         self.runpy()
-        out = self.process.stdout(timeout=.1)
+        out = self.process.stdout(timeout=1)
         self.assertEqual(out, "")
         self.assertFalse(self.process.process.isalive())
 

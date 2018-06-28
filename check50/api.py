@@ -86,23 +86,12 @@ def exists(*paths):
 
 def import_checks(path):
     """Retrieve a Python module/package from (relative) path"""
-    prev_path = sys.path
+    dir = (internal.check_dir / path).absolute()
+    name = dir.name
 
-    path = internal.check_dir / path
-    module_name = path.name
+    file = internal.parse_config(dir)["checks"]
+    return internal.import_file(name, dir / file)
 
-    try:
-        sys.path.insert(0, str(path.absolute().parent))
-        return importlib.reload(__import__(path.name))
-    finally:
-        sys.path = prev_path
-
-
-def append_code(original, codefile):
-    """Append codefile to original."""
-    with open(codefile) as code, open(original, "a") as o:
-        o.write("\n")
-        o.write(code.read())
 
 
 # TODO: Add docstrings to methods

@@ -54,8 +54,8 @@ def _timeout(seconds):
     try:
         yield
     finally:
-        signal.signal(signal.SIGALRM, signal.SIG_DFL)
         signal.alarm(0)
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
 def check(dependency=None, timeout=60):

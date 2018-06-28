@@ -24,9 +24,7 @@ class TestExists(Base):
         process.close(force=True)
 
     def test_with_file(self):
-        with open("foo.py", "w") as f:
-            pass
-
+        open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exists")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
@@ -44,9 +42,7 @@ class TestExitPy(Base):
         process.close(force=True)
 
     def test_with_file(self):
-        with open("foo.py", "w") as f:
-            pass
-
+        open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
@@ -66,8 +62,7 @@ class TestStdoutPy(Base):
         process.close(force=True)
 
     def test_with_empty_file(self):
-        with open("foo.py", "w") as f:
-            pass
+        open("foo.py", "w").close()
 
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
         process.expect_exact(":)")
@@ -101,8 +96,7 @@ class TestStdinPy(Base):
         process.close(force=True)
 
     def test_with_empty_file(self):
-        with open("foo.py", "w") as f:
-            pass
+        open("foo.py", "w").close()
 
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
         process.expect_exact(":)")
@@ -131,9 +125,7 @@ class TestStdinPromptPy(Base):
         process.close(force=True)
 
     def test_with_empty_file(self):
-        with open("foo.py", "w") as f:
-            pass
-
+        open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
@@ -173,8 +165,7 @@ class TestStdinMultiline(Base):
         process.close(force=True)
 
     def test_with_empty_file(self):
-        with open("foo.py", "w") as f:
-            pass
+        open("foo.py", "w").close()
 
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
         process.expect_exact(":(")
@@ -226,9 +217,7 @@ class TestCompileExit(Base):
         process.close(force=True)
 
     def test_with_correct_file(self):
-        with open("foo.py", "w") as f:
-            pass
-
+        open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
         process.expect_exact(":)")
         process.expect_exact("exit")
