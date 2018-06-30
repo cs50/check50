@@ -109,7 +109,7 @@ def bar():
         expectation = \
 """import check50
 
-@check()
+@check50.check()
 def bar():
     \"\"\"bar\"\"\"
     check50.run("python3 foo.py").stdout("Hello\\nWorld!\\n", regex=False).exit(0)"""
