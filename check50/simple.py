@@ -80,7 +80,7 @@ def _compile_check(name, check):
 
 
 def _validate(name, run):
-    if isinstance(run, str) and run == "run":
+    if run == "run":
         raise CompileError("You forgot a - in front of run")
 
     for key in run:

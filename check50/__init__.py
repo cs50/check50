@@ -29,7 +29,6 @@ from .api import (
         hash,
         include,
         log, _log,
-        run,
         Failure, Mismatch
 )
 

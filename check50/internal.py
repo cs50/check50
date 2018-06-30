@@ -16,8 +16,7 @@ check_dir = None
 # Temporary directory in which check is being run
 run_dir = None
 
-
-class Register:
+class _Register:
     def __init__(self):
         self._before_everies = []
         self._after_everies = []
@@ -52,7 +51,6 @@ class Register:
 
 
 register = Register()
-
 
 def parse_config(check_dir):
     config_file = check_dir / ".check50.yaml"
