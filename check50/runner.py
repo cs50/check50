@@ -33,10 +33,14 @@ class CheckResult:
     log = attr.ib(default=[])
     why = attr.ib(default=None)
     data = attr.ib(default={})
+    dependency = attr.ib(default=None)
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
-        return cls(description=check.__doc__, *args, **kwargs)
+        return cls(description=check.__doc__,
+                   dependency=check._check_dependency.__name__ if check._check_dependency else None,
+                   *args,
+                   **kwargs)
 
 
 class Timeout(Failure):

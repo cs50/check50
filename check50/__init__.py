@@ -34,3 +34,4 @@ from .api import (
 )
 
 from .runner import check
+from pexpect import EOF
