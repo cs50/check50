@@ -25,7 +25,7 @@ def _stdin(arg):
         arg = r"\n".join(arg)
 
     arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
-    return f'.stdin("{arg}")'
+    return f'.stdin("{arg}", prompt=False)'
 
 
 def _stdout(arg):
@@ -82,7 +82,7 @@ def _compile_check(name, check):
 def _validate(name, run):
     if isinstance(run, str) and run == "run":
         raise CompileError("You forgot a - in front of run")
-        
+
     for key in run:
         if key not in COMMANDS:
             raise UnsupportedCommand(

@@ -8,4 +8,4 @@ def exists():
 @check50.check(exists)
 def prints_hello_name():
     """prints hello name"""
-    check50.run("python3 foo.py").stdin("bar").stdout("hello bar")
+    check50.run("python3 foo.py").stdin("bar", prompt=False).stdout("hello bar")

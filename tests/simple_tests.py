@@ -38,7 +38,7 @@ class TestCompile(Base):
 @check50.check()
 def bar():
     \"\"\"bar\"\"\"
-    check50.run("python3 foo.py").stdin("baz").stdout("baz", regex=False).exit(0)"""
+    check50.run("python3 foo.py").stdin("baz", prompt=False).stdout("baz", regex=False).exit(0)"""
 
         result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
@@ -90,7 +90,7 @@ def baz():
 @check50.check()
 def bar():
     \"\"\"bar\"\"\"
-    check50.run("python3 foo.py").stdin("foo\\nbar").stdout("baz\\nqux", regex=False).exit(0)"""
+    check50.run("python3 foo.py").stdin("foo\\nbar", prompt=False).stdout("baz\\nqux", regex=False).exit(0)"""
 
         result = check50.simple.compile(checks)
         self.assertEqual(result, expectation)
