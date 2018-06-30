@@ -143,7 +143,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
     except git.GitError:
         if offline:
             raise InvalidIdentifier()
-        repo = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
+        origin = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
 
     try:
         if not offline:
