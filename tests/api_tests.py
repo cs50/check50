@@ -119,18 +119,18 @@ class TestProcessStdin(Base):
         self.write("x = input()")
         self.runpy()
         with self.assertRaises(check50.Failure):
-            self.process.stdin("bar", prompt=True)
+            self.process.stdin("bar")
 
     def test_expect_prompt(self):
         self.write("x = input('foo')")
         self.runpy()
-        self.process.stdin("bar", prompt=True)
+        self.process.stdin("bar")
         self.assertTrue(self.process.process.isalive())
 
     def test_no_prompt(self):
         self.write("x = input()\n")
         self.runpy()
-        self.process.stdin("bar")
+        self.process.stdin("bar", prompt=False)
         self.assertTrue(self.process.process.isalive())
 
 class TestProcessStdout(Base):
@@ -234,7 +234,7 @@ class TestProcessReject(Base):
         self.write("input()")
         self.runpy()
         self.process.reject()
-        self.process.stdin("foo")
+        self.process.stdin("foo", prompt=False)
         with self.assertRaises(check50.Failure):
             self.process.reject()
 
