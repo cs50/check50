@@ -11,12 +11,6 @@ check50
 .. automodule:: check50
    :members:
 
-check50.api
-***********
-
-.. autoclass:: check50.api.Process
-   :members:
-
 check50.c
 **********
 

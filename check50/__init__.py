@@ -30,11 +30,11 @@ from .api import (
         include,
         run,
         log, _log,
-        Failure, Mismatch
+        Failure, Mismatch, Process,
 )
 
 
 from .runner import check
 from pexpect import EOF
 
-__all__ = ["import_checks", "data", "diff", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "check", "EOF"]
+__all__ = ["import_checks", "data", "diff", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "Process", "check", "EOF"]

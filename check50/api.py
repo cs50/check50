@@ -15,8 +15,21 @@ from . import internal
 
 
 def run(command, env=None):
-    """Runs a command in the specified environment.
-    Returns a Process object representing the spawned child process"""
+    """Run a command.
+
+    :param command: command to be run
+    :param env: environment in which to run command
+    :type command: str
+    :type env: dict
+    :rtype: :class:`check50.Process`
+
+    By default, the command will be run using the same environment as ``check50``, these mappings may be overriden via the ``env`` parameter::
+
+        proc = check50.run("./foo")
+        proc = check50.run("./foo", env={ "HOME": "/" }
+
+    """
+
     log(f"running {command}...")
 
     if env is None:
@@ -38,7 +51,13 @@ internal.register.before_every(_log.clear)
 
 
 def log(line):
-    """Add line to check log."""
+    """Add to check log
+
+    :param line: line to be added to the check log
+    :type line: str
+
+    The check log is student-visible via the ``--log`` flag to ``check50``.
+    """
     _log.append(line)
 
 
@@ -47,18 +66,44 @@ internal.register.before_every(_data.clear)
 
 
 def data(**kwargs):
+    """Add data to the check payload
+
+    :params kwargs: key/value mappings to be added to the check payload
+
+    Example usage::
+
+        check50.data(time=7.3, mem=23)
+    """
+
     _data.update(kwargs)
 
 
 def include(*paths):
-    """Copies all given files from the check directory to the current directory."""
+    """Copy files/directories from the check directory (:data:`check50.internal.check_dir`), to the current directory
+
+    :params paths: files/directories to be copied
+
+
+    Example usage::
+
+        check50.include("foo.txt", "bar.txt")
+        assert os.path.exists("foo.txt") and os.path.exists("bar.txt")
+
+    """
     cwd = os.getcwd()
     for path in paths:
         _copy((internal.check_dir / path).resolve(), cwd)
 
 
 def hash(file):
-    """Hashes file using SHA-256."""
+    """Hashes file using SHA-256.
+
+    :param file: name of file to be hashed
+    :type file: str
+    :rtype: str
+    :raises check50.Failure: if ``file`` does not exist
+
+    """
 
     exists(file)
     log(f"Hashing {file}...")
@@ -71,13 +116,16 @@ def hash(file):
         return sha256.hexdigest()
 
 
-def diff(f1, f2):
-    """Returns boolean indicating whether or not the given files are different."""
-    return bool(run("diff {} {}".format(shlex.quote(f1), shlex.quote(f2))).exit())
-
-
 def exists(*paths):
-    """Asserts that all given paths exist."""
+    """Assert that all given paths exist.
+
+    :params paths: files/directories to be checked for existence
+    :raises check50.Failure: if any ``path in paths`` does not exist
+
+    Example usage::
+
+        check50.exists("foo.c", "foo.h")
+    """
     for path in paths:
         log(f"Checking that {path} exists...")
         if not os.path.exists(path):
@@ -85,7 +133,16 @@ def exists(*paths):
 
 
 def import_checks(path):
-    """Retrieve a Python module/package from (relative) path"""
+    """ Import checks module given relative path.
+
+    :param path: relative path from which to import checks module
+    :type path: str
+
+    Example usage::
+
+        less = check50.import_checks("../less")
+        from less import *
+    """
     dir = internal.check_dir / path
     name = dir.name
 
@@ -98,13 +155,13 @@ def import_checks(path):
 
 # TODO: Add docstrings to methods
 class Process:
-    """ Wrapper class for pexpect child process. """
+    """Class representing a process spawned by :func:`check50.run`"""
 
     def __init__(self, proc):
         self.process = proc
 
     def stdin(self, line, prompt=True, timeout=3):
-        """Send line to stdin
+        """Send line to stdin.
         If prompt is set to True (False by default) expect a prompt, any character in stdout
         waits until timeout for a prompt."""
         if line == EOF:
