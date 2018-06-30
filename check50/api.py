@@ -103,7 +103,7 @@ class Process:
     def __init__(self, proc):
         self.process = proc
 
-    def stdin(self, line, prompt=False, timeout=3):
+    def stdin(self, line, prompt=True, timeout=3):
         """
         Send line to stdin
         If prompt is set to True (False by default) expect a prompt, any character in stdout
