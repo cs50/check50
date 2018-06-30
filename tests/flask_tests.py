@@ -37,7 +37,6 @@ def root():
             f.write(src)
 
         app = check50.flask.app("hello.py")
-        self.assertIsInstance(app, check50.flask.App)
 
 class TestFlask(Base):
     def test_status(self):

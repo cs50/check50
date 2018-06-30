@@ -58,20 +58,6 @@ class TestExists(Base):
     def test_file_exists(self):
         check50.exists(self.filename)
 
-class TestDiff(Base):
-    def setUp(self):
-        super().setUp()
-        self.txt_filename = "foo.txt"
-        with open(self.txt_filename, "w") as f:
-            f.write("foo")
-
-    def test_no_diff(self):
-        self.write("foo")
-        self.assertFalse(check50.diff(self.txt_filename, self.filename))
-
-    def test_diff(self):
-        self.write("bar")
-        self.assertTrue(check50.diff(self.txt_filename, self.filename))
 
 class TestImportChecks(Base):
     def setUp(self):
@@ -104,8 +90,8 @@ class TestImportChecks(Base):
 
 class TestRun(Base):
     def test_returns_process(self):
-        process = check50.run("python3 ./{self.filename}")
-        self.assertIsInstance(process, check50.api.Process)
+        self.process = check50.run("python3 ./{self.filename}")
+
 
 class TestProcessKill(Base):
     def test_kill(self):

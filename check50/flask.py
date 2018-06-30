@@ -12,11 +12,7 @@ from .api import log, Failure
 from . import internal
 
 
-def app(file):
-    return App(file)
-
-
-class App:
+class app:
     """A flask app wrapper"""
     def __init__(self, path):
         dir, file = os.path.split(path)

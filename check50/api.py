@@ -14,38 +14,6 @@ from pexpect.exceptions import EOF, TIMEOUT
 from . import internal
 
 
-def run(command, env=None):
-    """Run a command.
-
-    :param command: command to be run
-    :param env: environment in which to run command
-    :type command: str
-    :type env: dict
-    :rtype: :class:`check50.Process`
-
-    By default, the command will be run using the same environment as ``check50``, these mappings may be overriden via the ``env`` parameter::
-
-        proc = check50.run("./foo")
-        proc = check50.run("./foo", env={ "HOME": "/" }
-
-    """
-
-    log(f"running {command}...")
-
-    if env is None:
-        env = {}
-
-    full_env = os.environ.copy()
-    full_env.update(env)
-
-    # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
-    # Workaround from https://github.com/pexpect/pexpect/issues/373
-    command = "bash -c {}".format(shlex.quote(command))
-    child = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
-
-    return Process(child)
-
-
 _log = []
 internal.register.before_every(_log.clear)
 
@@ -137,11 +105,20 @@ def import_checks(path):
 
     :param path: relative path from which to import checks module
     :type path: str
+    :returns: the imported module
+    :raises FileNotFoundError: if ``path / .check50.yaml`` does not exist
+    :raises yaml.YAMLError: if ``path / .check50.yaml`` is not a valid YAML file
 
-    Example usage::
+    This function is particularly useful when a set of checks logically extends
+    another, as is often the case in CS50's own problems that have a "less comfy"
+    and "more comfy" version. The "more comfy" version can include all of the
+    "less comfy" checks like so::
 
         less = check50.import_checks("../less")
         from less import *
+
+        .. note:: the ``__name__`` of the imported module is given by the basename
+        of the specified path (``less`` in the above example).
     """
     dir = internal.check_dir / path
     name = dir.name
@@ -152,13 +129,32 @@ def import_checks(path):
     return mod
 
 
+class run:
+    """Run a command.
 
-# TODO: Add docstrings to methods
-class Process:
-    """Class representing a process spawned by :func:`check50.run`"""
+    :param command: command to be run
+    :param env: environment in which to run command
+    :type command: str
+    :type env: dict
 
-    def __init__(self, proc):
-        self.process = proc
+    By default, the command will be run using the same environment as ``check50``, these mappings may be overriden via the ``env`` parameter::
+
+        check50.run("./foo").stdin("foo").stdout("bar").exit(0)
+        check50.run("./foo", env={ "HOME": "/" }).stdin("foo").stdout("bar").exit(0)
+
+    """
+
+    def __init__(self, command, env={}):
+        log(f"running {command}...")
+
+        full_env = os.environ.copy()
+        full_env.update(env)
+
+        # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
+        # Workaround from https://github.com/pexpect/pexpect/issues/373
+        command = "bash -c {}".format(shlex.quote(command))
+        self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
+
 
     def stdin(self, line, prompt=True, timeout=3):
         """Send line to stdin.

@@ -24,17 +24,16 @@ _set_version()
 from .api import (
         import_checks,
         data, _data,
-        diff,
         exists,
         hash,
         include,
         run,
         log, _log,
-        Failure, Mismatch, Process,
+        Failure, Mismatch
 )
 
 
 from .runner import check
 from pexpect import EOF
 
-__all__ = ["import_checks", "data", "diff", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "Process", "check", "EOF"]
+__all__ = ["import_checks", "data", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "check", "EOF"]
