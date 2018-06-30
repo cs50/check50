@@ -104,11 +104,9 @@ class Process:
         self.process = proc
 
     def stdin(self, line, prompt=True, timeout=3):
-        """
-        Send line to stdin
+        """Send line to stdin
         If prompt is set to True (False by default) expect a prompt, any character in stdout
-            waits until timeout for a prompt
-        """
+        waits until timeout for a prompt."""
         if line == EOF:
             log("sending EOF...")
         else:

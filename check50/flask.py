@@ -53,7 +53,7 @@ class App:
         return self._send("POST", route, data, params, follow_redirects=follow_redirects)
 
     def status(self, code=None):
-        """Throw error if http status code doesn't equal `code`or return the status code if `code is None."""
+        """Throw error if http status code doesn't equal 'code' or return the status code if 'code' is None."""
         if code is None:
             return self.response.status_code
 

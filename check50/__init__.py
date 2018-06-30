@@ -28,9 +28,13 @@ from .api import (
         exists,
         hash,
         include,
+        run,
         log, _log,
         Failure, Mismatch
 )
 
+
 from .runner import check
 from pexpect import EOF
+
+__all__ = ["import_checks", "data", "diff", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "check", "EOF"]

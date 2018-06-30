@@ -3,13 +3,13 @@
 API docs
 ========
 
-.. _check50
+.. _check50:
 
 check50
 *******
 
 .. automodule:: check50
-   :members: exists, run, append_code, data, diff, hash, import_checks, include, log, Failure, Mismatch
+   :members:
 
 check50.api
 ***********
