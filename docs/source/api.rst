@@ -23,6 +23,13 @@ check50.flask
 .. automodule:: check50.flask
    :members:
 
+
+check50.py
+***********
+.. automodule:: check50.py
+   :members:
+
+
 check50.internal
 *****************
 
