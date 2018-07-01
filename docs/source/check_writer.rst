@@ -3,13 +3,13 @@
 Writing check50 checks
 ======================
 
-Check50 checks live in a git repo on Github. Check50 finds the git repo based on the slug that is passed to check50. For instance, consider the following execution of check50:
+check50 checks live in a git repo on Github. check50 finds the git repo based on the slug that is passed to check50. For instance, consider the following execution of check50:
 
 .. code-block:: bash
 
     check50 cs50/problems/2018/x/hello
 
-Check50 will look for an owner called `cs50`, a repo called `problems`, a branch called `2018` or `2018/x` and a problem called `x/hello` or `hello`. The slug is thus parsed like so:
+check50 will look for an owner called `cs50`, a repo called `problems`, a branch called `2018` or `2018/x` and a problem called `x/hello` or `hello`. The slug is thus parsed like so:
 
 .. code-block:: bash
 
@@ -206,7 +206,7 @@ You should now find the following ``checks.py``:
         """hello world"""
         check50.run("python3 hello.py").stdout("Hello, world!", regex=False).exit(0)
 
-Check50 will by default ignore and overwrite what is in ``checks.py`` for as long as there are checks in ``.check50.yaml``. To change this you have to edit ``.check50.yaml`` to:
+check50 will by default ignore and overwrite what is in ``checks.py`` for as long as there are checks in ``.check50.yaml``. To change this you have to edit ``.check50.yaml`` to:
 
 .. code-block:: yaml
 
@@ -240,7 +240,7 @@ A Python check is made up as follows:
         """prints "hello, world\\n" """
         check50.run("python3 hello.py").stdout("[Hh]ello, world!?\n", regex=True).exit(0)
 
-Check50 uses its check decorator to tag functions as checks. You can pass another check as argument to specify a dependency. Docstrings are used as check descriptions, this is what will ultimately be shown when running check50. The checks themselves are just Python code. Check50 comes with a simple API to run programs, send input to stdin, and check or retrieve output from stdout. A check fails if a ``check50.Failure`` exception or an exception inheriting from ``check50.Failure`` like ``check50.Mismatch`` is thrown. This allows you to write your own custom check code like so:
+check50 uses its check decorator to tag functions as checks. You can pass another check as argument to specify a dependency. Docstrings are used as check descriptions, this is what will ultimately be shown when running check50. The checks themselves are just Python code. check50 comes with a simple API to run programs, send input to stdin, and check or retrieve output from stdout. A check fails if a ``check50.Failure`` exception or an exception inheriting from ``check50.Failure`` like ``check50.Mismatch`` is thrown. This allows you to write your own custom check code like so:
 
 .. code-block:: Python
     :linenos:
