@@ -117,7 +117,8 @@ def import_checks(path):
         less = check50.import_checks("../less")
         from less import *
 
-        .. note:: the ``__name__`` of the imported module is given by the basename
+    .. note::
+        The ``__name__`` of the imported module is given by the basename
         of the specified path (``less`` in the above example).
     """
     dir = internal.check_dir / path
@@ -157,9 +158,15 @@ class run:
 
 
     def stdin(self, line, prompt=True, timeout=3):
-        """Send line to stdin.
-        If prompt is set to True (False by default) expect a prompt, any character in stdout
-        waits until timeout for a prompt."""
+        """Send a line to the stdin of the spawned process.
+
+        :param line: line to be sent to the process
+        :type line: str
+        :param prompt: indicates whether we should expect that the child process to have printed a prompt
+        :type prompt: bool
+        :param timeout: number of seconds we should wait for child process to print prompt
+        :type timeout: int
+        """
         if line == EOF:
             log("sending EOF...")
         else:
