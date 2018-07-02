@@ -12,6 +12,9 @@ setup(
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
     install_requires=["attrs", "bs4", "gitpython", "pexpect", "pyyaml", "requests", "termcolor", "submit50>=2.4.5"],
+    extras_require = {
+        "develop": ["sphinx", "sphinx_rtd_theme"]
+    },
     keywords=["check", "check50"],
     name="check50",
     packages=find_packages(),
