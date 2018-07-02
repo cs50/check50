@@ -51,7 +51,6 @@ def include(*paths):
 
     :params paths: files/directories to be copied
 
-
     Example usage::
 
         check50.include("foo.txt", "bar.txt")
@@ -117,8 +116,10 @@ def import_checks(path):
         less = check50.import_checks("../less")
         from less import *
 
-        .. note:: the ``__name__`` of the imported module is given by the basename
+    .. note::
+        the ``__name__`` of the imported module is given by the basename
         of the specified path (``less`` in the above example).
+
     """
     dir = internal.check_dir / path
     name = dir.name
@@ -157,9 +158,17 @@ class run:
 
 
     def stdin(self, line, prompt=True, timeout=3):
-        """Send line to stdin.
-        If prompt is set to True (False by default) expect a prompt, any character in stdout
-        waits until timeout for a prompt."""
+        """Send line to stdin, optionally expect a prompt.
+
+        :param line: line to be send to stdin
+        :type line: str
+        :param prompt: boolean indicating whether a prompt is expected, if True absorbs all of stdout before inserting line into stdin and raises :class:`check50.Failure` if stdout is empty
+        :type prompt: bool
+        :param timeout: maximum number of seconds to wait for prompt
+        :type timeout: int / float
+        :raises check50.Failure: if ``prompt`` is set to True and no prompt is given
+
+        """
         if line == EOF:
             log("sending EOF...")
         else:
@@ -180,11 +189,18 @@ class run:
         return self
 
     def stdout(self, output=None, str_output=None, regex=True, timeout=3):
-        """
-        Retrieve all output from stdout until timeout (3 sec by default)
-        If output (str / File obj) is given, matches stdout until output is matched, or raises Mismatch
-        If str_output is given, use str_output (human readable form of output) in Mismatch if raised
-        If regex is set to False (True by default) perform an exact match otherwise match with regex
+        """Retrieve all output from stdout until timeout (3 sec by default)
+
+        :param output: optional output to be expected from stdout, raises :class:`check50.Failure` if no match
+        :type output: str
+        :param str_output: what will be displayed as expected output, a human readable form of ``output``
+        :type str_output: str
+        :param regex: flag indicating whether ``output`` should be treated as a regex
+        :type regex: bool
+        :param timeout: maximum number of seconds to wait for ``output``
+        :type timeout: int / float
+        :raises check50.Failure: if ``output`` is given and nothing in stdout matches output before timeout
+
         """
         if output is None:
             return self._wait(timeout)._output
@@ -226,9 +242,12 @@ class run:
         return self
 
     def reject(self, timeout=1):
-        """
-        Check that the process survives for timeout (1 second by default)
-        Usecase: check that program rejected input and is now waiting on new input
+        """ Check that the process survives for timeout. Useful for checking whether program is waiting on input.
+
+        :param timeout: number of seconds to wait
+        :type timeout: int / float
+        :raises check50.Failure: if process ends before ``timeout``
+
         """
         log("checking that input was rejected...")
         try:
@@ -242,8 +261,15 @@ class run:
 
     def exit(self, code=None, timeout=5):
         """
-        Wait for eof or until timeout (5 sec by default), returns the exitcode
+        Wait for EOF or until timeout (5 sec by default), returns the exitcode
         If code is given, matches exitcode vs code and raises Failure incase of mismatch
+
+        :param code: optional code to match the exitcode against, raises :class:`check50.Failure` if there is no match
+        :type code: int
+        :param timeout: maximum number of seconds to wait for the program to end
+        :type timeout: int / float
+        :raises check50.Failure: if ``code`` is given and does not match the actual exitcode within ``timeout``
+
         """
         self._wait(timeout)
 
@@ -299,6 +325,23 @@ class run:
 
 
 class Failure(Exception):
+    """Exception signifying check failure
+
+    :param rationale: message to be displayed capturing why the check failed
+    :type rationale: str
+    :param help: optional help message to be displayed
+    :type help: str
+
+    Example usage::
+
+        out = check50.run("./cash").stdin("4.2").stdout()
+        if 10 not in out:
+            help = None
+            if 11 in out:
+                help = "did you forget to round your result?"
+            raise check50.Failure("Expected a different result", help=help)
+    """
+
     def __init__(self, rationale, help=None):
         self.rationale = rationale
         self.help = help
@@ -311,6 +354,25 @@ class Failure(Exception):
 
 
 class Mismatch(Failure):
+    """Exception signifying check failure due to a mismatch
+
+    :param expected: the expected value
+    :param actual: the actual value
+    :param help: optional help message to be displayed
+    :type help: str
+
+    Example usage::
+
+        from re import match
+        expected = "[Hh]ello, world!?\\n"
+        actual = check50.run("./hello").stdout()
+        if not match(expected, actual):
+            help = None
+            if match(expected[:-1], actual):
+                help = r"did you forget a newline ('\\n') at the end of your printf string?"
+            raise check50.Mismatch("hello, world\\n", actual, help=help)
+
+    """
     def __init__(self, expected, actual, help=None):
         super().__init__(rationale=f"expected {_raw(expected)}, not {_raw(actual)}", help=help)
         self.expected = expected
