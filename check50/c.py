@@ -26,7 +26,7 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
 
     flags = CFLAGS.copy()
     flags.update(cflags)
-    flags = " ".join(f"-{flag}" + (f"={value}" if isinstance(value , str) else "")
+    flags = " ".join((f"-{flag}" + (f"={value}" if value is not True else "")).replace("_", "-")
                      for flag, value in flags.items() if value)
 
     out_flag = f" -o {exe_name} " if exe_name is not None else " "

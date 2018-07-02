@@ -147,7 +147,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
 
     try:
         if not offline:
-            origin.fetch(branch)
+            origin.fetch(branch, depth=1, recurse_submodules="yes")
     except git.GitError:
         raise InternalError(f"failed to fetch checks from remote repository")
 
@@ -219,13 +219,10 @@ def main():
                         help="run checks completely offline (implies --local)")
     parser.add_argument("-l", "--local",
                         action="store_true",
-                        help="run checks locally instead of uploading to cs50")
+                        help="run checks locally instead of uploading to cs50 (enabled by default in beta version)")
     parser.add_argument("--log",
                         action="store_true",
                         help="display more detailed information about check results")
-    parser.add_argument("--repo", "-r",
-                        action="store",
-                        help="repo to clone checks from")
     parser.add_argument("-o", "--output",
                         action="store",
                         default="ansi",
@@ -239,6 +236,9 @@ def main():
                         version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
+
+    # TODO: remove this when submit.cs50.io API is stabilized
+    args.local = True
 
     if not args.files:
         args.files = os.listdir(".")

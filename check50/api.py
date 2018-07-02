@@ -41,6 +41,7 @@ def data(**kwargs):
     Example usage::
 
         check50.data(time=7.3, mem=23)
+    
     """
 
     _data.update(kwargs)
@@ -92,6 +93,7 @@ def exists(*paths):
     Example usage::
 
         check50.exists("foo.c", "foo.h")
+
     """
     for path in paths:
         log(f"Checking that {path} exists...")
