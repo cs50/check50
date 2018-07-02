@@ -147,7 +147,7 @@ def prepare_checks(checks_root, reponame, branch, offline=False):
 
     try:
         if not offline:
-            origin.fetch(branch)
+            origin.fetch(branch, depth=1, recurse_submodules="yes")
     except git.GitError:
         raise InternalError(f"failed to fetch checks from remote repository")
 
