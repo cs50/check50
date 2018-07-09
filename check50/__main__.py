@@ -225,11 +225,7 @@ def main():
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        import submit50
-        submit50.handler.type = "check"
-        signal.signal(signal.SIGINT, submit50.handler)
-        submit50.run.verbose = args.verbose
-        username, commit_hash = submit50.submit("check50", args.slug)
+        username, commit_hash = push50.push(org="check50", slug=args.slug, tool="check50")
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":
