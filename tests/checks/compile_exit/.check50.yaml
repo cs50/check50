@@ -1,4 +1,0 @@
-checks:
-  exit:
-    - run: python3 foo.py
-      exit: 0

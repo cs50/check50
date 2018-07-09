@@ -1,6 +1,0 @@
-checks:
-  std:
-    - run: python3 foo.py
-      stdin: bar
-      stdout: bar
-      exit: 0

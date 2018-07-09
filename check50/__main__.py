@@ -1,3 +1,4 @@
+import push50
 import argparse
 import contextlib
 import importlib
@@ -14,7 +15,6 @@ import sys
 import tempfile
 import traceback
 import time
-
 import attr
 import git
 from pexpect.exceptions import EOF
@@ -27,22 +27,17 @@ from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 from . import simple
 
-
-class InternalError(Exception):
-    """Error during execution of check50."""
-
-    def __init__(self, msg):
-        self.msg = msg
+push50.LOCAL_PATH = f"~/.local/share/check50"
 
 
-class InvalidIdentifier(InternalError):
-    def __init__(self, identifier=None):
-        self.identifier = identifier
-        super().__init__(f"invalid identifier{f': {identifier}' if identifier else ''}")
+class InvalidSlug(internal.InternalError):
+    def __init__(self, slug=None):
+        self.slug = slug
+        super().__init__(f"invalid slug{f': {slug}' if slug else ''}")
 
 
 def excepthook(cls, exc, tb):
-    if issubclass(cls, InternalError):
+    if issubclass(cls, internal.InternalError):
         cprint(exc.msg, "red", file=sys.stderr)
     elif cls is FileNotFoundError:
         cprint(f"{exc.filename} not found", "red", file=sys.stderr)
@@ -101,59 +96,6 @@ def print_ansi(results, log=False):
             for line in result.log:
                 print(f"    {line}")
 
-
-def parse_identifier(identifier, offline=False):
-    # Find second "/" in identifier
-    idx = identifier.find("/", identifier.find("/") + 1)
-    if idx == -1:
-        raise InvalidIdentifier(identifier)
-
-    repo, remainder = identifier[:idx], identifier[idx+1:]
-
-    def parse_branch(offline):
-        try:
-            if not offline:
-                try:
-                    return parse_branch(offline=True)
-                except InvalidIdentifier:
-                    branches = (line.split("\t")[1].replace("refs/heads/", "")
-                                for line in git.Git().ls_remote(f"https://github.com/{repo}", heads=True).split("\n"))
-            else:
-                branches = map(str, git.Repo(f"~/.local/share/check50/{repo}").branches)
-        except git.GitError:
-            raise InvalidIdentifier(identifier)
-
-        for branch in branches:
-            if remainder.startswith(f"{branch}/"):
-                return branch, remainder[len(branch)+1:]
-        else:
-            raise InvalidIdentifier(identifier)
-
-
-    branch, problem = parse_branch(offline)
-
-    return repo, branch, problem
-
-
-def prepare_checks(checks_root, reponame, branch, offline=False):
-    """If {checks_root} exists, update it and checkout {branch}, else clone it from github.com/{reponame}."""
-
-    try:
-        origin = git.Repo(str(checks_root)).remotes["origin"]
-    except git.GitError:
-        if offline:
-            raise InvalidIdentifier()
-        origin = git.Repo.init(str(checks_root)).create_remote("origin", f"https://github.com/{reponame}")
-
-    try:
-        if not offline:
-            origin.fetch(branch, depth=1, recurse_submodules="yes")
-    except git.GitError:
-        raise InternalError(f"failed to fetch checks from remote repository")
-
-    origin.refs[branch].checkout()
-
-
 def install_requirements(requirements, verbose=False):
     """Look for a requirements.txt in each dir in {dirs} and install it via pip.
     Suppress pip output unless {verbose} is True."""
@@ -174,7 +116,7 @@ def install_requirements(requirements, verbose=False):
     try:
         subprocess.check_call(pip, stdout=stdout, stderr=stderr)
     except subprocess.CalledProcessError:
-        raise InternalError(
+        raise internal.InternalError(
             f"failed to install dependencies from {requirements}")
 
 
@@ -196,7 +138,7 @@ def await_results(url, pings=45, sleep=2):
     else:
         # Terminate if no response
         print()
-        raise InternalError(
+        raise internal.InternalError(
             f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
     print()
 
@@ -208,12 +150,12 @@ def await_results(url, pings=45, sleep=2):
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
-    parser.add_argument("identifier")
+    parser.add_argument("slug", help="a slug identifying a check50 problem in the form of <org>/<repo>/<branch>/<problem>")
     parser.add_argument("files", nargs="*")
     parser.add_argument("-d", "--dev",
                         action="store_true",
                         help="run check50 in development mode (implies --offline and --verbose).\n"
-                             "causes IDENTIFIER to be interpreted as a literal path to a checks package")
+                             "causes SLUG to be interpreted as a literal path to a checks package")
     parser.add_argument("--offline",
                         action="store_true",
                         help="run checks completely offline (implies --local)")
@@ -262,26 +204,24 @@ def main():
     excepthook.verbose = args.verbose
 
     if args.local:
+        # if developing, assume slug is a path to check_dir
         if args.dev:
-            internal.check_dir = Path(args.identifier).expanduser().absolute()
+            internal.check_dir = Path(args.slug).expanduser().absolute()
+            with open(internal.check_dir / ".cs50.yaml") as f:
+                config_yaml = yaml.safe_load(f.read())["check50"]
+        # otherwise have push50 create a local copy of slug
         else:
-            repo, branch, problem = parse_identifier(args.identifier, offline=args.offline)
-            checks_root = Path(f"~/.local/share/check50/{repo}").expanduser().absolute()
-            prepare_checks(checks_root, repo, branch, offline=args.offline)
-            internal.check_dir = checks_root / problem.replace("/", os.sep)
+            internal.check_dir, config_yaml = push50.local(args.slug, "check50", update=offline)
 
-        try:
-            options = internal.parse_config(internal.check_dir)
-        except (FileNotFoundError, yaml.YAMLError):
-            raise InvalidIdentifier(args.identifier)
+        config = internal.init_config(config_yaml)
 
-        if not args.offline and options["requirements"]:
-            install_requirements(internal.check_dir / options["requirements"], verbose=args.verbose)
+        if not args.offline and config["requirements"]:
+            install_requirements(internal.check_dir / config["requirements"], verbose=args.verbose)
 
-        checks_file = (internal.check_dir / options["checks"]).absolute()
+        checks_file = (internal.check_dir / config["checks"]).absolute()
 
         with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-            results = CheckRunner(checks_file, locale=options["locale"]).run(args.files)
+            results = CheckRunner(checks_file, locale=config["locale"]).run(args.files)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
@@ -289,7 +229,7 @@ def main():
         submit50.handler.type = "check"
         signal.signal(signal.SIGINT, submit50.handler)
         submit50.run.verbose = args.verbose
-        username, commit_hash = submit50.submit("check50", args.identifier)
+        username, commit_hash = submit50.submit("check50", args.slug)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":

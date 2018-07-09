@@ -16,6 +16,12 @@ check_dir = None
 # Temporary directory in which check is being run
 run_dir = None
 
+class InternalError(Exception):
+    """Error during execution of check50."""
+
+    def __init__(self, msg):
+        self.msg = msg
+
 class Register:
     def __init__(self):
         self._before_everies = []
@@ -53,21 +59,15 @@ class Register:
 register = Register()
 
 
-def parse_config(check_dir):
-    config_file = check_dir / ".check50.yaml"
-
-    with open(config_file) as f:
-        config = yaml.safe_load(f)
-
+def init_config(config_yaml):
     options = {
         "checks": "__init__.py",
         "requirements": False,
         "locale": False,
     }
 
-    if config is not None:
-        options.update(config)
-
+    if config_yaml is not None:
+        options.update(config_yaml)
 
     if isinstance(options["checks"], dict):
         with open(check_dir / "__init__.py", "w") as f:

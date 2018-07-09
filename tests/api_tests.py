@@ -71,8 +71,9 @@ class TestImportChecks(Base):
         check50.internal.check_dir = self._old_check_dir
 
     def test_simple_import(self):
-        with open(".check50.yaml", "w") as f:
-            f.write("checks: foo.py")
+        with open(".cs50.yaml", "w") as f:
+            f.write("check50:\n")
+            f.write("  checks: foo.py")
         mod = check50.import_checks(".")
         self.assertEqual(mod.__name__, pathlib.Path(self.working_directory.name).name)
 
@@ -80,8 +81,9 @@ class TestImportChecks(Base):
         with open("./bar/baz.py", "w") as f:
             f.write("qux = 0")
 
-        with open("./bar/.check50.yaml", "w") as f:
-            f.write("checks: baz.py")
+        with open("./bar/.cs50.yaml", "w") as f:
+            f.write("check50:\n")
+            f.write("  checks: baz.py")
 
         mod = check50.import_checks("./bar")
         self.assertEqual(mod.__name__, "bar")

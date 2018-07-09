@@ -6,7 +6,7 @@ import signal
 import sys
 import time
 import importlib
-
+import yaml
 import shlex
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
@@ -41,7 +41,7 @@ def data(**kwargs):
     Example usage::
 
         check50.data(time=7.3, mem=23)
-    
+
     """
 
     _data.update(kwargs)
@@ -126,7 +126,10 @@ def import_checks(path):
     dir = internal.check_dir / path
     name = dir.name
 
-    file = internal.parse_config(dir)["checks"]
+    with open(dir / ".cs50.yaml") as f:
+        content = yaml.safe_load(f.read())["check50"]
+
+    file = internal.init_config(content)["checks"]
     mod = internal.import_file(name, (dir / file).resolve())
     sys.modules[name] = mod
     return mod
