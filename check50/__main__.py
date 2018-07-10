@@ -15,8 +15,8 @@ import sys
 import tempfile
 import traceback
 import time
+
 import attr
-import git
 from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
@@ -25,20 +25,17 @@ import yaml
 from . import internal, __version__, simple
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
-from . import simple
 
-push50.LOCAL_PATH = f"~/.local/share/check50"
+push50.LOCAL_PATH = "~/.local/share/check50"
 
 
-class InvalidSlug(internal.InternalError):
-    def __init__(self, slug=None):
-        self.slug = slug
-        super().__init__(f"invalid slug{f': {slug}' if slug else ''}")
+class Error(Exception):
+    pass
 
 
 def excepthook(cls, exc, tb):
-    if issubclass(cls, internal.InternalError):
-        cprint(exc.msg, "red", file=sys.stderr)
+    if (issubclass(cls, Error) or issubclass(cls, push50.Error)) and exc.args:
+        cprint(str(exc), "red", file=sys.stderr)
     elif cls is FileNotFoundError:
         cprint(f"{exc.filename} not found", "red", file=sys.stderr)
     elif cls is KeyboardInterrupt:
@@ -97,27 +94,23 @@ def print_ansi(results, log=False):
                 print(f"    {line}")
 
 def install_requirements(requirements, verbose=False):
-    """Look for a requirements.txt in each dir in {dirs} and install it via pip.
-    Suppress pip output unless {verbose} is True."""
+    """Install all packages in requirements list via pip"""
+
+    if not requirements:
+        return
 
     stdout = stderr = None if verbose else subprocess.DEVNULL
+    with tempfile.NamedTemporaryFile() as req_file:
+        req_file.writelines(requirements)
+        pip = ["pip", "install", "-r", req_file.name]
+        # Unless we are in a virtualenv, we need --user
+        if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
+            pip.append("--user")
 
-    requirements = Path(requirements).expanduser().absolute()
-
-    if not requirements.exists():
-        raise FileNotFoundError(requirements)
-
-    pip = ["pip", "install", "-r", requirements]
-
-    # Unless we are in a virtualenv, we need --user
-    if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
-        pip.append("--user")
-
-    try:
-        subprocess.check_call(pip, stdout=stdout, stderr=stderr)
-    except subprocess.CalledProcessError:
-        raise internal.InternalError(
-            f"failed to install dependencies from {requirements}")
+        try:
+            subprocess.check_call(pip, stdout=stdout, stderr=stderr)
+        except subprocess.CalledProcessError:
+            raise Error(f"failed to install dependencies from {requirements}")
 
 
 def await_results(url, pings=45, sleep=2):
@@ -138,8 +131,7 @@ def await_results(url, pings=45, sleep=2):
     else:
         # Terminate if no response
         print()
-        raise internal.InternalError(
-            f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
+        raise Error(f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
     print()
 
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
@@ -193,12 +185,9 @@ def main():
         args.local = True
 
     if args.verbose:
-        # Show all git output in verbose mode.
-        # This is supposed to be done by setting the GIT_PYTHON_TRACE env variable,
-        # but GitPython checks this once when it is imported, not when it is used.
-        # Setting it this way is technically undocumented, but convenient.
-        git.Git.GIT_PYTHON_TRACE = "full"
-        logging.basicConfig(level=logging.INFO)
+        # Show push50 commands being run in verbose mode
+        logging.basicConfig(level="INFO")
+        push50.ProgressBar.DISABLED = True
         args.log = True
 
     excepthook.verbose = args.verbose
@@ -208,15 +197,20 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().absolute()
             with open(internal.check_dir / ".cs50.yaml") as f:
-                config_yaml = yaml.safe_load(f.read())["check50"]
+                config = yaml.safe_load(f.read()).get("check50", False)
+            if not config:
+                raise Error(f"check50 has not been enabled for this identifier. "
+                             "Ensure that {internal.check_dir / 'cs50.yaml'} contains "
+                             " a 'check50' key.")
         # otherwise have push50 create a local copy of slug
         else:
-            internal.check_dir, config_yaml = push50.local(args.slug, "check50", update=offline)
+            import pdb; pdb.set_trace()
+            internal.check_dir, config = push50.local(args.slug, "check50", offline=args.offline)
 
-        config = internal.init_config(config_yaml)
+        config = internal.apply_default_config(config)
 
-        if not args.offline and config["requirements"]:
-            install_requirements(internal.check_dir / config["requirements"], verbose=args.verbose)
+        if not args.offline:
+            install_requirements(config["requirements"], verbose=args.verbose)
 
         checks_file = (internal.check_dir / config["checks"]).absolute()
 

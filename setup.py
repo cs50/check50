@@ -11,7 +11,7 @@ setup(
         "Topic :: Utilities"
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
-    install_requires=["attrs", "bs4", "gitpython", "pexpect", "pyyaml", "requests", "termcolor", "submit50>=2.4.5"],
+    install_requires=["attrs", "bs4", "pexpect", "push50", "pyyaml", "requests", "termcolor"],
     extras_require = {
         "develop": ["sphinx", "sphinx_rtd_theme"]
     },

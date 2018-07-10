@@ -129,7 +129,7 @@ def import_checks(path):
     with open(dir / ".cs50.yaml") as f:
         content = yaml.safe_load(f.read())["check50"]
 
-    file = internal.init_config(content)["checks"]
+    file = internal.apply_default_config(content)["checks"]
     mod = internal.import_file(name, (dir / file).resolve())
     sys.modules[name] = mod
     return mod
