@@ -93,15 +93,15 @@ def print_ansi(results, log=False):
             for line in result.log:
                 print(f"    {line}")
 
-def install_requirements(requirements, verbose=False):
-    """Install all packages in requirements list via pip"""
+def install_dependencies(dependencies, verbose=False):
+    """Install all packages in dependency list via pip"""
 
-    if not requirements:
+    if not dependencies:
         return
 
     stdout = stderr = None if verbose else subprocess.DEVNULL
     with tempfile.NamedTemporaryFile() as req_file:
-        req_file.writelines(requirements)
+        req_file.writelines(dependencies)
         pip = ["pip", "install", "-r", req_file.name]
         # Unless we are in a virtualenv, we need --user
         if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
@@ -110,7 +110,7 @@ def install_requirements(requirements, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise Error(f"failed to install dependencies from {requirements}")
+            raise Error(f"failed to install dependencies from {dependencies}")
 
 
 def await_results(url, pings=45, sleep=2):
@@ -210,7 +210,7 @@ def main():
         config = internal.apply_default_config(config)
 
         if not args.offline:
-            install_requirements(config["requirements"], verbose=args.verbose)
+            install_dependencies(config["dependencies"], verbose=args.verbose)
 
         checks_file = (internal.check_dir / config["checks"]).absolute()
 
