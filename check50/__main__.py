@@ -204,7 +204,6 @@ def main():
                              " a 'check50' key.")
         # otherwise have push50 create a local copy of slug
         else:
-            import pdb; pdb.set_trace()
             internal.check_dir, config = push50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.apply_default_config(config)

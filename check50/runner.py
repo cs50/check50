@@ -179,7 +179,7 @@ class CheckRunner:
             if results[name] is None:
                 results[name] = CheckResult(description=description,
                                             status=Status.Skip,
-                                            why={"rationale": "can't check until a frown turns upside down"
+                                            why={"rationale": "can't check until a frown turns upside down",
                                                  "dependency": check_name})
                 self._skip_children(name, results)
 

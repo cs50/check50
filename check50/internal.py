@@ -63,9 +63,8 @@ def apply_default_config(config):
 
     if not config:
         return options
-    elif isinstance(config, dict):
-        options.update(config)
 
+    options.update(config)
 
     if isinstance(options["checks"], dict):
         with open(check_dir / "__init__.py", "w") as f:
