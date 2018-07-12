@@ -61,7 +61,7 @@ def _timeout(seconds):
 
 
 def check(dependency=None, timeout=60):
-    """ Decorator for checks. """
+    """Decorator for checks."""
     def decorator(check):
 
         # Modules are evaluated from the top of the file down, so _check_names will
@@ -73,7 +73,7 @@ def check(dependency=None, timeout=60):
         def wrapper(checks_root, dependency_state):
             # Result template
             result = CheckResult.from_check(check)
-            # any shared (returned) state
+            # Any shared (returned) state
             state = None
 
             try:
@@ -135,8 +135,10 @@ class CheckRunner:
         # TODO: Check for deadlocks (Khan's algorithm?)
 
     def run(self, files):
-        """Run checks concurrently.
-        Returns a list of CheckResults ordered by declaration order of the checks in the imported module"""
+        """
+        Run checks concurrently.
+        Returns a list of CheckResults ordered by declaration order of the checks in the imported module
+        """
 
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
@@ -185,8 +187,10 @@ class CheckRunner:
 
 
 class run_check:
-    """Hack to get around the fact that `pickle` can't serialize closures.
-    This class is essentially a function that reimports the check module and runs the check."""
+    """
+    Hack to get around the fact that `pickle` can't serialize closures.
+    This class is essentially a function that reimports the check module and runs the check.
+    """
 
     def __init__(self, check_name, spec, checks_root, state=None):
         self.check_name = check_name

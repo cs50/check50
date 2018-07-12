@@ -12,8 +12,8 @@ CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 def compile(*files, exe_name=None, cc=CC, **cflags):
     """
-    compile files to exe_name (files[0] minus .c by default)
-    uses compiler: {CC} with compilers_flags: {CFLAGS} by default
+    Compile files to exe_name (files[0] minus .c by default)
+    Uses compiler: {CC} with compilers_flags: {CFLAGS} by default
     """
 
     if not files:
@@ -35,16 +35,16 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
 
 
 def valgrind(command):
-    """run command with valgrind, checks for valgrind errors at the end of the check"""
+    """Run command with valgrind, checks for valgrind errors at the end of the check."""
     xml_file = tempfile.NamedTemporaryFile()
     internal.register.after_check(lambda: _check_valgrind(xml_file))
 
-    # ideally we'd like for this whole command not to be logged.
+    # Ideally we'd like for this whole command not to be logged.
     return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
 
 
 def _check_valgrind(xml_file):
-    """Log and report any errors encountered by valgrind"""
+    """Log and report any errors encountered by valgrind."""
     log("checking for valgrind errors... ")
 
     # Load XML file created by valgrind

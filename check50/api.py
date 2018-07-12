@@ -19,7 +19,8 @@ internal.register.before_every(_log.clear)
 
 
 def log(line):
-    """Add to check log
+    """
+    Add to check log
 
     :param line: line to be added to the check log
     :type line: str
@@ -34,7 +35,8 @@ internal.register.before_every(_data.clear)
 
 
 def data(**kwargs):
-    """Add data to the check payload
+    """
+    Add data to the check payload
 
     :params kwargs: key/value mappings to be added to the check payload
 
@@ -48,7 +50,8 @@ def data(**kwargs):
 
 
 def include(*paths):
-    """Copy files/directories from the check directory (:data:`check50.internal.check_dir`), to the current directory
+    """
+    Copy files/directories from the check directory (:data:`check50.internal.check_dir`), to the current directory
 
     :params paths: files/directories to be copied
 
@@ -64,7 +67,8 @@ def include(*paths):
 
 
 def hash(file):
-    """Hashes file using SHA-256.
+    """
+    Hashes file using SHA-256.
 
     :param file: name of file to be hashed
     :type file: str
@@ -85,7 +89,8 @@ def hash(file):
 
 
 def exists(*paths):
-    """Assert that all given paths exist.
+    """
+    Assert that all given paths exist.
 
     :params paths: files/directories to be checked for existence
     :raises check50.Failure: if any ``path in paths`` does not exist
@@ -102,7 +107,8 @@ def exists(*paths):
 
 
 def import_checks(path):
-    """ Import checks module given relative path.
+    """
+    Import checks module given relative path.
 
     :param path: relative path from which to import checks module
     :type path: str
@@ -136,7 +142,8 @@ def import_checks(path):
 
 
 class run:
-    """Run a command.
+    """
+    Run a command.
 
     :param command: command to be run
     :param env: environment in which to run command
@@ -163,7 +170,8 @@ class run:
 
 
     def stdin(self, line, prompt=True, timeout=3):
-        """Send line to stdin, optionally expect a prompt.
+        """
+        Send line to stdin, optionally expect a prompt.
 
         :param line: line to be send to stdin
         :type line: str
@@ -194,7 +202,8 @@ class run:
         return self
 
     def stdout(self, output=None, str_output=None, regex=True, timeout=3):
-        """Retrieve all output from stdout until timeout (3 sec by default)
+        """
+        Retrieve all output from stdout until timeout (3 sec by default)
 
         :param output: optional output to be expected from stdout, raises :class:`check50.Failure` if no match
         :type output: str
@@ -247,7 +256,8 @@ class run:
         return self
 
     def reject(self, timeout=1):
-        """ Check that the process survives for timeout. Useful for checking whether program is waiting on input.
+        """
+        Check that the process survives for timeout. Useful for checking whether program is waiting on input.
 
         :param timeout: number of seconds to wait
         :type timeout: int / float
@@ -287,7 +297,7 @@ class run:
         return self
 
     def kill(self):
-        """Kill the process"""
+        """Kill the process."""
         self.process.close(force=True)
         return self
 
@@ -330,7 +340,8 @@ class run:
 
 
 class Failure(Exception):
-    """Exception signifying check failure
+    """
+    Exception signifying check failure
 
     :param rationale: message to be displayed capturing why the check failed
     :type rationale: str
@@ -359,7 +370,8 @@ class Failure(Exception):
 
 
 class Mismatch(Failure):
-    """Exception signifying check failure due to a mismatch
+    """
+    Exception signifying check failure due to a mismatch
 
     :param expected: the expected value
     :param actual: the actual value
@@ -390,7 +402,7 @@ class Mismatch(Failure):
 
 
 def _raw(s):
-    """Get raw representation of s, truncating if too long"""
+    """Get raw representation of s, truncating if too long."""
 
     if isinstance(s, list):
         s = "\n".join(_raw(item) for item in s)
@@ -398,10 +410,10 @@ def _raw(s):
     if s == EOF:
         return "EOF"
 
-    s = repr(s)  # get raw representation of string
-    s = s[1:-1]  # strip away quotation marks
+    s = repr(s)  # Get raw representation of string
+    s = s[1:-1]  # Strip away quotation marks
     if len(s) > 15:
-        s = s[:15] + "..."  # truncate if too long
+        s = s[:15] + "..."  # Truncate if too long
     return "\"{}\"".format(s)
 
 

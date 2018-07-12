@@ -94,7 +94,7 @@ def print_ansi(results, log=False):
                 print(f"    {line}")
 
 def install_dependencies(dependencies, verbose=False):
-    """Install all packages in dependency list via pip"""
+    """Install all packages in dependency list via pip."""
 
     if not dependencies:
         return
@@ -114,8 +114,10 @@ def install_dependencies(dependencies, verbose=False):
 
 
 def await_results(url, pings=45, sleep=2):
-    """Ping {url} until it returns a results payload, timing out after
-    {pings} pings and waiting {sleep} seconds between pings."""
+    """
+    Ping {url} until it returns a results payload, timing out after
+    {pings} pings and waiting {sleep} seconds between pings.
+    """
 
     print("Checking...", end="", flush=True)
     for _ in range(pings):
@@ -193,7 +195,7 @@ def main():
     excepthook.verbose = args.verbose
 
     if args.local:
-        # if developing, assume slug is a path to check_dir
+        # If developing, assume slug is a path to check_dir
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().absolute()
             with open(internal.check_dir / ".cs50.yaml") as f:
@@ -202,7 +204,7 @@ def main():
                 raise Error(f"check50 has not been enabled for this identifier. "
                              "Ensure that {internal.check_dir / 'cs50.yaml'} contains "
                              " a 'check50' key.")
-        # otherwise have push50 create a local copy of slug
+        # Otherwise have push50 create a local copy of slug
         else:
             internal.check_dir, config = push50.local(args.slug, "check50", offline=args.offline)
 

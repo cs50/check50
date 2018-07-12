@@ -18,7 +18,7 @@ class app:
         dir, file = os.path.split(path)
         name, _ = os.path.splitext(file)
 
-        # add directory of flask app to sys.path so we can import it properly
+        # Add directory of flask app to sys.path so we can import it properly
         prevpath = sys.path[0]
         try:
             sys.path[0] = os.path.abspath(dir or ".")
@@ -26,7 +26,7 @@ class app:
         except FileNotFoundError:
             raise Failure(f"could not find {file}")
         finally:
-            # restore sys.path
+            # Restore sys.path
             sys.path[0] = prevpath
 
         try:
@@ -35,7 +35,7 @@ class app:
             raise Failure(f"{file} does not contain an app")
 
         app.testing = True
-        # initialize flask client
+        # Initialize flask client
         self.client = app.test_client()
 
         self.response = None
@@ -75,7 +75,7 @@ class app:
             lambda regex, content: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)))
 
     def _send(self, method, route, data, params, **kwargs):
-        """Send request of type `method` to `route`"""
+        """Send request of type `method` to `route`."""
         route = self._fmt_route(route, params)
         log(f"sending {method.upper()} request to {route}")
         try:
@@ -105,13 +105,13 @@ class app:
     def _fmt_route(route, params):
         parsed = url.urlparse(route)
 
-        # convert params dict into urlencoded string
+        # Convert params dict into urlencoded string
         params = url.urlencode(params) if params else ""
 
-        # concatenate params
+        # Concatenate params
         param_str = "&".join((ps for ps in [params, parsed.query] if ps))
         if param_str:
             param_str = "?" + param_str
 
-        # only display netloc if it isn't localhost
+        # Only display netloc if it isn't localhost
         return "".join([parsed.netloc if parsed.netloc != "localhost" else "", parsed.path, param_str])

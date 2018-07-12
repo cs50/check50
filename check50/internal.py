@@ -24,15 +24,15 @@ class Register:
         self._after_checks = []
 
     def after_check(self, func):
-        """run func once at the end of the check, then discard func"""
+        """Run func once at the end of the check, then discard func."""
         self._after_checks.append(func)
 
     def after_every(self, func):
-        """run func at the end of every check"""
+        """Run func at the end of every check."""
         self._after_everies.append(func)
 
     def before_every(self, func):
-        """run func at the start of every check"""
+        """Run func at the start of every check."""
         self._before_everies.append(func)
 
     def __enter__(self):

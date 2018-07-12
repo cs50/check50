@@ -13,7 +13,7 @@ def append_code(original, codefile):
 
 
 def import_(path):
-    """given a raw file path, import a module"""
+    """Given a raw file path, import a module."""
     exists(path)
     log(f"importing {path}...")
     name = Path(path).stem
