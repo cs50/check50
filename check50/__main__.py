@@ -71,9 +71,13 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    json.dump({"results": {name: attr.asdict(result) for name, result in results.items()},
-               "version": __version__},
-              sys.stdout, cls=Encoder)
+    test_results = []
+    for name, result in results.items():
+        result = attr.asdict(result)
+        result["name"] = name
+        test_results.append(result)
+
+    json.dump({"results": test_results, "version": __version__}, sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
