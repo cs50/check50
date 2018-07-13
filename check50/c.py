@@ -44,7 +44,6 @@ def valgrind(command):
 
 
 def _check_valgrind(xml_file):
-<<<<<<< HEAD
     """Log and report any errors encountered by valgrind."""
     log(_("checking for valgrind errors..."))
 

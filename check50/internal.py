@@ -63,7 +63,7 @@ def load_config(check_dir):
 
     translation_options = {
         "localedir": "locale",
-        "domain": "checks",
+        "domain": "messages",
         "native": "en"
     }
 

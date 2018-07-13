@@ -1,6 +1,7 @@
 import push50
 import argparse
 import contextlib
+import gettext
 import importlib
 import inspect
 import itertools
@@ -113,12 +114,15 @@ def install_dependencies(dependencies, verbose=False):
             raise Error(_("failed to install dependencies"))
 
 
-def initialize_translations(config):
+def install_translations(config):
     if not config:
         return
     from . import _translation
+    print(internal.check_dir / config["localedir"])
     # TODO: check what languages are available to ensure that we don't get mixed output in the results. consult config["native"] for the language in which the checks are written.
-    checks_translation = gettext.translation(domain=config["domain"], localedir=config["localedir"])
+    checks_translation = gettext.translation(domain=config["domain"], localedir=internal.check_dir / config["localedir"], fallback=True)
+    print(config)
+    print(checks_translation)
     _translation.add_fallback(checks_translation)
 
 
@@ -203,7 +207,7 @@ def main():
     if args.local:
         # If developing, assume slug is a path to check_dir
         if args.dev:
-            internal.check_dir = Path(args.slug).expanduser().absolute()
+            internal.check_dir = Path(args.slug).expanduser().resolve()
             with open(internal.check_dir / ".cs50.yaml") as f:
                 config = yaml.safe_load(f.read()).get("check50", False)
             if not config:
@@ -214,12 +218,12 @@ def main():
             internal.check_dir = push50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
-        initialize_translations(config["translations"])
+        install_translations(config["translations"])
 
         if not args.offline:
             install_dependencies(config["dependencies"], verbose=args.verbose)
 
-        checks_file = (internal.check_dir / config["checks"]).absolute()
+        checks_file = (internal.check_dir / config["checks"]).resolve()
 
         with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
             results = CheckRunner(checks_file).run(os.listdir("."))
