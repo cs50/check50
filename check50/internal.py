@@ -54,17 +54,32 @@ class Register:
 register = Register()
 
 
-def apply_default_config(config):
+def load_config(check_dir):
     options = {
         "checks": "__init__.py",
-        "requirements": False,
-        "locale": False,
+        "dependencies": None,
+        "translations": None
     }
 
-    if not config:
-        return options
+    translation_options = {
+        "localedir": "locale",
+        "domain": "checks",
+        "native": "en"
+    }
 
-    options.update(config)
+    config_file = check_dir / ".cs50.yaml"
+
+    with open(config_file) as f:
+        config = yaml.safe_load(f)["check50"]
+
+    if isinstance(config, dict):
+        options.update(config)
+
+    if options["translations"]:
+        if isinstance(options["translations"], dict):
+            translation_options.update(options["translations"])
+        options["translations"] = translation_options
+
 
     if isinstance(options["checks"], dict):
         with open(check_dir / "__init__.py", "w") as f:
@@ -75,7 +90,6 @@ def apply_default_config(config):
 
 
 def import_file(name, path):
-    prevpath = sys.path
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

@@ -17,9 +17,18 @@ def _set_version():
     else:
         __version__ = dist.version
 
+def _setup_translation():
+    import gettext
+    from pkg_resources import resource_filename
+    global _translation
+    _translation = gettext.translation("check50", resource_filename("check50", "locale"), fallback=True)
+    _translation.install()
+
+
 
 # Encapsulated inside a function so their local variables/imports aren't seen by autocompleters
 _set_version()
+_setup_translation()
 
 from .api import (
         import_checks,

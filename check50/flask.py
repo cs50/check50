@@ -24,7 +24,7 @@ class app:
             sys.path[0] = os.path.abspath(dir or ".")
             mod = internal.import_file(name, file)
         except FileNotFoundError:
-            raise Failure(f"could not find {file}")
+            raise Failure(_("could not find {}").format(file))
         finally:
             # Restore sys.path
             sys.path[0] = prevpath
@@ -32,7 +32,7 @@ class app:
         try:
             app = mod.app
         except AttributeError:
-            raise Failure(f"{file} does not contain an app")
+            raise Failure(_("{} does not contain an app").format(file))
 
         app.testing = True
         # Initialize flask client
@@ -53,9 +53,9 @@ class app:
         if code is None:
             return self.response.status_code
 
-        log(f"checking that status code {code} is returned...")
+        log(_("checking that status code {} is returned...").format(code))
         if code != self.response.status_code:
-            raise Failure("expected status code {}, but got {}".format(
+            raise Failure(_("expected status code {}, but got {}").format(
                 code, self.response.status_code))
         return self
 
@@ -66,7 +66,7 @@ class app:
     def content(self, output=None, str_output=None, **kwargs):
         """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
         if self.response.mimetype != "text/html":
-            raise Failure(f"expected request to return HTML, but it returned {self.response.mimetype}")
+            raise Failure(_("expected request to return HTML, but it returned {}").format(self.response.mimetype))
 
         return self._search_page(
             output,
@@ -77,12 +77,12 @@ class app:
     def _send(self, method, route, data, params, **kwargs):
         """Send request of type `method` to `route`."""
         route = self._fmt_route(route, params)
-        log(f"sending {method.upper()} request to {route}")
+        log(_("sending {} request to {}").format(method.upper(), route))
         try:
             self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
         except BaseException as e:  # Catch all exceptions thrown by app
-            log(f"exception raised in application: {type(e).__name__}: {e}")
-            raise Failure("application raised an exception (rerun with --log for more details)")
+            log(_("exception raised in application: {}: {}").format(type(e).__name__, e))
+            raise Failure(_("application raised an exception (rerun with --log for more details)"))
         return self
 
     def _search_page(self, output, str_output, content, match_fn, **kwargs):
@@ -92,12 +92,12 @@ class app:
         if str_output is None:
             str_output = output
 
-        log(f"checking that \"{str_output}\" is in page")
+        log(_("checking that \"{}\" is in page").format(str_output))
 
         regex = re.compile(output)
 
         if not match_fn(regex, content):
-            raise Failure(f"expected to find \"{str_output}\" in page, but it wasn't found")
+            raise Failure(_("expected to find \"{}\" in page, but it wasn't found").format(str_output))
 
         return self
 

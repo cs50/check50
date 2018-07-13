@@ -22,7 +22,7 @@ import requests
 from termcolor import cprint
 import yaml
 
-from . import internal, __version__, simple
+from . import internal, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 
@@ -37,14 +37,14 @@ def excepthook(cls, exc, tb):
     if (issubclass(cls, Error) or issubclass(cls, push50.Error)) and exc.args:
         cprint(str(exc), "red", file=sys.stderr)
     elif cls is FileNotFoundError:
-        cprint(f"{exc.filename} not found", "red", file=sys.stderr)
+        cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
     elif cls is KeyboardInterrupt:
         cprint(f"check cancelled", "red")
     elif not issubclass(cls, Exception):
         # Class is some other BaseException, better just let it go
         return
     else:
-        cprint("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!", "red", file=sys.stderr)
+        cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
 
     if excepthook.verbose:
         traceback.print_exception(cls, exc, tb)
@@ -87,7 +87,7 @@ def print_ansi(results, log=False):
                 cprint(f"    {result.why['help']}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.why.get('rationale') or 'check skipped'}", "yellow")
+            cprint(f"    {result.why.get('rationale') or _('check skipped')}", "yellow")
 
         if log:
             for line in result.log:
@@ -110,7 +110,16 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise Error(f"failed to install dependencies from {dependencies}")
+            raise Error(_("failed to install dependencies"))
+
+
+def initialize_translations(config):
+    if not config:
+        return
+    from . import _translation
+    # TODO: check what languages are available to ensure that we don't get mixed output in the results. consult config["native"] for the language in which the checks are written.
+    checks_translation = gettext.translation(domain=config["domain"], localedir=config["localedir"])
+    _translation.add_fallback(checks_translation)
 
 
 def await_results(url, pings=45, sleep=2):
@@ -133,7 +142,7 @@ def await_results(url, pings=45, sleep=2):
     else:
         # Terminate if no response
         print()
-        raise Error(f"check50 is taking longer than normal!\nSee https://cs50.me/checks/{commit_hash} for more detail.")
+        raise Error(_("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
     print()
 
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
@@ -144,29 +153,28 @@ def await_results(url, pings=45, sleep=2):
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
-    parser.add_argument("slug", help="a slug identifying a check50 problem in the form of <org>/<repo>/<branch>/<problem>")
-    parser.add_argument("files", nargs="*")
+    parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help="run check50 in development mode (implies --offline and --verbose).\n"
-                             "causes SLUG to be interpreted as a literal path to a checks package")
+                        help=_("run check50 in development mode (implies --offline and --verbose).\n"
+                             "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
-                        help="run checks completely offline (implies --local)")
+                        help=_("run checks completely offline (implies --local)"))
     parser.add_argument("-l", "--local",
                         action="store_true",
-                        help="run checks locally instead of uploading to cs50 (enabled by default in beta version)")
+                        help=_("run checks locally instead of uploading to cs50 (enabled by default in beta version)"))
     parser.add_argument("--log",
                         action="store_true",
-                        help="display more detailed information about check results")
+                        help=_("display more detailed information about check results"))
     parser.add_argument("-o", "--output",
                         action="store",
                         default="ansi",
                         choices=["ansi", "json"],
-                        help="format of check results")
+                        help=_("format of check results"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
-                        help="display the full tracebacks of any errors (also implies --log)")
+                        help=_("display the full tracebacks of any errors (also implies --log)"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -176,8 +184,6 @@ def main():
     # TODO: remove this when submit.cs50.io API is stabilized
     args.local = True
 
-    if not args.files:
-        args.files = os.listdir(".")
 
     if args.dev:
         args.offline = True
@@ -201,14 +207,14 @@ def main():
             with open(internal.check_dir / ".cs50.yaml") as f:
                 config = yaml.safe_load(f.read()).get("check50", False)
             if not config:
-                raise Error(f"check50 has not been enabled for this identifier. "
-                             "Ensure that {internal.check_dir / 'cs50.yaml'} contains "
-                             " a 'check50' key.")
-        # Otherwise have push50 create a local copy of slug
+                raise Error(_("check50 has not been enabled for this identifier. "
+                              "Ensure that {} contains a 'check50' key.".format(internal.check_dir / 'cs50.yaml')))
+        # otherwise have push50 create a local copy of slug
         else:
-            internal.check_dir, config = push50.local(args.slug, "check50", offline=args.offline)
+            internal.check_dir = push50.local(args.slug, "check50", offline=args.offline)
 
-        config = internal.apply_default_config(config)
+        config = internal.load_config(internal.check_dir)
+        initialize_translations(config["translations"])
 
         if not args.offline:
             install_dependencies(config["dependencies"], verbose=args.verbose)
@@ -216,7 +222,7 @@ def main():
         checks_file = (internal.check_dir / config["checks"]).absolute()
 
         with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-            results = CheckRunner(checks_file, locale=config["locale"]).run(args.files)
+            results = CheckRunner(checks_file).run(os.listdir("."))
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")

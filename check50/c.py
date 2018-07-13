@@ -17,7 +17,7 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
     """
 
     if not files:
-        raise RuntimeError("compile requires at least one file")
+        raise RuntimeError(_("compile requires at least one file"))
 
     if exe_name is None and files[0].endswith(".c"):
         exe_name = Path(files[0]).stem
@@ -44,8 +44,9 @@ def valgrind(command):
 
 
 def _check_valgrind(xml_file):
+<<<<<<< HEAD
     """Log and report any errors encountered by valgrind."""
-    log("checking for valgrind errors... ")
+    log(_("checking for valgrind errors..."))
 
     # Load XML file created by valgrind
     xml = ET.ElementTree(file=xml_file)
@@ -68,7 +69,7 @@ def _check_valgrind(xml_file):
             if obj is not None and internal.run_dir in Path(obj.text).parents:
                 file, line = frame.find("file"), frame.find("line")
                 if file is not None and line is not None:
-                    msg.append(f": (file: {file.text}, line: {line.text})")
+                    msg.append(f": ({_('file')}: {file.text}, {_('line')}: {line.text})")
                 break
 
         msg = "".join(msg)
@@ -78,4 +79,4 @@ def _check_valgrind(xml_file):
 
     # Only raise exception if we encountered errors.
     if reported:
-        raise Failure("valgrind tests failed; rerun with --log for more information.")
+        raise Failure(_("valgrind tests failed; rerun with --log for more information."))

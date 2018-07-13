@@ -81,16 +81,16 @@ def _compile_check(name, check):
 
 def _validate(name, run):
     if run == "run":
-        raise CompileError("You forgot a - in front of run")
+        raise CompileError(_("You forgot a - in front of run"))
 
     for key in run:
         if key not in COMMANDS:
             raise UnsupportedCommand(
-                f"{key} is not a valid command in check {name}, use only: {list(COMMANDS.keys())}")
+                _("{} is not a valid command in check {}, use only: {}").format(key, name, COMMANDS))
 
     for required_command in ["run"]:
         if required_command not in run:
-            raise MissingCommand(f"Missing {required_command} in check {name}")
+            raise MissingCommand(_("Missing {} in check {}").format(required_name, name))
 
 
 def _preprocess(run):

@@ -5,6 +5,7 @@ import enum
 import functools
 import inspect
 import importlib
+import gettext
 import os
 from pathlib import Path
 import shutil
@@ -33,17 +34,19 @@ class CheckResult:
     log = attr.ib(default=[])
     why = attr.ib(default=None)
     data = attr.ib(default={})
+    dependency = attr.ib(default=None)
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
-        return cls(description=check.__doc__,
+        return cls(description=_(check.__doc__),
+                   dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
 
 
 class Timeout(Failure):
     def __init__(self, seconds):
-        super().__init__(rationale=f"check timed out after {seconds} second{'s' if seconds > 1 else ''}")
+        super().__init__(rationale=_("check timed out after {} seconds").format(seconds))
 
 
 @contextmanager
@@ -92,11 +95,11 @@ def check(dependency=None, timeout=60):
                 result.why = e.asdict()
             except BaseException as e:
                 result.status = Status.Skip
-                result.why = {"rationale": "check50 ran into an error while running checks!"}
+                result.why = {"rationale": _("check50 ran into an error while running checks!")}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
-                log("Contact sysadmins@cs50.harvard.edu with the URL of this check!")
+                log(_("Contact sysadmins@cs50.harvard.edu with the URL of this check!"))
             else:
                 result.status = Status.Pass
             finally:
@@ -109,10 +112,7 @@ def check(dependency=None, timeout=60):
 
 # Probably shouldn't be a class
 class CheckRunner:
-    def __init__(self, checks_path, locale=None):
-
-        if locale:
-            raise NotImplementedError("check50 does not yet support internationalization")
+    def __init__(self, checks_path, translations=None):
 
         # TODO: Naming the module "checks" is arbitray. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
@@ -173,16 +173,16 @@ class CheckRunner:
 
         for name in not_passed:
             self._skip_children(name, results)
+
         return results
 
     def _skip_children(self, check_name, results):
         """Recursively skip the children of check_name (presumably because check_name did not pass)."""
         for name, description in self.child_map[check_name]:
             if results[name] is None:
-                results[name] = CheckResult(description=description,
+                results[name] = CheckResult(description=_(description),
                                             status=Status.Skip,
-                                            why={"rationale": "can't check until a frown turns upside down",
-                                                 "dependency": check_name})
+                                            why={"rationale": _("can't check until a frown turns upside down")})
                 self._skip_children(name, results)
 
 

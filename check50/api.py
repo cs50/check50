@@ -1,4 +1,6 @@
 from contextlib import contextmanager
+import gettext
+import pkg_resources
 import hashlib
 import os
 import shutil
@@ -12,7 +14,6 @@ import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal
-
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -78,7 +79,7 @@ def hash(file):
     """
 
     exists(file)
-    log(f"Hashing {file}...")
+    log(_("hashing {}...").format(file))
 
     # https://stackoverflow.com/a/22058673
     with open(file, "rb") as f:
@@ -101,7 +102,7 @@ def exists(*paths):
 
     """
     for path in paths:
-        log(f"Checking that {path} exists...")
+        log(_("checking that {} exists...").format(path))
         if not os.path.exists(path):
             raise Failure(f"{path} not found")
 
@@ -130,14 +131,9 @@ def import_checks(path):
 
     """
     dir = internal.check_dir / path
-    name = dir.name
-
-    with open(dir / ".cs50.yaml") as f:
-        content = yaml.safe_load(f.read())["check50"]
-
-    file = internal.apply_default_config(content)["checks"]
-    mod = internal.import_file(name, (dir / file).resolve())
-    sys.modules[name] = mod
+    file = internal.load_config(dir)["checks"]
+    mod = internal.import_file(dir.name, (dir / file).resolve())
+    sys.modules[dir.name] = mod
     return mod
 
 
@@ -158,7 +154,7 @@ class run:
     """
 
     def __init__(self, command, env={}):
-        log(f"running {command}...")
+        log(_("running {}...").format(command))
 
         full_env = os.environ.copy()
         full_env.update(env)
@@ -185,13 +181,13 @@ class run:
         if line == EOF:
             log("sending EOF...")
         else:
-            log(f"sending input {line}...")
+            log(_("sending input {}...").format(line))
 
         if prompt:
             try:
                 self.process.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
-                raise Failure("expected prompt for input, found none")
+                raise Failure(_("expected prompt for input, found none"))
         try:
             if line == EOF:
                 self.process.sendeof()
@@ -230,10 +226,10 @@ class run:
             str_output = output
 
         if output == EOF:
-            log("checking for EOF...")
+            log(_("checking for EOF..."))
         else:
             output = output.replace("\n", "\r\n")
-            log(f"checking for output \"{str_output}\"...")
+            log(_("checking for output \"{}\"...").format(str_output))
 
         try:
             expect(output, timeout=timeout)
@@ -243,11 +239,11 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Failure(f"did not find {_raw(str_output)}")
+            raise Failure(_("did not find {}").format(_raw(str_output)))
         except UnicodeDecodeError:
-            raise Failure("output not valid ASCII text")
+            raise Failure(_("output not valid ASCII text"))
         except Exception:
-            raise Failure("check50 could not verify output")
+            raise Failure(_("check50 could not verify output"))
 
         # If we expected EOF and we still got output, report an error.
         if output == EOF and self.process.before:
@@ -264,14 +260,14 @@ class run:
         :raises check50.Failure: if process ends before ``timeout``
 
         """
-        log("checking that input was rejected...")
+        log(_("checking that input was rejected..."))
         try:
             self._wait(timeout)
         except Failure as e:
             if not isinstance(e.__cause__, TIMEOUT):
                 raise
         else:
-            raise Failure("expected program to reject input, but it did not")
+            raise Failure(_("expected program to reject input, but it did not"))
         return self
 
     def exit(self, code=None, timeout=5):
@@ -291,9 +287,9 @@ class run:
         if code is None:
             return self.exitcode
 
-        log(f"checking that program exited with status {code}...")
+        log(_("checking that program exited with status {}...").format(code))
         if self.exitcode != code:
-            raise Failure(f"expected exit code {code}, not {self.exitcode}")
+            raise Failure(_("expected exit code {}, not {}").format(code, self.exitcode))
         return self
 
     def kill(self):
@@ -314,11 +310,11 @@ class run:
             except EOF:
                 break
             except UnicodeDecodeError:
-                raise Failure("output not valid ASCII text")
+                raise Failure(_("output not valid ASCII text"))
             else:
                 out.append(bytes)
         else:
-            raise Failure("timed out while waiting for program to exit") from TIMEOUT(timeout)
+            raise Failure(_("timed out while waiting for program to exit")) from TIMEOUT(timeout)
 
         # Read any remaining data in pipe.
         while True:
@@ -333,7 +329,7 @@ class run:
         self.kill()
 
         if self.process.signalstatus == signal.SIGSEGV:
-            raise Failure("failed to execute program due to segmentation fault")
+            raise Failure(_("failed to execute program due to segmentation fault"))
 
         self.exitcode = self.process.exitstatus
         return self
@@ -391,7 +387,7 @@ class Mismatch(Failure):
 
     """
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=f"expected {_raw(expected)}, not {_raw(actual)}", help=help)
+        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
         self.expected = expected
         self.actual = actual
 

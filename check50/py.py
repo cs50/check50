@@ -15,7 +15,7 @@ def append_code(original, codefile):
 def import_(path):
     """Given a raw file path, import a module."""
     exists(path)
-    log(f"importing {path}...")
+    log(_("importing {}...").format(path))
     name = Path(path).stem
     try:
         return internal.import_file(name, path)
