@@ -134,7 +134,7 @@ class CheckRunner:
 
         # TODO: Check for deadlocks (Khan's algorithm?)
 
-    def run(self, files):
+    def run(self, files, working_area):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
@@ -145,31 +145,24 @@ class CheckRunner:
         results = {name: None for name in self.check_names}
         executor = futures.ProcessPoolExecutor()
 
-        with tempfile.TemporaryDirectory() as checks_root:
-            checks_root = Path(checks_root)
+        checks_root = working_area.parent
 
-            # Setup initial check environment
-            dst_dir = checks_root / "-"
-            os.mkdir(dst_dir)
-            for filename in files:
-                _copy(filename, dst_dir)
+        # Start all checks that have no dependencies
+        not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
+                       for name, _ in self.child_map[None])
+        not_passed = []
 
-            # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
-                           for name, _ in self.child_map[None])
-            not_passed = []
-
-            while not_done:
-                done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
-                for future in done:
-                    name, result, state = future.result()
-                    results[name] = result
-                    if result.status is Status.Pass:
-                        for child_name, _ in self.child_map[name]:
-                            not_done.add(executor.submit(
-                                run_check(child_name, self.checks_spec, checks_root, state)))
-                    else:
-                        not_passed.append(name)
+        while not_done:
+            done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
+            for future in done:
+                name, result, state = future.result()
+                results[name] = result
+                if result.status is Status.Pass:
+                    for child_name, _ in self.child_map[name]:
+                        not_done.add(executor.submit(
+                            run_check(child_name, self.checks_spec, checks_root, state)))
+                else:
+                    not_passed.append(name)
 
         for name in not_passed:
             self._skip_children(name, results)

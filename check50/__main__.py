@@ -54,8 +54,8 @@ def excepthook(cls, exc, tb):
 
 
 # Assume we should print tracebacks until we get command line arguments
-excepthook.verbose = True
-sys.excepthook = excepthook
+#excepthook.verbose = True
+#sys.excepthook = excepthook
 
 
 class Encoder(json.JSONEncoder):
@@ -101,7 +101,7 @@ def install_dependencies(dependencies, verbose=False):
         return
 
     stdout = stderr = None if verbose else subprocess.DEVNULL
-    with tempfile.NamedTemporaryFile() as req_file:
+    with tempfile.NamedTemporaryFile(mode="w") as req_file:
         req_file.writelines(dependencies)
         pip = ["pip", "install", "-r", req_file.name]
         # Unless we are in a virtualenv, we need --user
@@ -213,7 +213,7 @@ def main():
             if not config:
                 raise Error(_("check50 has not been enabled for this identifier. "
                               "Ensure that {} contains a 'check50' key.".format(internal.check_dir / 'cs50.yaml')))
-        # otherwise have push50 create a local copy of slug
+        # Otherwise have push50 create a local copy of slug
         else:
             internal.check_dir = push50.local(args.slug, "check50", offline=args.offline)
 
@@ -225,8 +225,13 @@ def main():
 
         checks_file = (internal.check_dir / config["checks"]).resolve()
 
-        with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-            results = CheckRunner(checks_file).run(os.listdir("."))
+        # Have push50 decide which files to include
+        included, excluded = push50.files(config)
+
+        # Create a working_area (temp dir) with all included studentfiles named -
+        with push50.working_area(included, name='-') as dir:
+            with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
+                results = CheckRunner(checks_file).run(os.listdir("."), dir)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
