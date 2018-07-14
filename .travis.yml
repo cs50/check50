@@ -11,6 +11,13 @@ script:
 - pip install .
 - pip install flask
 - python -m tests
+before_deploy: |
+  version="v$(check50 --version | cut --delimiter ' ' --fields 2)"
+  if [ -z "$(git tag --list "$version")" ]; then \
+      git config --local user.name "bot50"; \
+      git config --local user.email "bot@cs50.harvard.edu"; \
+      git tag "$version"; \
+  fi
 deploy:
 - provider: releases
   api_key: $GITHUB_TOKEN
