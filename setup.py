@@ -11,7 +11,6 @@ setup(
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
     license="GPLv3",
-    cmdclass=cmdclass,
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
