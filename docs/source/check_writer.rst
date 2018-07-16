@@ -355,7 +355,7 @@ Put something in stdin, expect it in stdout:
     @check50.check()
     def id():
         """id.py prints what you give it"""
-        check50.run("python3 hello.py").stdin("foo").stdout("foo").stdin("bar").stdout("bar")
+        check50.run("python3 hello.py").stdin("foo").stdout("foo").stdin("bar").stdout("bar").exit()
 
 Be helpful, check for common mistakes:
 

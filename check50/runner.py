@@ -65,7 +65,25 @@ def _timeout(seconds):
 
 
 def check(dependency=None, timeout=60):
-    """Decorator for checks."""
+    """Decorator used to denote a function as a check.
+
+    :param dependency: only run this check if ``dependency`` passes and inherit its filesystem
+    :type dependency: function
+    :param timeout: global timeout for check
+    :type timeout: int
+
+    Example usage::
+
+        @check50.check() # Mark 'exists' as a check
+        def exists():
+            \"\"\"hello.py exists\"\"\"
+            check50.exists("hello.py")
+
+        @check50.check(exists) # Mark 'prints_hello' as a check that depends on 'exists'
+        def prints_hello():
+            \"\"\"prints "hello, world\\n\"\"\"
+            check50.run("python3 hello.py").stdout("hello, world\n").exit(0)
+    """
     def decorator(check):
 
         # Modules are evaluated from the top of the file down, so _check_names will

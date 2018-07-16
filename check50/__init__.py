@@ -31,14 +31,14 @@ _set_version()
 _setup_translation()
 
 from .api import (
-        import_checks,
-        data, _data,
-        exists,
-        hash,
-        include,
-        run,
-        log, _log,
-        Failure, Mismatch
+    import_checks,
+    data, _data,
+    exists,
+    hash,
+    include,
+    run,
+    log, _log,
+    Failure, Mismatch
 )
 
 

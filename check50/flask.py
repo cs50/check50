@@ -55,9 +55,9 @@ class app:
         :param data: form data to include in request
         :type data: dict
         :param params: URL parameters to include in request
+        :type params: dict
         :param follow_redirects: enable redirection (defaults to ``True``)
         :type follow_redirects: bool
-        :returns: ``self``
         :raises check50.Failure: if Flask application throws an uncaught exception
 
         Example usage::
@@ -74,6 +74,7 @@ class app:
         :param data: form data to include in request
         :type data: dict
         :param params: URL parameters to include in request
+        :type params: dict
         :param follow_redirects: enable redirection (defaults to ``True``)
         :type follow_redirects: bool
         :raises check50.Failure: if Flask application throws an uncaught exception
