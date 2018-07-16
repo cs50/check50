@@ -64,7 +64,6 @@ def load_config(check_dir):
     translation_options = {
         "localedir": "locale",
         "domain": "messages",
-        "native": "en"
     }
 
     config_file = check_dir / ".cs50.yaml"
