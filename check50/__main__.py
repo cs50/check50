@@ -122,11 +122,8 @@ def install_translations(config):
     if not config:
         return
     from . import _translation
-    print(internal.check_dir / config["localedir"])
     # TODO: check what languages are available to ensure that we don't get mixed output in the results. consult config["native"] for the language in which the checks are written.
     checks_translation = gettext.translation(domain=config["domain"], localedir=internal.check_dir / config["localedir"], fallback=True)
-    print(config)
-    print(checks_translation)
     _translation.add_fallback(checks_translation)
 
 
@@ -235,7 +232,7 @@ def main():
         # Create a working_area (temp dir) with all included studentfiles named -
         with push50.working_area(included, name='-') as dir:
             with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-                results = CheckRunner(checks_file).run(os.listdir("."), dir)
+                results = CheckRunner(checks_file).run(push50.files(config)[0], dir)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
