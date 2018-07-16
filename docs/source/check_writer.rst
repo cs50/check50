@@ -213,6 +213,7 @@ You should now find the following ``__init__.py``:
 check50 will by default ignore and overwrite what is in ``__init__.py`` for as long as there are checks in ``.cs50.yaml``. To change this you have to edit ``.cs50.yaml`` to:
 
 .. code-block:: yaml
+
     check50:
       checks: __init__.py
 
