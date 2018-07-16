@@ -128,11 +128,25 @@ Require that both foo.py and bar.c are present and include them.
 dependencies:
 *************
 
+``dependencies:`` is a list of ``pip`` installable dependencies that check50 will install.
+
 .. code-block:: YAML
     :linenos:
 
     check50:
       checks: true
-      required:
-        - "foo.py"
-        - "bar.c"
+      dependencies:
+        - pyyaml
+        - flask
+
+Has check50 install both ``pyyaml`` and ``flask`` via ``pip``.
+
+.. code-block:: YAML
+    :linenos:
+
+    check50:
+      checks: true
+      dependencies:
+        - git+https://github.com/cs50/submit50#egg=submit50
+
+Has check50 ``pip install`` submit50 from GitHub, especially useful for projects that are not hosted on PyPi. See https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support for more info on installing from a VCS.
