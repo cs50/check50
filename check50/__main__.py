@@ -230,9 +230,9 @@ def main():
         included, excluded = push50.files(config)
 
         # Create a working_area (temp dir) with all included studentfiles named -
-        with push50.working_area(included, name='-') as dir:
+        with push50.working_area(included, name='-') as working_area:
             with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-                results = CheckRunner(checks_file).run(push50.files(config)[0], dir)
+                results = CheckRunner(checks_file).run(included, working_area)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
