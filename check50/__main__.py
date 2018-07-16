@@ -223,12 +223,12 @@ def main():
         checks_file = (internal.check_dir / config["checks"]).resolve()
 
         # Have push50 decide which files to include
-        included, excluded = push50.files(config)
+        included = push50.files(config)[0]
 
         # Create a working_area (temp dir) with all included studentfiles named -
-        with push50.working_area(included, name='-') as working_area:
-            with contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
-                results = CheckRunner(checks_file).run(included, working_area)
+        with push50.working_area(included, name='-') as working_area, \
+             contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
+            results = CheckRunner(checks_file).run(included, working_area)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
