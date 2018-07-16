@@ -45,6 +45,7 @@ Or in text, if you want to quickly copy-paste:
 
 .. code-block:: yaml
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks:
@@ -78,6 +79,7 @@ YAML checks in check50 all live in `.cs50.yaml` and start with a top-level key c
 
 .. code-block:: yaml
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks:
@@ -93,6 +95,7 @@ This code snippet defines three checks, named ``hello world``, ``foo`` and ``bar
 
 .. code-block:: yaml
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks:
@@ -131,14 +134,16 @@ In case you want to check for multiline input, you can make use of YAML's ``|`` 
 
 .. code-block:: yaml
     :linenos:
+    :caption: **.cs50.yaml**
 
-    checks:
-      multiline hello world:
-        - run: python3 multi_hello.py
-          stdout: | # expect Hello\nWorld!\n in stdout
-            Hello
-            World!
-          exit: 0
+    check50:
+      checks:
+        multiline hello world:
+          - run: python3 multi_hello.py
+            stdout: | # expect Hello\nWorld!\n in stdout
+              Hello
+              World!
+            exit: 0
 
 Developing locally
 ******************
@@ -190,6 +195,7 @@ As a result you should now find a file called ``__init__.py`` in the check direc
 
 .. code-block:: yaml
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks:
@@ -202,6 +208,7 @@ You should now find the following ``__init__.py``:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -213,6 +220,7 @@ You should now find the following ``__init__.py``:
 check50 will by default ignore and overwrite what is in ``__init__.py`` for as long as there are checks in ``.cs50.yaml``. To change this you have to edit ``.cs50.yaml`` to:
 
 .. code-block:: yaml
+    :caption: **.cs50.yaml**
 
     check50:
       checks: __init__.py
@@ -232,6 +240,7 @@ A Python check is made up as follows:
 
 .. code-block:: Python
     :linenos:
+    :caption: **__init__.py**
 
     import check50 # import the check50 module
 
@@ -249,6 +258,7 @@ check50 uses its check decorator to tag functions as checks. You can pass anothe
 
 .. code-block:: Python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -271,6 +281,7 @@ You can share state between checks if you make them dependent on each other. By 
 
 .. code-block:: Python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
     import check50.c
@@ -289,6 +300,7 @@ You can also share Python state between checks by returning what you want to sha
 
 .. code-block:: Python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -317,6 +329,7 @@ Check whether a file exists:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -329,6 +342,7 @@ Check stdout for an exact string:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     @check50.check(exists)
     def prints_hello_world():
@@ -339,6 +353,7 @@ Check stdout for a rough match:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     @check50.check(exists)
     def prints_hello():
@@ -350,6 +365,7 @@ Put something in stdin, expect it in stdout:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -362,6 +378,7 @@ Be helpful, check for common mistakes:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
     import re
@@ -386,6 +403,7 @@ Create your own assertions:
 
 .. code-block:: python
     :linenos:
+    :caption: **__init__.py**
 
     import check50
 
@@ -406,10 +424,11 @@ Check50, and other CS50 tools like submit50 and lab50, use a special configurati
 checks:
 *******
 
-``checks:`` takes either a truthy value to indicate that this slug is valid for check50, or a filename specifying a filename containing check50 Python checks, or a record of check50 YAML checks.
+``checks:`` takes either a truthy value to indicate that this slug is valid for check50, or a filename specifying a file containing check50 Python checks, or a record of check50 YAML checks.
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -418,6 +437,7 @@ Only specifies that this is a valid slug for check50. This configuration will al
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: "my_filename.py"
@@ -426,6 +446,7 @@ Specifies that this is a valid slug for check50, and has check50 look for ``my_f
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks:
@@ -444,6 +465,7 @@ exclude:
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -454,6 +476,7 @@ Excludes all files ending with ``.pyc``.
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -465,6 +488,7 @@ Exclude all files, but include all files ending with ``.py``. Note that order is
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -476,6 +500,7 @@ Exclude all files, but include all files in the source directory.
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -487,6 +512,7 @@ Include everything, but exclude everything in the build and docs directories.
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -499,6 +525,7 @@ Exclude everything, include everything from the source directory, but exclude al
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -515,6 +542,7 @@ required:
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -532,6 +560,7 @@ dependencies:
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
@@ -543,6 +572,7 @@ Has check50 install both ``pyyaml`` and ``flask`` via ``pip``.
 
 .. code-block:: YAML
     :linenos:
+    :caption: **.cs50.yaml**
 
     check50:
       checks: true
