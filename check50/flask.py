@@ -95,11 +95,11 @@ class app:
 
         Example usage::
 
-        check50.flask.app("application.py").status(200)
+            check50.flask.app("application.py").status(200)
 
-        status = check50.flask.app("application.py").get("/").status()
-        if status != 200:
-            raise check50.Failure(f"expected status code 200, but got {status}")
+            status = check50.flask.app("application.py").get("/").status()
+            if status != 200:
+                raise check50.Failure(f"expected status code 200, but got {status}")
 
         """
         if code is None:
