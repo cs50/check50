@@ -1,9 +1,6 @@
-import check50
+import pathlib
 import re
-import os
 import sys
-import imp
-import errno
 import urllib.parse as url
 
 from bs4 import BeautifulSoup
@@ -13,43 +10,98 @@ from . import internal
 
 
 class app:
-    """A flask app wrapper"""
-    def __init__(self, path):
-        dir, file = os.path.split(path)
-        name, _ = os.path.splitext(file)
+    """Spawn a Flask app.
+
+    :param path: path to python file containing Flask app
+    :param app_name: name of Flask app in file
+    :type path: str
+    :type env: str
+
+    Example usage::
+
+        check50.flask.app("application.py").get("/").status(200)
+    """
+    def __init__(self, path, app_name="app"):
+
+        path = pathlib.Path(path).resolve()
 
         # Add directory of flask app to sys.path so we can import it properly
         prevpath = sys.path[0]
         try:
-            sys.path[0] = os.path.abspath(dir or ".")
-            mod = internal.import_file(name, file)
+            sys.path[0] = str(path.parent)
+            mod = internal.import_file(path.stem, path.name)
         except FileNotFoundError:
-            raise Failure(_("could not find {}").format(file))
+            raise Failure(_("could not find {}").format(path.name))
         finally:
             # Restore sys.path
             sys.path[0] = prevpath
 
         try:
-            app = mod.app
+            app = getattr(mod, app_name)
         except AttributeError:
             raise Failure(_("{} does not contain an app").format(file))
 
         app.testing = True
         # Initialize flask client
-        self.client = app.test_client()
+        self._client = app.test_client()
 
         self.response = None
 
     def get(self, route, data=None, params=None, follow_redirects=True):
-        """Send GET request to `route`."""
+        """Send GET request to app.
+
+        :param route: route to send request to
+        :type route: str
+        :param data: form data to include in request
+        :type data: dict
+        :param params: URL parameters to include in request
+        :param follow_redirects: enable redirection (defaults to ``True``)
+        :type follow_redirects: bool
+        :returns: ``self``
+        :raises check50.Failure: if Flask application throws an uncaught exception
+
+        Example usage::
+
+            check50.flask.app("application.py").get("/buy", params={"q": "02138"}).content()
+        """
         return self._send("GET", route, data, params, follow_redirects=follow_redirects)
 
     def post(self, route, data=None, params=None, follow_redirects=True):
-        """Send POST request to `route`."""
+        """Send POST request to app.
+
+        :param route: route to send request to
+        :type route: str
+        :param data: form data to include in request
+        :type data: dict
+        :param params: URL parameters to include in request
+        :param follow_redirects: enable redirection (defaults to ``True``)
+        :type follow_redirects: bool
+        :raises check50.Failure: if Flask application throws an uncaught exception
+
+        Example usage::
+
+            check50.flask.app("application.py").post("/buy", data={"symbol": "GOOG", "shares": 10}).status(200)
+        """
+
         return self._send("POST", route, data, params, follow_redirects=follow_redirects)
 
     def status(self, code=None):
-        """Throw error if http status code doesn't equal 'code' or return the status code if 'code' is None."""
+        """Check status code in response returned by application.
+        If ``code`` is not None, assert that ``code`` is returned by application,
+        else simply return the status code.
+
+        :param code: ``code`` to assert that application returns
+        :type code: int
+
+        Example usage::
+
+        check50.flask.app("application.py").status(200)
+
+        status = check50.flask.app("application.py").get("/").status()
+        if status != 200:
+            raise check50.Failure(f"expected status code 200, but got {status}")
+
+        """
         if code is None:
             return self.response.status_code
 
@@ -79,7 +131,7 @@ class app:
         route = self._fmt_route(route, params)
         log(_("sending {} request to {}").format(method.upper(), route))
         try:
-            self.response = getattr(self.client, method.lower())(route, data=data, **kwargs)
+            self.response = getattr(self._client, method.lower())(route, data=data, **kwargs)
         except BaseException as e:  # Catch all exceptions thrown by app
             log(_("exception raised in application: {}: {}").format(type(e).__name__, e))
             raise Failure(_("application raised an exception (rerun with --log for more details)"))

@@ -37,6 +37,13 @@ def root():
             f.write(src)
 
         app = check50.flask.app("hello.py")
+        self.assertIsInstance(app, check50.flask.app)
+
+    def test_no_app(self):
+        with self.assertRaises(check50.Failure):
+            check50.flask.app("doesnt_exist.py")
+
+
 
 class TestFlask(Base):
     def test_status(self):

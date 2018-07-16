@@ -199,7 +199,7 @@ class run:
 
     def stdout(self, output=None, str_output=None, regex=True, timeout=3):
         """
-        Retrieve all output from stdout until timeout (3 sec by default)
+        Retrieve all output from stdout until timeout (3 sec by default). If ``output`` is None, ``stdout`` returns all of the stdout outputted by the process, else it returns ``self``.
 
         :param output: optional output to be expected from stdout, raises :class:`check50.Failure` if no match
         :type output: str
@@ -209,8 +209,16 @@ class run:
         :type regex: bool
         :param timeout: maximum number of seconds to wait for ``output``
         :type timeout: int / float
-        :raises check50.Failure: if ``output`` is given and nothing in stdout matches output before timeout
+        :raises check50.Mismatch: if ``output`` is specified and nothing that the process output matches it
+        :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
 
+        Example usage::
+
+            check50.run("./hello").stdout("[Hh]ello, world!?", "hello, world").exit()
+
+            output = check50.run("./hello").stdout()
+            if not re.match("[Hh]ello, world!?", output):
+                raise check50.Mismatch("hello, world", output)
         """
         if output is None:
             return self._wait(timeout)._output
@@ -272,14 +280,24 @@ class run:
 
     def exit(self, code=None, timeout=5):
         """
-        Wait for EOF or until timeout (5 sec by default), returns the exitcode
-        If code is given, matches exitcode vs code and raises Failure incase of mismatch
+        Wait for process to exit or until timeout (5 sec by default) and asserts that process exits with ``code``. If ``code`` is ``None``, returns the code the process exited with.
 
-        :param code: optional code to match the exitcode against, raises :class:`check50.Failure` if there is no match
+        ..note:: In order to ensure that spawned child processes do not outlive the check that spawned them, it is good practice to call either method (with no arguments if the exit code doesn't matter) or ``.kill()`` on every spawned process.
+
+        :param code: code to assert process exits with
         :type code: int
         :param timeout: maximum number of seconds to wait for the program to end
         :type timeout: int / float
         :raises check50.Failure: if ``code`` is given and does not match the actual exitcode within ``timeout``
+
+        Example usage::
+
+            check50.run("./hello").exit(0)
+
+            code = check50.run("./hello").exit()
+            if code != 0:
+                raise check50.Failure(f"expected exit code 0, not {code}")
+
 
         """
         self._wait(timeout)
@@ -293,7 +311,10 @@ class run:
         return self
 
     def kill(self):
-        """Kill the process."""
+        """Kill the process.
+
+        Child will first be sent a ``SIGHUP``, followed by a ``SIGINT`` and
+        finally a ``SIGKILL`` if it ignores the first two."""
         self.process.close(force=True)
         return self
 
@@ -337,7 +358,7 @@ class run:
 
 class Failure(Exception):
     """
-    Exception signifying check failure
+    Exception signifying check failure.
 
     :param rationale: message to be displayed capturing why the check failed
     :type rationale: str
@@ -367,7 +388,7 @@ class Failure(Exception):
 
 class Mismatch(Failure):
     """
-    Exception signifying check failure due to a mismatch
+    Exception signifying check failure due to a mismatch in expected and actual outputs.
 
     :param expected: the expected value
     :param actual: the actual value
