@@ -66,22 +66,18 @@ class Encoder(json.JSONEncoder):
             return "EOF"
         elif isinstance(o, Status):
             return o.value
-
-        return o.__dict__
+        elif isinstance(o, CheckResult):
+            return attr.asdict(o)
+        else:
+            return o.__dict__
 
 
 def print_json(results):
-    test_results = []
-    for name, result in results.items():
-        result = attr.asdict(result)
-        result["name"] = name
-        test_results.append(result)
-
-    json.dump({"results": test_results, "version": __version__}, sys.stdout, cls=Encoder)
+    json.dump({"results": list(results), "version": __version__}, sys.stdout, cls=Encoder)
 
 
 def print_ansi(results, log=False):
-    for result in results.values():
+    for result in results:
         if result.status is Status.Pass:
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
