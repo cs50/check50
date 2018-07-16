@@ -33,7 +33,7 @@ class CheckResult:
     description = attr.ib()
     status = attr.ib(default=None, converter=Status)
     log = attr.ib(default=[])
-    why = attr.ib(default=None)
+    cause = attr.ib(default=None)
     data = attr.ib(default={})
     dependency = attr.ib(default=None)
 
@@ -126,10 +126,10 @@ def check(dependency=None, timeout=60):
                     state = check(*args)
             except Failure as e:
                 result.status = Status.Fail
-                result.why = e.asdict()
+                result.cause = e.payload
             except BaseException as e:
                 result.status = Status.Skip
-                result.why = {"rationale": _("check50 ran into an error while running checks!")}
+                result.cause = {"rationale": _("check50 ran into an error while running checks!")}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
@@ -210,7 +210,7 @@ class CheckRunner:
                 results[name] = CheckResult(name=name, description=_(description),
                                             status=Status.Skip,
                                             dependency=check_name,
-                                            why={"rationale": _("can't check until a frown turns upside down")})
+                                            cause={"rationale": _("can't check until a frown turns upside down")})
                 self._skip_children(name, results)
 
 

@@ -376,15 +376,10 @@ class Failure(Exception):
     """
 
     def __init__(self, rationale, help=None):
-        self.rationale = rationale
-        self.help = help
+        self.payload = {"rationale": rationale, "help": help}
 
     def __str__(self):
-        return self.rationale
-
-    def asdict(self):
-        return {"rationale": self.rationale, "help": self.help}
-
+        return self.payload["rationale"]
 
 class Mismatch(Failure):
     """
@@ -409,13 +404,7 @@ class Mismatch(Failure):
     """
     def __init__(self, expected, actual, help=None):
         super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
-        self.expected = expected
-        self.actual = actual
-
-    def asdict(self):
-        return dict(expected=self.expected,
-                    actual=self.actual,
-                    **super().asdict())
+        self.payload.update({"expected": expected, "actual": actual})
 
 
 def _raw(s):

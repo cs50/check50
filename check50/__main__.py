@@ -82,13 +82,13 @@ def print_ansi(results, log=False):
             cprint(f":) {result.description}", "green")
         elif result.status is Status.Fail:
             cprint(f":( {result.description}", "red")
-            if result.why.get("rationale") is not None:
-                cprint(f"    {result.why['rationale']}", "red")
-            if result.why.get("help") is not None:
-                cprint(f"    {result.why['help']}", "red")
+            if result.cause.get("rationale") is not None:
+                cprint(f"    {result.cause['rationale']}", "red")
+            if result.cause.get("help") is not None:
+                cprint(f"    {result.cause['help']}", "red")
         elif result.status is Status.Skip:
             cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.why.get('rationale') or _('check skipped')}", "yellow")
+            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
 
         if log:
             for line in result.log:
