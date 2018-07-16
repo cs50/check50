@@ -282,7 +282,7 @@ class run:
         """
         Wait for process to exit or until timeout (5 sec by default) and asserts that process exits with ``code``. If ``code`` is ``None``, returns the code the process exited with.
 
-        .. note:: In order to ensure that spawned child processes do not outlive the check that spawned them, it is good practice to call either method (with no arguments if the exit code doesn't matter) or ``.kill()`` on every spawned process.
+        ..note:: In order to ensure that spawned child processes do not outlive the check that spawned them, it is good practice to call either method (with no arguments if the exit code doesn't matter) or ``.kill()`` on every spawned process.
 
         :param code: code to assert process exits with
         :type code: int

@@ -65,24 +65,39 @@ def _timeout(seconds):
 
 
 def check(dependency=None, timeout=60):
-    """Decorator used to denote a function as a check.
+    """Mark function as a check.
 
-    :param dependency: only run this check if ``dependency`` passes and inherit its filesystem
+    :param dependency: the check that this check depends on
     :type dependency: function
-    :param timeout: global timeout for check
+    :param timeout: maximum number of seconds the check can run
     :type timeout: int
+
+    When a check depends on another, the former will only run if the latter passes.
+    Additionally, the dependent check will inherit the filesystem of its dependency.
+    This is particularly useful when writing e.g., a ``compiles`` check that compiles a
+    student's program (and checks that it compiled successfully). Any checks that run the
+    student's program will logically depend on this check, and since they inherit the
+    resulting filesystem of the check, they will immidiately have access to the compiled
+    program without needing to recompile.
 
     Example usage::
 
         @check50.check() # Mark 'exists' as a check
         def exists():
-            \"\"\"hello.py exists\"\"\"
-            check50.exists("hello.py")
+            \"""hello.c exists\"""
+            check50.exists("hello.c")
 
-        @check50.check(exists) # Mark 'prints_hello' as a check that depends on 'exists'
+        @check50.check(exists) # Mark 'compiles' as a check that depends on 'exists'
+        def compiles():
+            \"""hello.c compiles\"""
+            check50.c.compile("hello.c")
+
+        @check50.check(compiles)
         def prints_hello():
-            \"\"\"prints "hello, world\\n\"\"\"
-            check50.run("python3 hello.py").stdout("hello, world\n").exit(0)
+            \"""prints "Hello, world!\\\\n\"""
+            # Since 'prints_hello', depends on 'compiles' it inherits the compiled binary
+            check50.run("./hello").stdout("[Hh]ello, world!?\\n", "hello, world\\n").exit()
+
     """
     def decorator(check):
 

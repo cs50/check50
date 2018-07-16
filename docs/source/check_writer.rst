@@ -356,7 +356,7 @@ Put something in stdin, expect it in stdout:
     @check50.check()
     def id():
         """id.py prints what you give it"""
-        check50.run("python3 hello.py").stdin("foo").stdout("foo").stdin("bar").stdout("bar").exit()
+        check50.run("python3 hello.py").stdin("foo").stdout("foo").stdin("bar").stdout("bar")
 
 Be helpful, check for common mistakes:
 
@@ -395,3 +395,16 @@ Create your own assertions:
         output = check50.run("python3 qux.py").stdout()
         if not any(answer in output for answer in ["foo", "bar", "baz"]):
             raise check50.Failure("no match found")
+
+
+
+Configuring check50
+*******************
+TODO
+.. todo: talk about ``.cs50.yaml`` specification
+
+Internationalizing checks
+******************************
+TODO
+.. todo: write tutorial on internationalizing checks. Extract messages with pygettext.py, compiling translations, etc.
+
