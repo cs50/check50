@@ -6,11 +6,15 @@ addons:
   apt:
     update: true
     packages: valgrind
-install: pip install --upgrade .
+install: 
+  - pip install --upgrade .
+  - pip install babel flask travis-sphinx
 script:
-- pip install .
-- pip install flask
-- python -m tests
+  # - python setup.py compile_catalog
+  - python -m tests
+  - travis-sphinx build
+after_success:
+  - travis-sphinx deploy --branches master,v3dev
 before_deploy: |
   version="v$(check50 --version | cut --delimiter ' ' --fields 2)"
   if [ -z "$(git tag --list "$version")" ]; then \
@@ -27,6 +31,7 @@ deploy:
 - provider: pypi
   user: "$PYPI_USERNAME"
   password: "$PYPI_PASSWORD"
+  skip_cleanup: true
   on:
     branch: master
 notifications:
