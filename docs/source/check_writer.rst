@@ -28,18 +28,18 @@ To get you started, the first thing you need to do is |register_github|. Once yo
 
    <a href="https://github.com/new" target="_blank">create a new git repo</a>
 
-.. image:: img/repo.png
+.. image:: _static/repo.png
 
 Creating a check and running it
 *******************************
 
 Your new repo should live at ``https://github.com/<user>/<repo>``, that is ``https://github.com/cs50/example_checks`` in our example. Once you have created your new repo, create a new file by clicking the `Create new file` button:
 
-.. image:: img/new_file.png
+.. image:: _static/new_file.png
 
 Then continue by creating the following `.cs50.yaml` file. All indentation is done by 2 spaces, as per YAML syntax.
 
-.. image:: img/new_yaml.png
+.. image:: _static/new_yaml.png
 
 Or in text, if you want to quickly copy-paste:
 
@@ -56,7 +56,7 @@ Or in text, if you want to quickly copy-paste:
 
 Note that you should create a directory like in the example above by typing: `example/.cs50.yaml`. Once you have populated the file with the code above. Scroll down the page and hit the commit button:
 
-.. image:: img/commit.png
+.. image:: _static/commit.png
 
 That's it! You know have a repo that check50 can use to check whether a python file called `hello.py` prints ``Hello, world!`` and exits with a ``0`` as exit code. To try it, simply execute:
 

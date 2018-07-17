@@ -14,7 +14,6 @@ install: pip install --upgrade .[develop]
 script:
   # - python setup.py compile_catalog
   - python -m tests
-  - mkdir docs/source/_static
   - travis-sphinx build
 after_success:
   - travis-sphinx deploy --branches master,v3dev
