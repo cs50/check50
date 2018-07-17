@@ -118,8 +118,9 @@ def install_translations(config):
     if not config:
         return
     from . import _translation
-    # TODO: check what languages are available to ensure that we don't get mixed output in the results. consult config["native"] for the language in which the checks are written.
-    checks_translation = gettext.translation(domain=config["domain"], localedir=internal.check_dir / config["localedir"], fallback=True)
+    checks_translation = gettext.translation(domain=config["domain"],
+                                             localedir=internal.check_dir / config["localedir"],
+                                             fallback=True)
     _translation.add_fallback(checks_translation)
 
 
