@@ -6,9 +6,11 @@ addons:
   apt:
     update: true
     packages: valgrind
-install: 
-  - pip install --upgrade .
+before_install:
   - pip install babel flask travis-sphinx
+  # TODO: remove when push50 is on pypi
+  - pip install git+git://github.com/cs50/push50
+install: pip install --upgrade .
 script:
   # - python setup.py compile_catalog
   - python -m tests
