@@ -188,6 +188,8 @@ class run:
                 self.process.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
                 raise Failure(_("expected prompt for input, found none"))
+            except UnicodeDecodeError:
+                raise Failure(_("output not valid ASCII text"))
         try:
             if line == EOF:
                 self.process.sendeof()
@@ -221,7 +223,8 @@ class run:
                 raise check50.Mismatch("hello, world", output)
         """
         if output is None:
-            return self._wait(timeout)._output
+            self._wait(timeout)
+            return "".join(self.process.before).replace("\r\n", "\n").lstrip("\n")
 
         try:
             output = output.read()
@@ -247,7 +250,7 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Failure(_("did not find {}").format(_raw(str_output)))
+            raise Failure(_("did not find \"{}\"").format(_raw(str_output)))
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
         except Exception:
@@ -319,34 +322,13 @@ class run:
         return self
 
     def _wait(self, timeout=5):
-        out = []
-        end = time.time() + timeout
-        while time.time() <= end:
-            if not self.process.isalive():
-                break
-            try:
-                bytes = self.process.read_nonblocking(size=1024, timeout=0)
-            except TIMEOUT:
-                pass
-            except EOF:
-                break
-            except UnicodeDecodeError:
-                raise Failure(_("output not valid ASCII text"))
-            else:
-                out.append(bytes)
-        else:
+        try:
+            self.process.expect(EOF, timeout=timeout)
+        except TIMEOUT:
             raise Failure(_("timed out while waiting for program to exit")) from TIMEOUT(timeout)
+        except UnicodeDecodeError:
+            raise Failure(_("output not valid ASCII text"))
 
-        # Read any remaining data in pipe.
-        while True:
-            try:
-                bytes = self.process.read_nonblocking(size=1024, timeout=0)
-            except (TIMEOUT, EOF):
-                break
-            else:
-                out.append(bytes)
-
-        self._output = "".join(out).replace("\r\n", "\n").lstrip("\n")
         self.kill()
 
         if self.process.signalstatus == signal.SIGSEGV:
@@ -403,7 +385,7 @@ class Mismatch(Failure):
 
     """
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
+        super().__init__(rationale=_("expected \"{}\", not \"{}\"").format(_raw(expected), _raw(actual)), help=help)
         self.payload.update({"expected": expected, "actual": actual})
 
 
@@ -420,7 +402,7 @@ def _raw(s):
     s = s[1:-1]  # Strip away quotation marks
     if len(s) > 15:
         s = s[:15] + "..."  # Truncate if too long
-    return "\"{}\"".format(s)
+    return s
 
 
 def _copy(src, dst):
