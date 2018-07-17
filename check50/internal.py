@@ -6,7 +6,7 @@ import importlib
 from pathlib import Path
 import sys
 
-import yaml
+import push50
 
 from . import simple
 
@@ -69,7 +69,7 @@ def load_config(check_dir):
     config_file = check_dir / ".cs50.yaml"
 
     with open(config_file) as f:
-        config = yaml.safe_load(f)["check50"]
+        config = push50.config.load(f.read(), "check50")
 
     if isinstance(config, dict):
         options.update(config)

@@ -21,7 +21,6 @@ import attr
 from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
-import yaml
 
 from . import internal, __version__, simple, api
 from .api import Failure
@@ -207,7 +206,8 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().resolve()
             with open(internal.check_dir / ".cs50.yaml") as f:
-                config = yaml.safe_load(f.read()).get("check50", False)
+                config = push50.config.load(f.read(), "check50")
+
             if not config:
                 raise Error(_("check50 has not been enabled for this identifier. "
                               "Ensure that {} contains a 'check50' key.".format(internal.check_dir / 'cs50.yaml')))
