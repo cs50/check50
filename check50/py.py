@@ -25,7 +25,7 @@ def append_code(original, codefile):
         check50.include("lookup.py")
 
         # Overwrite the lookup function in helpers.py with our own implementation.
-        check50.append_code("helpers.py", "lookup.py")
+        check50.py.append_code("helpers.py", "lookup.py")
     """
     with open(codefile) as code, open(original, "a") as o:
         o.write("\n")
