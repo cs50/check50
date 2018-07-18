@@ -56,10 +56,9 @@ def _compile_check(name, check):
     if check_name[0].isdigit():
         check_name = f"_{check_name}"
 
-
     if not re.match("\w+", check_name):
-        raise CompileError(f"{name} is not a valid name for a check, " \
-            "check names should consist only of alphanumeric characters, underscores, and spaces")
+        raise CompileError(_("{} is not a valid name for a check, "
+                             "check names should consist only of alphanumeric characters, underscores, and spaces").format(name))
 
     out = ["@check50.check()",
            f"def {check_name}():",

@@ -17,11 +17,13 @@ def _set_version():
     else:
         __version__ = dist.version
 
+
 def _setup_translation():
     import gettext
     from pkg_resources import resource_filename
     global _translation
-    _translation = gettext.translation("check50", resource_filename("check50", "locale"), fallback=True)
+    _translation = gettext.translation(
+        "check50", resource_filename("check50", "locale"), fallback=True)
     _translation.install()
 
 
@@ -45,4 +47,5 @@ from .api import (
 from .runner import check
 from pexpect import EOF
 
-__all__ = ["import_checks", "data", "exists", "hash", "include", "run", "log", "Failure", "Mismatch", "check", "EOF"]
+__all__ = ["import_checks", "data", "exists", "hash", "include",
+           "run", "log", "Failure", "Mismatch", "check", "EOF"]

@@ -93,6 +93,7 @@ def print_ansi(results, log=False):
             for line in result.log:
                 print(f"    {line}")
 
+
 def install_dependencies(dependencies, verbose=False):
     """Install all packages in dependency list via pip."""
 
@@ -143,7 +144,8 @@ def await_results(url, pings=45, sleep=2):
     else:
         # Terminate if no response
         print()
-        raise Error(_("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
+        raise Error(
+            _("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
     print()
 
     # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
@@ -151,9 +153,9 @@ def await_results(url, pings=45, sleep=2):
     return (CheckResult(**result) for result in payload["checks"]["results"])
 
 
-
 class LogoutAction(argparse.Action):
     """Hook into argparse to allow a logout flag"""
+
     def __init__(self, option_strings, dest=argparse.SUPPRESS, default=argparse.SUPPRESS, help=_("logout of check50")):
         super().__init__(option_strings, dest=dest, nargs=0, default=default, help=help)
 
@@ -174,7 +176,7 @@ def main():
     parser.add_argument("-d", "--dev",
                         action="store_true",
                         help=_("run check50 in development mode (implies --offline and --verbose).\n"
-                             "causes SLUG to be interpreted as a literal path to a checks package"))
+                               "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local)"))
@@ -201,7 +203,6 @@ def main():
 
     # TODO: remove this when submit.cs50.io API is stabilized
     args.local = True
-
 
     if args.dev:
         args.offline = True
@@ -245,7 +246,7 @@ def main():
 
         # Create a working_area (temp dir) with all included studentfiles named -
         with push50.working_area(included, name='-') as working_area, \
-             contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
+                contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
             results = CheckRunner(checks_file).run(included, working_area)
     else:
         # TODO: Remove this before we ship

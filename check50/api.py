@@ -164,7 +164,6 @@ class run:
         command = "bash -c {}".format(shlex.quote(command))
         self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
 
-
     def stdin(self, line, prompt=True, timeout=3):
         """
         Send line to stdin, optionally expect a prompt.
@@ -363,6 +362,7 @@ class Failure(Exception):
     def __str__(self):
         return self.payload["rationale"]
 
+
 class Mismatch(Failure):
     """
     Exception signifying check failure due to a mismatch in expected and actual outputs.
@@ -384,6 +384,7 @@ class Mismatch(Failure):
             raise check50.Mismatch("hello, world\\n", actual, help=help)
 
     """
+
     def __init__(self, expected, actual, help=None):
         super().__init__(rationale=_("expected \"{}\", not \"{}\"").format(_raw(expected), _raw(actual)), help=help)
         self.payload.update({"expected": expected, "actual": actual})

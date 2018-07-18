@@ -21,6 +21,7 @@ class app:
 
         check50.flask.app("application.py").get("/").status(200)
     """
+
     def __init__(self, path, app_name="app"):
 
         path = pathlib.Path(path).resolve()
@@ -118,7 +119,8 @@ class app:
     def content(self, output=None, str_output=None, **kwargs):
         """Searches for `output` regex within HTML page. kwargs are passed to BeautifulSoup's find function to filter for tags."""
         if self.response.mimetype != "text/html":
-            raise Failure(_("expected request to return HTML, but it returned {}").format(self.response.mimetype))
+            raise Failure(_("expected request to return HTML, but it returned {}").format(
+                self.response.mimetype))
 
         return self._search_page(
             output,
@@ -149,7 +151,8 @@ class app:
         regex = re.compile(output)
 
         if not match_fn(regex, content):
-            raise Failure(_("expected to find \"{}\" in page, but it wasn't found").format(str_output))
+            raise Failure(
+                _("expected to find \"{}\" in page, but it wasn't found").format(str_output))
 
         return self
 

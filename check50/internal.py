@@ -79,7 +79,6 @@ def load_config(check_dir):
             translation_options.update(options["translations"])
         options["translations"] = translation_options
 
-
     if isinstance(options["checks"], dict):
         with open(check_dir / "__init__.py", "w") as f:
             f.write(simple.compile(options["checks"]))
