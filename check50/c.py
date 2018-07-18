@@ -6,14 +6,37 @@ import xml.etree.cElementTree as ET
 from .api import run, log, Failure
 from . import internal
 
+#: Default compiler for :func:`check50.c.compile`
 CC = "clang"
+
+#: Default CFLAGS for :func:`check50.c.compile`
 CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 
 def compile(*files, exe_name=None, cc=CC, **cflags):
     """
-    Compile files to exe_name (files[0] minus .c by default)
-    Uses compiler: {CC} with compilers_flags: {CFLAGS} by default
+    Compile C source files.
+
+    :param files: filenames to be compiled
+    :param exe_name: name of resulting executable
+    :param cc: compiler to use (:data:`check50.c.CC` by default)
+    :param cflags: additional flags to pass to the compiler
+    :raises check50.Failure: if compilation failed (i.e., if the compiler returns a non-zero exit status).
+    :raises RuntimeError: if no filenames are specified
+
+    If ``exe_name`` is None, :func:`check50.c.compile` will default to the first
+    file specified sans the ``.c`` extension::
+
+
+        check50.c.compile("foo.c", "bar.c") # clang foo.c bar.c -o foo -std=c11 -ggdb -lm
+
+    Additional CFLAGS may be passed as keyword arguments like so::
+
+        check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c11 -ggdb -lm -lcs50
+
+    In the same vein, the default CFLAGS may be overriden via keyword arguments::
+
+        check50.c.compile("foo.c", "bar.c", std="c99", lm=False) # clang foo.c bar.c -o foo -std=c99 -ggdb
     """
 
     if not files:
@@ -34,13 +57,30 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
     run(f"{cc} {files}{out_flag}{flags}").exit(0)
 
 
-def valgrind(command):
-    """Run command with valgrind, checks for valgrind errors at the end of the check."""
+def valgrind(command, env={}):
+    """Run a command with valgrind.
+    :param command: command to be run
+    :type command: str
+    :param env: environment in which to run command
+    :type env: str
+    :raises check50.Failure: if, at the end of the check, valgrind reports any errors
+
+    This function works exactly like :func:`check50.run`, with the additional effect that ``command`` is run through
+    ``valgrind`` and ``valgrind``'s output is automatically reviewed at the end of the check for memory leaks and other
+    bugs. If ``valgrind`` reports any issues, the check is failed and student-friendly messages are printed to the log.
+
+    .. note: it is recommended that the student's code is compiled with the `-ggdb` flag so that additional information,
+    such as the file and line number at which the issue was detected can be included in the log as well.
+
+    Example usage::
+
+        check50.c.valgrind("./leaky").stdin("foo").stdout("bar").exit(0)
+    """
     xml_file = tempfile.NamedTemporaryFile()
     internal.register.after_check(lambda: _check_valgrind(xml_file))
 
     # Ideally we'd like for this whole command not to be logged.
-    return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}")
+    return run(f"valgrind --show-leak-kinds=all --xml=yes --xml-file={xml_file.name} -- {command}", env=env)
 
 
 def _check_valgrind(xml_file):
