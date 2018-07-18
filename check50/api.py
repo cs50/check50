@@ -224,7 +224,7 @@ class run:
         """
         if output is None:
             self._wait(timeout)
-            return "".join(self.process.before).replace("\r\n", "\n").lstrip("\n")
+            return self.process.before.replace("\r\n", "\n").lstrip("\n")
 
         try:
             output = output.read()
