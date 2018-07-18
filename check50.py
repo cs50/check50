@@ -585,6 +585,8 @@ class Child(object):
                 self.child.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
                 raise Error("expected prompt for input, found none")
+            except UnicodeDecodeError:
+                raise Error("output not valid ASCII text")
 
         if line == EOF:
             self.child.sendeof()
@@ -594,7 +596,8 @@ class Child(object):
 
     def stdout(self, output=None, str_output=None, timeout=3):
         if output is None:
-            return self.wait(timeout).output
+            self.wait(timeout)
+            return self.child.before.replace("\r\n", "\n").lstrip("\n")
 
         # Files should be interpreted literally, anything else shouldn't be.
         try:
@@ -656,36 +659,15 @@ class Child(object):
         return self
 
     def wait(self, timeout=5):
-        end = time.time() + timeout
-        while time.time() <= end:
-            if not self.child.isalive():
-                break
-            try:
-                bytes = self.child.read_nonblocking(size=1024, timeout=0)
-            except TIMEOUT:
-                pass
-            except EOF:
-                break
-            except UnicodeDecodeError:
-                raise Error("output not valid ASCII text")
-            else:
-                self.output.append(bytes)
-        else:
+        try:
+            self.child.expect(EOF, timeout=timeout)
+        except TIMEOUT:
             e = Error("timed out while waiting for program to exit")
             e.__context__ = TIMEOUT(timeout)
             raise e
+        except UnicodeDecodeError:
+            raise Failure(_("output not valid ASCII text"))
 
-
-        # Read any remaining data in pipe.
-        while True:
-            try:
-                bytes = self.child.read_nonblocking(size=1024, timeout=0)
-            except (TIMEOUT, EOF):
-                break
-            else:
-                self.output.append(bytes)
-
-        self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
         self.kill()
 
         if self.child.signalstatus == signal.SIGSEGV:
