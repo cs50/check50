@@ -1,4 +1,3 @@
-import push50
 import argparse
 import contextlib
 import gettext
@@ -19,6 +18,7 @@ import time
 
 import attr
 from pexpect.exceptions import EOF
+import push50
 import requests
 from termcolor import cprint
 
@@ -53,8 +53,8 @@ def excepthook(cls, exc, tb):
 
 
 # Assume we should print tracebacks until we get command line arguments
-#excepthook.verbose = True
-#sys.excepthook = excepthook
+excepthook.verbose = True
+sys.excepthook = excepthook
 
 
 class Encoder(json.JSONEncoder):
@@ -151,6 +151,22 @@ def await_results(url, pings=45, sleep=2):
     return (CheckResult(**result) for result in payload["checks"]["results"])
 
 
+
+class LogoutAction(argparse.Action):
+    """Hook into argparse to allow a logout flag"""
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, default=argparse.SUPPRESS, help=_("logout of check50")):
+        super().__init__(option_strings, dest=dest, nargs=0, default=default, help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        try:
+            push50.logout()
+        except push50.Error:
+            raise Error(_("failed to logout"))
+        else:
+            termcolor.cprint(_("logged out successfully"), "green")
+        parser.exit()
+
+
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
@@ -179,6 +195,7 @@ def main():
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
+    parser.add_argument("--logout", action=LogoutAction)
 
     args = parser.parse_args()
 
