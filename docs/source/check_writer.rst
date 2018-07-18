@@ -457,11 +457,14 @@ Specifies that this is a valid slug for check50, and has check50 look for ``my_f
 
 Specifies that this is a valid slug for check50, and has check50 compile and run the YAML check. For more on YAML checks in check50 see :ref:``check_writer``.
 
-********
-exclude:
-********
 
-``exclude:`` takes a list of patterns. These patterns are globbed and any matching files are excluded. If a pattern starts with ``!``, all files are included instead. The last item in the list wins. If and only if a pattern does not contain a ``/``, and starts with a ``*``, it is considered recursive in such a way that ``*.o`` will exclude all files in any directory ending with ``.o``. This special casing is just for convenience. Alternatively you could write ``**/*.o`` that is functionally identical to ``*.o``, or write ``./*.o`` if you only want to exclude files ending with ``.o`` from the top-level directory.
+******
+files:
+******
+
+``files:`` takes a list of files/patterns. Every item in the list must be tagged by either ``!include``, ``!exclude`` or ``!require``. All files matching a pattern tagged with ``!include`` are included and likewise for ``!exclude``. ``!require`` is similar to ``!include``, however it does not accept patterns, only filenames, and will cause ``check50`` to display an error if that file is missing. The list that is given to ``files:`` is processed top to bottom. Later items in ``files:`` win out over earlier items.
+
+The patterns that ``!include`` and ``!exclude`` accept are globbed, any matching files are added. check50 introduces one exception for convenience, similarly to how git treats .gitignore: If and only if a pattern does not contain a ``/``, and starts with a ``*``, it is considered recursive in such a way that ``*.o`` will exclude all files in any directory ending with ``.o``. This special casing is just for convenience. Alternatively you could write ``**/*.o`` that is functionally identical to ``*.o``, or write ``./*.o`` if you only want to exclude files ending with ``.o`` from the top-level directory.
 
 .. code-block:: YAML
     :linenos:
@@ -469,8 +472,8 @@ exclude:
 
     check50:
       checks: true
-      exclude:
-        - "*.pyc"
+      files:
+        - !exclude "*.pyc"
 
 Excludes all files ending with ``.pyc``.
 
@@ -480,9 +483,9 @@ Excludes all files ending with ``.pyc``.
 
     check50:
       checks: true
-      exclude:
-        - "*"
-        - "!*.py"
+      files:
+        - !exclude "*"
+        - !include "*.py"
 
 Exclude all files, but include all files ending with ``.py``. Note that order is important here, if you would inverse the two lines it would read: include all files ending with ``.py``, exclude everything. Effectively excluding everything!
 
@@ -492,9 +495,9 @@ Exclude all files, but include all files ending with ``.py``. Note that order is
 
     check50:
       checks: true
-      exclude:
-        - "*"
-        - "!source/"
+      files:
+        - !exclude "*"
+        - !include "source/"
 
 Exclude all files, but include all files in the source directory.
 
@@ -504,9 +507,9 @@ Exclude all files, but include all files in the source directory.
 
     check50:
       checks: true
-      exclude:
-        - "build/"
-        - "docs/"
+      files:
+        - !exclude "build/"
+        - !exclude "docs/"
 
 Include everything, but exclude everything in the build and docs directories.
 
@@ -516,10 +519,10 @@ Include everything, but exclude everything in the build and docs directories.
 
     check50:
       checks: true
-      exclude:
-        - "*"
-        - "!source/"
-        - "!*.pyc"
+      files:
+        - !exclude "*"
+        - !include "source/"
+        - !exclude "*.pyc"
 
 Exclude everything, include everything from the source directory, but exclude all files ending with ``.pyc``.
 
@@ -529,16 +532,10 @@ Exclude everything, include everything from the source directory, but exclude al
 
     check50:
       checks: true
-      exclude:
-        - "source/**/*.pyc"
+      files:
+        - !exclude "source/**/*.pyc"
 
 Include everything, but any files ending on ``.pyc`` within the source directory. The ``**`` here pattern matches any directory.
-
-*********
-required:
-*********
-
-``required:`` takes a list of filenames that are required. If any such file are not present when checking, check50 will report that the file is missing and not run any checks. ``required:`` takes precedence over ``exclude:``, thus any files in ``required:`` are always included.
 
 .. code-block:: YAML
     :linenos:
@@ -546,11 +543,25 @@ required:
 
     check50:
       checks: true
-      required:
-        - "foo.py"
-        - "bar.c"
+      files:
+        - !require "foo.py"
+        - !require "bar.c"
 
 Require that both foo.py and bar.c are present and include them.
+
+.. code-block:: YAML
+    :linenos:
+    :caption: **.cs50.yaml**
+
+    check50:
+      checks: true
+      files:
+        - !exclude "*"
+        - !include "*.py"
+        - !require "foo.py"
+        - !require "bar.c"
+
+Exclude everything, include all files ending with ``.py`` and require (and include) both foo.py and bar.c. It is generally recommended to place any ``!require``d files at the end of the ``files:``, this ensures they are always included. 
 
 *************
 dependencies:
