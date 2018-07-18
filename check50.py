@@ -666,7 +666,7 @@ class Child(object):
             e.__context__ = TIMEOUT(timeout)
             raise e
         except UnicodeDecodeError:
-            raise Failure(_("output not valid ASCII text"))
+            raise Error("output not valid ASCII text")
 
         self.kill()
 
