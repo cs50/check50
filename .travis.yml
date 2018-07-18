@@ -6,17 +6,14 @@ addons:
   apt:
     update: true
     packages: valgrind
-before_install:
-  - pip install babel flask travis-sphinx
-  # TODO: remove when push50 is on pypi
-  - pip install git+git://github.com/cs50/push50
+before_install: pip install babel flask travis-sphinx
 install: pip install --upgrade .[develop]
 script:
   # - python setup.py compile_catalog
   - python -m tests
   - travis-sphinx build
-# TODO: remove branches flag when we actually deploy
-after_success: travis-sphinx deploy --branches master,v3dev
+# TODO: remove branches flag when we actually deploy to master
+after_success: travis-sphinx deploy --branches master,develop
 before_deploy: |
   version="v$(check50 --version | cut --delimiter ' ' --fields 2)"
   if [ -z "$(git tag --list "$version")" ]; then \
