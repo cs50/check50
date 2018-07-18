@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import errno
@@ -247,6 +248,7 @@ def print_json(results):
             pass
 
         output.append(obj)
+
     print(json.dumps(output, cls=Encoder))
 
 
@@ -583,6 +585,8 @@ class Child(object):
                 self.child.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
                 raise Error("expected prompt for input, found none")
+            except UnicodeDecodeError:
+                raise Error("output not valid ASCII text")
 
         if line == EOF:
             self.child.sendeof()
@@ -592,7 +596,8 @@ class Child(object):
 
     def stdout(self, output=None, str_output=None, timeout=3):
         if output is None:
-            return self.wait(timeout).output
+            self.wait(timeout)
+            return self.child.before.replace("\r\n", "\n").lstrip("\n")
 
         # Files should be interpreted literally, anything else shouldn't be.
         try:
@@ -631,17 +636,15 @@ class Child(object):
 
         return self
 
-    def reject(self, timeout=3):
+    def reject(self, timeout=1):
         self.test.log.append("checking that input was rejected...")
         try:
-            self.child.expect(".+", timeout=timeout)
-            self.child.sendline("")
-        except EOF:
-            raise Error("expected prompt for input, found none")
-        except OSError:
-            self.test.fail()
-        except TIMEOUT:
-            raise Error("timed out while waiting for input to be rejected")
+            self.wait(timeout)
+        except Error as e:
+            if not isinstance(e.__context__, TIMEOUT):
+                raise
+        else:
+            raise Error("expected program to reject input, but it did not")
         return self
 
     def exit(self, code=None, timeout=5):
@@ -656,33 +659,15 @@ class Child(object):
         return self
 
     def wait(self, timeout=5):
-        end = time.time() + timeout
-        while time.time() <= end:
-            if not self.child.isalive():
-                break
-            try:
-                bytes = self.child.read_nonblocking(size=1024, timeout=0)
-            except TIMEOUT:
-                pass
-            except EOF:
-                break
-            except UnicodeDecodeError:
-                raise Error("output not valid ASCII text")
-            else:
-                self.output.append(bytes)
-        else:
-            raise Error("timed out while waiting for program to exit")
+        try:
+            self.child.expect(EOF, timeout=timeout)
+        except TIMEOUT:
+            e = Error("timed out while waiting for program to exit")
+            e.__context__ = TIMEOUT(timeout)
+            raise e
+        except UnicodeDecodeError:
+            raise Failure(_("output not valid ASCII text"))
 
-        # Read any remaining data in pipe.
-        while True:
-            try:
-                bytes = self.child.read_nonblocking(size=1024, timeout=0)
-            except (TIMEOUT, EOF):
-                break
-            else:
-                self.output.append(bytes)
-
-        self.output = "".join(self.output).replace("\r\n", "\n").lstrip("\n")
         self.kill()
 
         if self.child.signalstatus == signal.SIGSEGV:
@@ -771,10 +756,7 @@ class Checks(unittest.TestCase):
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
         cmd = "bash -c {}".format(quote(cmd))
-        if sys.version_info < (3, 0):
-            child = pexpect.spawn(cmd, echo=False, env=env)
-        else:
-            child = pexpect.spawnu(cmd, encoding="utf-8", echo=False, env=env)
+        child = pexpect.spawn(cmd, echo=False, encoding="utf-8", env=env)
 
         self.children.append(Child(self, child))
         return self.children[-1]
