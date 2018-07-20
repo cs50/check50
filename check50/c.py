@@ -69,12 +69,14 @@ def valgrind(command, env={}):
     ``valgrind`` and ``valgrind``'s output is automatically reviewed at the end of the check for memory leaks and other
     bugs. If ``valgrind`` reports any issues, the check is failed and student-friendly messages are printed to the log.
 
-    .. note: it is recommended that the student's code is compiled with the `-ggdb` flag so that additional information,
-    such as the file and line number at which the issue was detected can be included in the log as well.
-
     Example usage::
 
         check50.c.valgrind("./leaky").stdin("foo").stdout("bar").exit(0)
+
+    .. note::
+        It is recommended that the student's code is compiled with the `-ggdb`
+        flag so that additional information, such as the file and line number at which
+        the issue was detected can be included in the log as well.
     """
     xml_file = tempfile.NamedTemporaryFile()
     internal.register.after_check(lambda: _check_valgrind(xml_file))
