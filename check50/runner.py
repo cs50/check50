@@ -177,26 +177,25 @@ class CheckRunner:
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
         results = {name: None for name in self.check_names}
-        executor = futures.ProcessPoolExecutor()
-
         checks_root = working_area.parent
+        with futures.ProcessPoolExecutor() as executor:
 
-        # Start all checks that have no dependencies
-        not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
-                       for name, _ in self.child_map[None])
-        not_passed = []
+            # Start all checks that have no dependencies
+            not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
+                           for name, _ in self.child_map[None])
+            not_passed = []
 
-        while not_done:
-            done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
-            for future in done:
-                result, state = future.result()
-                results[result.name] = result
-                if result.status is Status.Pass:
-                    for child_name, _ in self.child_map[result.name]:
-                        not_done.add(executor.submit(
-                            run_check(child_name, self.checks_spec, checks_root, state)))
-                else:
-                    not_passed.append(result.name)
+            while not_done:
+                done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
+                for future in done:
+                    result, state = future.result()
+                    results[result.name] = result
+                    if result.status is Status.Pass:
+                        for child_name, _ in self.child_map[result.name]:
+                            not_done.add(executor.submit(
+                                run_check(child_name, self.checks_spec, checks_root, state)))
+                    else:
+                        not_passed.append(result.name)
 
         for name in not_passed:
             self._skip_children(name, results)
