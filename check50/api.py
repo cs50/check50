@@ -104,7 +104,7 @@ def exists(*paths):
     for path in paths:
         log(_("checking that {} exists...").format(path))
         if not os.path.exists(path):
-            raise Failure(f"{path} not found")
+            raise Failure(_("{} not found").format(path))
 
 
 def import_checks(path):
