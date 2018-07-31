@@ -122,7 +122,7 @@ def check(dependency=None, timeout=60):
 
                 # Run registered functions before/after running check
                 with internal.register, _timeout(seconds=timeout):
-                    args = (dependency_state,) if inspect.getargspec(check).args else ()
+                    args = (dependency_state,) if inspect.getfullargspec(check).args else ()
                     state = check(*args)
             except Failure as e:
                 result.status = Status.Fail

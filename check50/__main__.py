@@ -26,7 +26,7 @@ from . import internal, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 
-push50.LOCAL_PATH = "~/.local/share/check50"
+push50.api.LOCAL_PATH = "~/.local/share/check50"
 
 
 class Error(Exception):
@@ -245,8 +245,15 @@ def main():
         included = push50.files(config)[0]
 
         # Create a working_area (temp dir) with all included studentfiles named -
+        if args.verbose:
+            stdout = sys.stdout
+            stderr = sys.stderr
+        else:
+            stdout = stderr = open(os.devnull, "w")
+
         with push50.working_area(included, name='-') as working_area, \
-                contextlib.redirect_stdout(sys.stdout if args.verbose else open(os.devnull, "w")):
+                contextlib.redirect_stdout(stdout), \
+                contextlib.redirect_stderr(stderr):
             results = CheckRunner(checks_file).run(included, working_area)
     else:
         # TODO: Remove this before we ship

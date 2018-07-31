@@ -2,6 +2,7 @@ import pathlib
 import re
 import sys
 import urllib.parse as url
+import warnings
 
 from bs4 import BeautifulSoup
 
@@ -122,10 +123,15 @@ class app:
             raise Failure(_("expected request to return HTML, but it returned {}").format(
                 self.response.mimetype))
 
+        # TODO: Remove once beautiful soup updates to accomodate python 3.7
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            content = BeautifulSoup(self.response.data, "html.parser")
+
         return self._search_page(
             output,
             str_output,
-            BeautifulSoup(self.response.data, "html.parser"),
+            content,
             lambda regex, content: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)))
 
     def _send(self, method, route, data, params, **kwargs):
