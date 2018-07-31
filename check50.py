@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import argparse
 import errno
 import hashlib
-import imp
 import inspect
 import json
 import os
@@ -21,7 +20,13 @@ import tempfile
 import time
 import traceback
 import unittest
+import warnings
 import xml.etree.cElementTree as ET
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    import imp
+
 
 from backports.shutil_which import which
 from bs4 import BeautifulSoup
@@ -514,10 +519,14 @@ class App(object):
             raise Error("expected request to return HTML, but it returned {}".format(
                 self.response.mimetype))
 
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning)
+            content = BeautifulSoup(self.response.data, "html.parser")
+
         return self._search_page(
             output,
             str_output,
-            BeautifulSoup(self.response.data, "html.parser"),
+            content,
             lambda regex, content, **kwargs: any(regex.search(str(tag)) for tag in content.find_all(**kwargs)))
 
     def _send(self, method, route, data, params, **kwargs):
