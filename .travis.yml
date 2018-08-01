@@ -34,7 +34,7 @@ deploy:
   on:
     branch: master
 - provider: script
-  script: 'curl --silent --request POST --header "Content-Type\: application/json" --header "Travis-API-Version\: token $TRAVIS_TOKEN" --data \'{"request"\: "master"}}\' https\://api.travis-ci.org/repo/cs50%2Fmanual50/requests'
+  script: 'curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data "{ \"request\": { \"branch\": \"master\" } }" "https://api.travis-ci.org/repo/cs50%2Fmanual50/requests"'
   on: v3dev
 notifications:
   slack:
