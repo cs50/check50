@@ -35,12 +35,8 @@ deploy:
     branch: master
 - provider: script
   script: |
-    curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data '{"request": {"branch": "master"}}' https://api.travis-ci.com/repo/cs50%2Fmanual50/requests 
+    curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data '{"request": {"branch": "master"}}' https://api.travis-ci.org/repo/cs50%2Fmanual50/requests 
   on: v3dev
-  # - provider: releases
-#   on:
-#     branch: v3dev
-#   script: 'curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data \'{"request": {"branch": "master"}}\' https://api.travis-ci.com/repo/cs50%2Fmanual50/requests'
 notifications:
   slack:
     secure: DHyiOOI74L9aIi2raGNpsGpyNC5STBci9HvL22l+ujl0h4rcT3fg50Gj9tTtvlKsJwe+gGMx8nXwZZRO/d6uuBlr5Sez3DcBaQbC5YRJQDAxorL4R8ay+2hGtU00dMzH4mtfJwiH9lISfXf+L5nXDqisckN6KtcwHh8hRrK6wjU35D035aIKoWvKcZYA5hhc9uE6D+LV+mVMr7AK9mUDUl3kpzbc9KChRgjyP893rpEKInVbQeZtpT96v0/yyM3ef1l+x9trw7dHZWy2OfXcP4VG6SFywCls8vt4fAeIm50mpHOr11R6QScRmjB562xVt3BU1fwKjSv57nZ/N7IiNAQ97WY8LAanHQQosfESahHbXYFQ0RpPVXfdwEhQetlUuh32w5uJNqZ0Nx/CjoMO4cToTeNsYCeCIIFNKjlFLfbfuJsGqWxb3g9EgtRAYhVQSok1fNPJNbfx3SfA5ZhCFv1t8HGZADXrN0wRPblygVSyG1ELUb3KWbdQ5XtE5S+Dr2r2YVcbrVgc6OQ60g6CowItzcz91K2DFbWyUQoSHMH6iLrqa3hOBRCKsnv4YBRwn0O5B4+KmfuJBz+xj1qmlUw7YAWMmu2PUoM/X9NS+NTzE85IyQY2/KTWeqK02ixyKPqj8+vqsC8mLEz9PHJjQcaBWaGIQUNTDNIKHcUtDVA=
