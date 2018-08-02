@@ -17,8 +17,8 @@ import traceback
 import time
 
 import attr
+import lib50
 from pexpect.exceptions import EOF
-import push50
 import requests
 from termcolor import cprint
 
@@ -26,7 +26,7 @@ from . import internal, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, Status, CheckResult
 
-push50.api.LOCAL_PATH = "~/.local/share/check50"
+lib50.api.LOCAL_PATH = "~/.local/share/check50"
 
 
 class Error(Exception):
@@ -34,7 +34,7 @@ class Error(Exception):
 
 
 def excepthook(cls, exc, tb):
-    if (issubclass(cls, Error) or issubclass(cls, push50.Error)) and exc.args:
+    if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
         cprint(str(exc), "red", file=sys.stderr)
     elif cls is FileNotFoundError:
         cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
@@ -161,8 +161,8 @@ class LogoutAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         try:
-            push50.logout()
-        except push50.Error:
+            lib50.logout()
+        except lib50.Error:
             raise Error(_("failed to logout"))
         else:
             termcolor.cprint(_("logged out successfully"), "green")
@@ -212,9 +212,9 @@ def main():
         args.local = True
 
     if args.verbose:
-        # Show push50 commands being run in verbose mode
+        # Show lib50 commands being run in verbose mode
         logging.basicConfig(level="INFO")
-        push50.ProgressBar.DISABLED = True
+        lib50.ProgressBar.DISABLED = True
         args.log = True
 
     excepthook.verbose = args.verbose
@@ -224,14 +224,14 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().resolve()
             with open(internal.check_dir / ".cs50.yaml") as f:
-                config = push50.config.load(f.read(), "check50")
+                config = lib50.config.load(f.read(), "check50")
 
             if not config:
                 raise Error(_("check50 has not been enabled for this identifier. "
                               "Ensure that {} contains a 'check50' key.".format(internal.check_dir / 'cs50.yaml')))
-        # Otherwise have push50 create a local copy of slug
+        # Otherwise have lib50 create a local copy of slug
         else:
-            internal.check_dir = push50.local(args.slug, "check50", offline=args.offline)
+            internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
         install_translations(config["translations"])
@@ -241,8 +241,8 @@ def main():
 
         checks_file = (internal.check_dir / config["checks"]).resolve()
 
-        # Have push50 decide which files to include
-        included = push50.files(config)[0]
+        # Have lib50 decide which files to include
+        included = lib50.files(config.get("files"))[0]
 
         # Create a working_area (temp dir) with all included studentfiles named -
         if args.verbose:
@@ -251,14 +251,14 @@ def main():
         else:
             stdout = stderr = open(os.devnull, "w")
 
-        with push50.working_area(included, name='-') as working_area, \
+        with lib50.working_area(included, name='-') as working_area, \
                 contextlib.redirect_stdout(stdout), \
                 contextlib.redirect_stderr(stderr):
             results = CheckRunner(checks_file).run(included, working_area)
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        username, commit_hash = push50.push(org="check50", slug=args.slug, tool="check50")
+        username, commit_hash = lib50.push(org="check50", slug=args.slug, tool="check50")
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":
