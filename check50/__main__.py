@@ -223,14 +223,8 @@ def main():
         # If developing, assume slug is a path to check_dir
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().resolve()
-            with open(internal.check_dir / ".cs50.yaml") as f:
-                config = lib50.config.load(f.read(), "check50")
-
-            if not config:
-                raise Error(_("check50 has not been enabled for this identifier. "
-                              "Ensure that {} contains a 'check50' key.".format(internal.check_dir / 'cs50.yaml')))
-        # Otherwise have lib50 create a local copy of slug
         else:
+            # Otherwise have lib50 create a local copy of slug
             internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.load_config(internal.check_dir)

@@ -6,7 +6,7 @@ import importlib
 from pathlib import Path
 import sys
 
-import push50
+import lib50
 
 from . import simple
 
@@ -69,7 +69,7 @@ def load_config(check_dir):
     config_file = check_dir / ".cs50.yaml"
 
     with open(config_file) as f:
-        config = push50.config.load(f.read(), "check50")
+        config = lib50.config.load(f.read(), "check50")
 
     if isinstance(config, dict):
         options.update(config)
