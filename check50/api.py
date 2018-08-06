@@ -1,15 +1,11 @@
-from contextlib import contextmanager
-import gettext
-import pkg_resources
 import hashlib
 import os
+import shlex
 import shutil
 import signal
 import sys
 import time
-import importlib
-import yaml
-import shlex
+
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
