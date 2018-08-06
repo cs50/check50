@@ -32,9 +32,9 @@ class CheckResult:
     name = attr.ib()
     description = attr.ib()
     status = attr.ib(default=None, converter=Status)
-    log = attr.ib(default=[])
+    log = attr.ib(default=attr.Factory(list))
     cause = attr.ib(default=None)
-    data = attr.ib(default={})
+    data = attr.ib(default=attr.Factory(dict))
     dependency = attr.ib(default=None)
 
     @classmethod
