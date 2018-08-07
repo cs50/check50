@@ -1,5 +1,5 @@
-Welcome to check50's documentation!
-===================================
+``check50``
+===========
 
 .. toctree::
    :hidden:
