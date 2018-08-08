@@ -14,7 +14,7 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["attrs>=18", "bs4", "pexpect", "lib50", "pyyaml", "requests", "termcolor"],
+    install_requires=["attrs>=18", "bs4", "pexpect", "lib50>=1.0.1", "pyyaml", "requests", "termcolor"],
     extras_require = {
         "develop": ["sphinx", "sphinx_rtd_theme"]
     },

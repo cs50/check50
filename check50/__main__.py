@@ -252,7 +252,7 @@ def main():
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        username, commit_hash = lib50.push(org="check50", slug=args.slug, tool="check50")
+        username, commit_hash = lib50.push("check50", args.slug)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":
