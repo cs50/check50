@@ -72,7 +72,8 @@ class Encoder(json.JSONEncoder):
 
 
 def print_json(results):
-    json.dump({"results": list(results), "version": __version__}, sys.stdout, cls=Encoder)
+    json.dump({"results": list(results), "version": __version__}, sys.stdout, cls=Encoder, indent=4)
+    print()
 
 
 def print_ansi(results, log=False):
