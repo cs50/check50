@@ -224,6 +224,8 @@ def main():
         # If developing, assume slug is a path to check_dir
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().resolve()
+            if not internal.check_dir.is_dir():
+                raise Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
             internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
