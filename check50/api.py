@@ -48,7 +48,8 @@ def data(**kwargs):
 
 def include(*paths):
     """
-    Copy files/directories from the check directory (:data:`check50.internal.check_dir`), to the current directory
+    Copy files/directories from the check directory (:data:`check50.internal.check_dir`),
+    to the current directory
 
     :params paths: files/directories to be copied
 
@@ -142,7 +143,8 @@ class run:
     :type command: str
     :type env: dict
 
-    By default, the command will be run using the same environment as ``check50``, these mappings may be overriden via the ``env`` parameter::
+    By default, the command will be run using the same environment as ``check50``,
+    these mappings may be overriden via the ``env`` parameter::
 
         check50.run("./foo").stdin("foo").stdout("bar").exit(0)
         check50.run("./foo", env={ "HOME": "/" }).stdin("foo").stdout("bar").exit(0)
@@ -166,7 +168,9 @@ class run:
 
         :param line: line to be send to stdin
         :type line: str
-        :param prompt: boolean indicating whether a prompt is expected, if True absorbs all of stdout before inserting line into stdin and raises :class:`check50.Failure` if stdout is empty
+        :param prompt: boolean indicating whether a prompt is expected, if True absorbs \
+                       all of stdout before inserting line into stdin and raises \
+                       :class:`check50.Failure` if stdout is empty
         :type prompt: bool
         :param timeout: maximum number of seconds to wait for prompt
         :type timeout: int / float
@@ -196,17 +200,22 @@ class run:
 
     def stdout(self, output=None, str_output=None, regex=True, timeout=3):
         """
-        Retrieve all output from stdout until timeout (3 sec by default). If ``output`` is None, ``stdout`` returns all of the stdout outputted by the process, else it returns ``self``.
+        Retrieve all output from stdout until timeout (3 sec by default). If ``output``
+        is None, ``stdout`` returns all of the stdout outputted by the process, else
+        it returns ``self``.
 
-        :param output: optional output to be expected from stdout, raises :class:`check50.Failure` if no match
+        :param output: optional output to be expected from stdout, raises \
+                       :class:`check50.Failure` if no match
         :type output: str
-        :param str_output: what will be displayed as expected output, a human readable form of ``output``
+        :param str_output: what will be displayed as expected output, a human \
+                           readable form of ``output``
         :type str_output: str
         :param regex: flag indicating whether ``output`` should be treated as a regex
         :type regex: bool
         :param timeout: maximum number of seconds to wait for ``output``
         :type timeout: int / float
-        :raises check50.Mismatch: if ``output`` is specified and nothing that the process output matches it
+        :raises check50.Mismatch: if ``output`` is specified and nothing that the \
+                                  process output matches it
         :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
 
         Example usage::
@@ -278,7 +287,9 @@ class run:
 
     def exit(self, code=None, timeout=5):
         """
-        Wait for process to exit or until timeout (5 sec by default) and asserts that process exits with ``code``. If ``code`` is ``None``, returns the code the process exited with.
+        Wait for process to exit or until timeout (5 sec by default) and asserts
+        that process exits with ``code``. If ``code`` is ``None``, returns the code
+        the process exited with.
 
         ..note:: In order to ensure that spawned child processes do not outlive the check that spawned them, it is good practice to call either method (with no arguments if the exit code doesn't matter) or ``.kill()`` on every spawned process.
 

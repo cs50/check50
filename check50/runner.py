@@ -29,6 +29,7 @@ class Status(enum.Enum):
 
 @attr.s(slots=True)
 class CheckResult:
+    """Record returned by each check"""
     name = attr.ib()
     description = attr.ib()
     status = attr.ib(default=None, converter=Status)
@@ -39,6 +40,9 @@ class CheckResult:
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
+        """Create a check_result given a check function, automatically recording the name,
+        the dependency, and the (translated) description.
+        """
         return cls(name=check.__name__, description=_(check.__doc__),
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
@@ -52,6 +56,17 @@ class Timeout(Failure):
 
 @contextmanager
 def _timeout(seconds):
+    """Context manager that runs code block until timeout is reached.
+
+    Example usage::
+
+        try:
+            with _timeout(10):
+                do_stuff()
+        except Timeout:
+            print("do_stuff timed out")
+    """
+
     def _handle_timeout(*args):
         raise Timeout(seconds)
 
@@ -114,13 +129,13 @@ def check(dependency=None, timeout=60):
             state = None
 
             try:
-                # Setup check environment
+                # Setup check environment, copying disk state from dependency
                 internal.run_dir = checks_root / check.__name__
                 src_dir = checks_root / (dependency.__name__ if dependency else "-")
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
-                # Run registered functions before/after running check
+                # Run registered functions before/after running check and set timeout
                 with internal.register, _timeout(seconds=timeout):
                     args = (dependency_state,) if inspect.getfullargspec(check).args else ()
                     state = check(*args)
@@ -166,8 +181,6 @@ class CheckRunner:
             dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
             self.child_map[dependency].add((name, check.__doc__))
 
-        # TODO: Check for deadlocks (Khan's algorithm?)
-
     def run(self, files, working_area):
         """
         Run checks concurrently.
@@ -188,9 +201,11 @@ class CheckRunner:
             while not_done:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
                 for future in done:
+                    # Get result from completed check
                     result, state = future.result()
                     results[result.name] = result
                     if result.status is Status.Pass:
+                        # Dispatch dependent checks
                         for child_name, _ in self.child_map[result.name]:
                             not_done.add(executor.submit(
                                 run_check(child_name, self.checks_spec, checks_root, state)))
@@ -203,7 +218,10 @@ class CheckRunner:
         return results.values()
 
     def _skip_children(self, check_name, results):
-        """Recursively skip the children of check_name (presumably because check_name did not pass)."""
+        """
+        Recursively skip the children of check_name (presumably because check_name
+        did not pass).
+        """
         for name, description in self.child_map[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),

@@ -52,7 +52,10 @@ COMMANDS = {"run": _run, "stdin": _stdin, "stdout": _stdout, "exit": _exit}
 def _compile_check(name, check):
     indent = " " * 4
 
+    # Allow check names to contain spaces/dashes, but replace them with underscores
     check_name = name.replace(' ', '_').replace('-', '_')
+
+    # Allow check names to start with numbers by prepending an _ to them
     if check_name[0].isdigit():
         check_name = f"_{check_name}"
 
@@ -66,7 +69,10 @@ def _compile_check(name, check):
 
     for run in check:
         _validate(name, run)
-        _preprocess(run)
+
+        # Append exit with no args if unspecified
+        if "exit" not in run:
+            run["exit"] = None
 
         line = [f"{indent}check50"]
 
@@ -90,11 +96,6 @@ def _validate(name, run):
     for required_command in ["run"]:
         if required_command not in run:
             raise MissingCommand(_("Missing {} in check {}").format(required_name, name))
-
-
-def _preprocess(run):
-    if "exit" not in run:
-        run["exit"] = None
 
 
 class CompileError(Exception):

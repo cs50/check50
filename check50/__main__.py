@@ -36,9 +36,9 @@ class Error(Exception):
 def excepthook(cls, exc, tb):
     if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
         cprint(str(exc), "red", file=sys.stderr)
-    elif cls is FileNotFoundError:
+    elif issubclass(cls, FileNotFoundError):
         cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-    elif cls is KeyboardInterrupt:
+    elif issubclass(cls, KeyboardInterrupt):
         cprint(f"check cancelled", "red")
     elif not issubclass(cls, Exception):
         # Class is some other BaseException, better just let it go
@@ -116,8 +116,11 @@ def install_dependencies(dependencies, verbose=False):
 
 
 def install_translations(config):
+    """Add check translations according to ``config`` as a fallback to existing translations"""
+
     if not config:
         return
+
     from . import _translation
     checks_translation = gettext.translation(domain=config["domain"],
                                              localedir=internal.check_dir / config["localedir"],
@@ -241,13 +244,13 @@ def main():
         # Have lib50 decide which files to include
         included = lib50.files(config.get("files"))[0]
 
-        # Create a working_area (temp dir) with all included studentfiles named -
         if args.verbose:
             stdout = sys.stdout
             stderr = sys.stderr
         else:
             stdout = stderr = open(os.devnull, "w")
 
+        # Create a working_area (temp dir) with all included student files named -
         with lib50.working_area(included, name='-') as working_area, \
                 contextlib.redirect_stdout(stdout), \
                 contextlib.redirect_stderr(stderr):
