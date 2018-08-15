@@ -21,18 +21,12 @@ from .api import log, Failure, _copy, _log, _data
 _check_names = []
 
 
-class Status(enum.Enum):
-    Pass = True
-    Fail = False
-    Skip = None
-
-
 @attr.s(slots=True)
 class CheckResult:
     """Record returned by each check"""
     name = attr.ib()
     description = attr.ib()
-    status = attr.ib(default=None, converter=Status)
+    passed = attr.ib(default=None)
     log = attr.ib(default=attr.Factory(list))
     cause = attr.ib(default=None)
     data = attr.ib(default=attr.Factory(dict))
@@ -140,17 +134,17 @@ def check(dependency=None, timeout=60):
                     args = (dependency_state,) if inspect.getfullargspec(check).args else ()
                     state = check(*args)
             except Failure as e:
-                result.status = Status.Fail
+                result.passed = False
                 result.cause = e.payload
             except BaseException as e:
-                result.status = Status.Skip
+                result.passed = None
                 result.cause = {"rationale": _("check50 ran into an error while running checks!")}
                 log(repr(e))
                 for line in traceback.format_tb(e.__traceback__):
                     log(line.rstrip())
                 log(_("Contact sysadmins@cs50.harvard.edu with the URL of this check!"))
             else:
-                result.status = Status.Pass
+                result.passed = True
             finally:
                 result.log = _log
                 result.data = _data
@@ -204,7 +198,7 @@ class CheckRunner:
                     # Get result from completed check
                     result, state = future.result()
                     results[result.name] = result
-                    if result.status is Status.Pass:
+                    if result.passed:
                         # Dispatch dependent checks
                         for child_name, _ in self.child_map[result.name]:
                             not_done.add(executor.submit(
@@ -225,7 +219,7 @@ class CheckRunner:
         for name, description in self.child_map[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),
-                                            status=Status.Skip,
+                                            passed=None,
                                             dependency=check_name,
                                             cause={"rationale": _("can't check until a frown turns upside down")})
                 self._skip_children(name, results)

@@ -24,7 +24,7 @@ from termcolor import cprint
 
 from . import internal, __version__, simple, api
 from .api import Failure
-from .runner import CheckRunner, Status, CheckResult
+from .runner import CheckRunner, CheckResult
 
 lib50.api.LOCAL_PATH = "~/.local/share/check50"
 
@@ -63,8 +63,6 @@ class Encoder(json.JSONEncoder):
     def default(self, o):
         if o == EOF:
             return "EOF"
-        elif isinstance(o, Status):
-            return o.value
         elif isinstance(o, CheckResult):
             return attr.asdict(o)
         else:
@@ -78,15 +76,15 @@ def print_json(results):
 
 def print_ansi(results, log=False):
     for result in results:
-        if result.status is Status.Pass:
+        if result.passed:
             cprint(f":) {result.description}", "green")
-        elif result.status is Status.Fail:
+        elif result.passed is not None:
             cprint(f":( {result.description}", "red")
             if result.cause.get("rationale") is not None:
                 cprint(f"    {result.cause['rationale']}", "red")
             if result.cause.get("help") is not None:
                 cprint(f"    {result.cause['help']}", "red")
-        elif result.status is Status.Skip:
+        else:
             cprint(f":| {result.description}", "yellow")
             cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
 
