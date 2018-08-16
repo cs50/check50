@@ -34,26 +34,37 @@ class Error(Exception):
 
 
 def excepthook(cls, exc, tb):
-    if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
-        cprint(str(exc), "red", file=sys.stderr)
-    elif issubclass(cls, FileNotFoundError):
-        cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-    elif issubclass(cls, KeyboardInterrupt):
-        cprint(f"check cancelled", "red")
-    elif not issubclass(cls, Exception):
-        # Class is some other BaseException, better just let it go
-        return
+    if excepthook.output == "json":
+        json.dump({
+            "error": {
+                "type": cls.__name__,
+                "value": str(exc),
+            },
+            "version": __version__
+        }, sys.stdout, indent=4)
+        print()
     else:
-        cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+        if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
+            cprint(str(exc), "red", file=sys.stderr)
+        elif issubclass(cls, FileNotFoundError):
+            cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
+        elif issubclass(cls, KeyboardInterrupt):
+            cprint(f"check cancelled", "red")
+        elif not issubclass(cls, Exception):
+            # Class is some other BaseException, better just let it go
+            return
+        else:
+            cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
 
-    if excepthook.verbose:
-        traceback.print_exception(cls, exc, tb)
+        if excepthook.verbose:
+            traceback.print_exception(cls, exc, tb)
 
     sys.exit(1)
 
 
 # Assume we should print tracebacks until we get command line arguments
 excepthook.verbose = True
+excepthook.output = "ansi"
 sys.excepthook = excepthook
 
 
@@ -78,15 +89,15 @@ def print_ansi(results, log=False):
     for result in results:
         if result.passed:
             cprint(f":) {result.description}", "green")
-        elif result.passed is not None:
+        elif result.passed is None:
+            cprint(f":| {result.description}", "yellow")
+            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
+        else:
             cprint(f":( {result.description}", "red")
             if result.cause.get("rationale") is not None:
                 cprint(f"    {result.cause['rationale']}", "red")
             if result.cause.get("help") is not None:
                 cprint(f"    {result.cause['help']}", "red")
-        else:
-            cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
 
         if log:
             for line in result.log:
@@ -220,6 +231,7 @@ def main():
         args.log = True
 
     excepthook.verbose = args.verbose
+    excepthook.output = args.output
 
     if args.local:
         # If developing, assume slug is a path to check_dir
