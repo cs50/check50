@@ -27,5 +27,5 @@ setup(
     },
     url="https://github.com/cs50/check50",
     version="3.0.0",
-    include_package_data=True,
+    include_package_data=True
 )
