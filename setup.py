@@ -1,40 +1,4 @@
-from os.path import isfile
 from setuptools import find_packages, setup
-from setuptools.command.develop import develop
-from setuptools.command.install import install
-from subprocess import call
-from sys import platform, version_info
-
-
-def install_certs(cmd):
-    """
-    Decorator for classes subclassing one of setuptools commands.
-
-    Installs certificates before installing the package when running
-    Python >= 3.6 on Mac OS.
-    """
-    orig_run = cmd.run
-
-    def run(self):
-        if platform == "darwin" and version_info >= (3, 6):
-            INSTALL_CERTS = "/Applications/Python 3.6/Install Certificates.command"
-            if not isfile(INSTALL_CERTS) or call(INSTALL_CERTS) != 0:
-                raise RuntimeError("Error installing certificates.")
-        orig_run(self)
-
-    cmd.run = run
-    return cmd
-
-
-@install_certs
-class CustomDevelop(develop):
-    pass
-
-
-@install_certs
-class CustomInstall(install):
-    pass
-
 
 setup(
     author="CS50",
@@ -46,18 +10,22 @@ setup(
         "Topic :: Utilities"
     ],
     description="This is check50, with which you can check solutions to problems for CS50.",
-    install_requires=["argparse", "bs4", "pexpect>=4.0", "requests", "backports.shutil_which", "six", "termcolor", "submit50>=2.4.5"],
+    license="GPLv3",
+    message_extractors = {
+        'check50': [('**.py', 'python', None),],
+    },
+    install_requires=["attrs>=18", "bs4", "pexpect", "lib50>=1.0.1", "pyyaml", "requests", "termcolor"],
+    extras_require = {
+        "develop": ["sphinx", "sphinx_rtd_theme"]
+    },
     keywords=["check", "check50"],
     name="check50",
-    py_modules=["check50", "config"],
-    cmdclass={
-        "develop": CustomDevelop,
-        "install": CustomInstall
-    },
-    packages=find_packages(),
+    packages=["check50"],
+    python_requires=">= 3.6",
     entry_points={
-        "console_scripts": ["check50=check50:main"]
+        "console_scripts": ["check50=check50.__main__:main"]
     },
     url="https://github.com/cs50/check50",
-    version="2.2.4"
+    version="3.0.0",
+    include_package_data=True
 )
