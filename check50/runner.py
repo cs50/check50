@@ -240,4 +240,9 @@ class run_check:
     def __call__(self):
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
-        return getattr(mod, self.check_name)(self.checks_root, self.state)
+        internal.check_running = True
+        try:
+            return getattr(mod, self.check_name)(self.checks_root, self.state)
+        finally:
+            internal.check_running = False
+

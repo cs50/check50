@@ -29,10 +29,6 @@ from .runner import CheckRunner, CheckResult
 lib50.api.LOCAL_PATH = "~/.local/share/check50"
 
 
-class Error(Exception):
-    pass
-
-
 def excepthook(cls, exc, tb):
     if excepthook.output == "json":
         json.dump({
@@ -44,7 +40,7 @@ def excepthook(cls, exc, tb):
         }, sys.stdout, indent=4)
         print()
     else:
-        if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
+        if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
             cprint(str(exc), "red", file=sys.stderr)
         elif issubclass(cls, FileNotFoundError):
             cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
@@ -121,7 +117,7 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise Error(_("failed to install dependencies"))
+            raise internal.Error(_("failed to install dependencies"))
 
 
 def install_translations(config):
@@ -157,7 +153,7 @@ def await_results(url, pings=45, sleep=2):
     else:
         # Terminate if no response
         print()
-        raise Error(
+        raise internal.Error(
             _("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
     print()
 
@@ -176,7 +172,7 @@ class LogoutAction(argparse.Action):
         try:
             lib50.logout()
         except lib50.Error:
-            raise Error(_("failed to logout"))
+            raise internal.Error(_("failed to logout"))
         else:
             termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
@@ -238,7 +234,7 @@ def main():
         if args.dev:
             internal.check_dir = Path(args.slug).expanduser().resolve()
             if not internal.check_dir.is_dir():
-                raise Error(_("{} is not a directory").format(internal.check_dir))
+                raise internal.Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
             internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
