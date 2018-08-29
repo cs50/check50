@@ -16,6 +16,14 @@ check_dir = None
 #: Temporary directory in which check is being run
 run_dir = None
 
+#: Boolean that indicates if a check is currently running
+check_running = False
+
+
+class Error(Exception):
+    """Exception for internal check50 errors."""
+    pass
+
 
 class Register:
     """
@@ -28,15 +36,31 @@ class Register:
         self._after_checks = []
 
     def after_check(self, func):
-        """Run func once at the end of the check, then discard func."""
+        """Run func once at the end of the check, then discard func.
+
+        :param func: callback to run after check
+        :raises check50.internal.Error: if called when no check is being run"""
+        if not check_running:
+            raise Error("cannot register callback to run after check when no check is running")
         self._after_checks.append(func)
 
     def after_every(self, func):
-        """Run func at the end of every check."""
+        """Run func at the end of every check.
+
+        :param func: callback to be run after every check
+        :raises check50.internal.Error: if called when a check is being run"""
+        if check_running:
+            raise Error("cannot register callback to run after every check when check is running")
         self._after_everies.append(func)
 
     def before_every(self, func):
-        """Run func at the start of every check."""
+        """Run func at the start of every check.
+
+        :param func: callback to be run before every check
+        :raises check50.internal.Error: if called when a check is being run"""
+
+        if check_running:
+            raise Error("cannot register callback to run before every check when check is running")
         self._before_everies.append(func)
 
     def __enter__(self):
