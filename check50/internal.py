@@ -31,8 +31,16 @@ class Register:
     :data:`check50.internal.register` should be the sole instance of this class.
     """
     def __init__(self):
-        self._before_everies = []
-        self._after_everies = []
+        def _running_callback():
+            global check_running
+            check_running = True
+
+        def _not_running_callback():
+            global check_running
+            check_running = False
+
+        self._before_everies = [_running_callback]
+        self._after_everies = [_not_running_callback]
         self._after_checks = []
 
     def after_check(self, func):

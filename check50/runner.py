@@ -93,17 +93,17 @@ def check(dependency=None, timeout=60):
 
         @check50.check() # Mark 'exists' as a check
         def exists():
-            \"""hello.c exists\"""
+            \"\"\"hello.c exists\"\"\"
             check50.exists("hello.c")
 
         @check50.check(exists) # Mark 'compiles' as a check that depends on 'exists'
         def compiles():
-            \"""hello.c compiles\"""
+            \"\"\"hello.c compiles\"\"\"
             check50.c.compile("hello.c")
 
         @check50.check(compiles)
         def prints_hello():
-            \"""prints "Hello, world!\\\\n\"""
+            \"\"\"prints "Hello, world!\\\\n\"\"\"
             # Since 'prints_hello', depends on 'compiles' it inherits the compiled binary
             check50.run("./hello").stdout("[Hh]ello, world!?\\n", "hello, world\\n").exit()
 
@@ -240,9 +240,4 @@ class run_check:
     def __call__(self):
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
-        internal.check_running = True
-        try:
-            return getattr(mod, self.check_name)(self.checks_root, self.state)
-        finally:
-            internal.check_running = False
-
+        return getattr(mod, self.check_name)(self.checks_root, self.state)
