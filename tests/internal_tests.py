@@ -3,8 +3,15 @@ import check50
 import check50.internal
 
 class TestRegisterAfterCheck(unittest.TestCase):
+    def tearDown(self):
+        check50.internal.check_running = False
+
     def test_after_check(self):
         l = []
+        with self.assertRaises(check50.internal.Error):
+            check50.internal.register.after_check(lambda : l.append("qux"))
+
+        check50.internal.check_running = True
         check50.internal.register.after_check(lambda : l.append("foo"))
 
         with check50.internal.register:
