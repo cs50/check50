@@ -26,7 +26,7 @@ from . import internal, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, CheckResult
 
-lib50.api.LOCAL_PATH = "~/.local/share/check50"
+lib50.LOCAL_PATH = "~/.local/share/check50"
 
 
 class Error(Exception):
