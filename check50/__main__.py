@@ -28,7 +28,6 @@ from .runner import CheckRunner, CheckResult
 
 lib50.LOCAL_PATH = "~/.local/share/check50"
 
-
 class Error(Exception):
     pass
 
@@ -241,7 +240,7 @@ def main():
                 raise Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
-            internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
+            internal.check_dir = lib50.local(args.slug, "check50", internal.config_loader, offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
         install_translations(config["translations"])
@@ -268,7 +267,7 @@ def main():
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        username, commit_hash = lib50.push("check50", args.slug)
+        username, commit_hash = lib50.push("check50", args.slug, internal.config_loader)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
     if args.output == "json":

@@ -16,6 +16,8 @@ check_dir = None
 #: Temporary directory in which check is being run
 run_dir = None
 
+config_loader = lib50.config.Loader("check50")
+config_loader.scope("files", "include", "exclude", "require")
 
 class Register:
     """
@@ -86,7 +88,7 @@ def load_config(check_dir):
     config_file = Path(check_dir) / ".cs50.yaml"
 
     with open(config_file) as f:
-        config = lib50.config.load(f.read(), "check50")
+        config = config_loader.load(f.read())
 
     if isinstance(config, dict):
         options.update(config)
