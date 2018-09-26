@@ -106,14 +106,17 @@ def print_ansi(results, log=False):
 
 def install_dependencies(dependencies, verbose=False):
     """Install all packages in dependency list via pip."""
-
     if not dependencies:
         return
 
     stdout = stderr = None if verbose else subprocess.DEVNULL
-    with tempfile.NamedTemporaryFile(mode="w") as req_file:
-        req_file.writelines(dependencies)
-        pip = ["pip", "install", "-r", req_file.name]
+    with tempfile.TemporaryDirectory() as req_dir:
+        req_file = Path(req_dir) / "requirements.txt"
+
+        with open(req_file, "w") as f:
+            f.writelines(dependencies)
+
+        pip = ["pip", "install", "-r", req_file]
         # Unless we are in a virtualenv, we need --user
         if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
             pip.append("--user")
@@ -122,7 +125,6 @@ def install_dependencies(dependencies, verbose=False):
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
             raise Error(_("failed to install dependencies"))
-
 
 def install_translations(config):
     """Add check translations according to ``config`` as a fallback to existing translations"""
