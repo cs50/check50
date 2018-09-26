@@ -127,6 +127,8 @@ def install_dependencies(dependencies, verbose=False):
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
 
+=======
+>>>>>>> fix dependencies not installing
 def install_translations(config):
     """Add check translations according to ``config`` as a fallback to existing translations"""
 
