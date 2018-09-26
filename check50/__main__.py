@@ -240,7 +240,7 @@ def main():
                 raise Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
-            internal.check_dir = lib50.local(args.slug, "check50", internal.config_loader, offline=args.offline)
+            internal.check_dir = lib50.local("check50", args.slug, internal.config_loader, offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
         install_translations(config["translations"])
