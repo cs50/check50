@@ -46,6 +46,11 @@ class TestValgrind(Base):
         super().setUp()
         if not (sys.platform == "linux" or sys.platform == "linux2"):
             raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
+        check50.internal.check_running = False
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.check_running = False
 
     def test_no_leak(self):
         with open("foo.c", "w") as f:

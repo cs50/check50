@@ -3,6 +3,9 @@ import check50
 import check50.internal
 
 class TestRegisterAfterCheck(unittest.TestCase):
+    def setUp(self):
+        check50.internal.check_running = False
+
     def tearDown(self):
         check50.internal.check_running = False
 
