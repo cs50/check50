@@ -53,6 +53,7 @@ class TestValgrind(Base):
             f.write(src)
 
         check50.c.compile("foo.c")
+        check50.internal.check_running = True
         with check50.internal.register:
             check50.c.valgrind("./foo").exit()
 
@@ -66,6 +67,7 @@ class TestValgrind(Base):
             f.write(src)
 
         check50.c.compile("leak.c")
+        check50.internal.check_running = True
         with self.assertRaises(check50.Failure):
             with check50.internal.register:
                 check50.c.valgrind("./leak").exit()
