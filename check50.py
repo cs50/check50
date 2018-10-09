@@ -834,7 +834,7 @@ class Checks(unittest.TestCase):
 
         # Only raise exception if we encountered errors.
         if reported:
-            raise Error("valgrind tests failed; rerun with --log for more information.")
+            raise Error("valgrind tests failed; rerun check50 with --log added to end of command for more information.")
 
 
 class Mismatch(object):
