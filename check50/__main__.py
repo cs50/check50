@@ -7,6 +7,7 @@ import itertools
 import json
 import logging
 import os
+import site
 from pathlib import Path
 import shutil
 import signal
@@ -117,7 +118,7 @@ def install_dependencies(dependencies, verbose=False):
             for dependency in dependencies:
                 f.write(f"{dependency}\n")
 
-        pip = ["pip", "install", "-r", req_file]
+        pip = ["python3", "-m", "pip", "install", "-r", req_file]
         # Unless we are in a virtualenv, we need --user
         if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
             pip.append("--user")
@@ -126,6 +127,9 @@ def install_dependencies(dependencies, verbose=False):
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
             raise Error(_("failed to install dependencies"))
+
+        # Reload sys.path, to find recently installed packages
+        importlib.reload(site)
 
 def install_translations(config):
     """Add check translations according to ``config`` as a fallback to existing translations"""
