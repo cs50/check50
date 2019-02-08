@@ -114,7 +114,8 @@ def install_dependencies(dependencies, verbose=False):
         req_file = Path(req_dir) / "requirements.txt"
 
         with open(req_file, "w") as f:
-            f.writelines(dependencies)
+            for dependency in dependencies:
+                f.write(f"{dependency}\n")
 
         pip = ["pip", "install", "-r", req_file]
         # Unless we are in a virtualenv, we need --user
