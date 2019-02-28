@@ -52,6 +52,7 @@ def import_(path):
 def compile(file):
     """
     Compile a Python program into byte code
+
     :param file: file to be compiled
     :raises check50.Failure: if compilation fails e.g. if there is a SyntaxError
     """

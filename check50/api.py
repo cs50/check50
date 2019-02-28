@@ -215,7 +215,7 @@ class run:
         :param timeout: maximum number of seconds to wait for ``output``
         :type timeout: int / float
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
-                                  process output matches it
+                                  process outputs matches it
         :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
 
         Example usage::

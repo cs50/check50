@@ -59,6 +59,7 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
 
 def valgrind(command, env={}):
     """Run a command with valgrind.
+
     :param command: command to be run
     :type command: str
     :param env: environment in which to run command
