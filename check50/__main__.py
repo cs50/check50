@@ -127,8 +127,11 @@ def install_dependencies(dependencies, verbose=False):
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
 
+<<<<<<< HEAD
 =======
 >>>>>>> fix dependencies not installing
+=======
+>>>>>>> reload sys.path after pip install, use python3 -m pip (#145)
 def install_translations(config):
     """Add check translations according to ``config`` as a fallback to existing translations"""
 
