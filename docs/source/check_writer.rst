@@ -222,10 +222,18 @@ check50 will by default ignore and overwrite what is in ``__init__.py`` for as l
 .. code-block:: yaml
     :caption: **.cs50.yaml**
 
-    check50:
-      checks: __init__.py
+    check50: true
 
-By doing so you are effectively telling check50 to look in ``__init__.py`` for checks. If you want, you can rename ``__init__.py`` to anything else, as long as you tell check50 where to look via ``.cs50.yaml``. To test whether everything is still in working order, run check50 again with:
+If the ``checks`` key is not specified (as is the case above), ``check50`` will look for Python checks written in a file called ``__init__.py``. If you would like to write the Python checks in a file called ``foo.py`` instead, you could specify it like so:
+
+.. code-block:: yaml
+    :caption: **.cs50.yaml**
+
+    check50:
+        checks: foo.py
+
+
+To test whether everything is still in working order, run check50 again with:
 
 .. code-block:: bash
 
@@ -424,14 +432,14 @@ Check50, and other CS50 tools like submit50 and lab50, use a special configurati
 checks:
 *******
 
-``checks:`` takes either a truthy value to indicate that this slug is valid for check50, or a filename specifying a file containing check50 Python checks, or a record of check50 YAML checks.
+``checks:`` takes a filename specifying a file containing check50 Python checks, or a record of check50 YAML checks. If not specified, it will default to ``__init__.py``.
 
 .. code-block:: YAML
     :linenos:
     :caption: **.cs50.yaml**
 
-    check50:
-      checks: true
+    check50: 
+      checks: checks.py
 
 Only specifies that this is a valid slug for check50. This configuration will allow you to run ``check50 <slug>``, by default ``check50`` will look for an ``__init__.py`` containing Python checks.
 
@@ -471,7 +479,6 @@ The patterns that ``!include`` and ``!exclude`` accept are globbed, any matching
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "*.pyc"
 
@@ -482,7 +489,6 @@ Excludes all files ending with ``.pyc``.
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "*"
         - !include "*.py"
@@ -494,7 +500,6 @@ Exclude all files, but include all files ending with ``.py``. Note that order is
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "*"
         - !include "source/"
@@ -506,7 +511,6 @@ Exclude all files, but include all files in the source directory.
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "build/"
         - !exclude "docs/"
@@ -518,7 +522,6 @@ Include everything, but exclude everything in the build and docs directories.
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "*"
         - !include "source/"
@@ -531,7 +534,6 @@ Exclude everything, include everything from the source directory, but exclude al
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "source/**/*.pyc"
 
@@ -542,7 +544,6 @@ Include everything, but any files ending on ``.pyc`` within the source directory
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !require "foo.py"
         - !require "bar.c"
@@ -554,7 +555,6 @@ Require that both foo.py and bar.c are present and include them.
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       files:
         - !exclude "*"
         - !include "*.py"
@@ -574,7 +574,6 @@ dependencies:
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       dependencies:
         - pyyaml
         - flask
@@ -586,7 +585,6 @@ Has check50 install both ``pyyaml`` and ``flask`` via ``pip``.
     :caption: **.cs50.yaml**
 
     check50:
-      checks: true
       dependencies:
         - git+https://github.com/cs50/submit50#egg=submit50
 
@@ -596,4 +594,3 @@ Has check50 ``pip install`` submit50 from GitHub, especially useful for projects
 Internationalizing checks
 *************************
 TODO
-.. todo: write tutorial on internationalizing checks. Extract messages with pygettext.py, compiling translations, etc.

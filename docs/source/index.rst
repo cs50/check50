@@ -27,7 +27,7 @@ First make sure you have Python 3.6 or higher installed. You can download Python
 
 .. |download_python| raw:: html
 
-   <a href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git" target="_blank">here</a>
+   <a href="https://www.python.org/downloads/" target="_blank">here</a>
 
 check50 has a dependency on git, please make sure to |install_git| if git is not already installed.
 
