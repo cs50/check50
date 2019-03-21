@@ -309,7 +309,7 @@ def import_checks(identifier):
                 args += ["--quiet"] * 3
 
             try:
-                code = __import__("pip").main(args)
+                code = subprocess.call([sys.executable, "-m", "pip", *args])
             except SystemExit as e:
                 code = e.code
 
