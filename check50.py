@@ -309,11 +309,8 @@ def import_checks(identifier):
                 args += ["--quiet"] * 3
 
             try:
-                code = __import__("pip").main(args)
-            except SystemExit as e:
-                code = e.code
-
-            if code:
+                subprocess.check_call([sys.executable, "-m", "pip"] + args)
+            except subprocess.CalledProcessError:
                 raise InternalError("failed to install dependencies in ({})".format(
                     requirements[len(config.args.checkdir) + 1:]))
 
