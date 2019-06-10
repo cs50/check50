@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from pathlib import Path
 import xml.etree.cElementTree as ET
@@ -55,10 +56,14 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
     out_flag = f" -o {exe_name} " if exe_name is not None else " "
 
     process = run(f"{cc} {files}{out_flag}{flags}")
-    stdout = process.stdout()
+
+    # Strip out ANSI codes
+    stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout())
+
     if process.exitcode != 0:
-        raise Failure(rationale=stdout,
-                      help="Try to compile your code on your own first, before running check50 again")
+        for line in stdout.splitlines():
+            log(line)
+        raise Failure("code failed to compile")
 
 
 def valgrind(command, env={}):
