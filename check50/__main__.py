@@ -63,6 +63,21 @@ def excepthook(cls, exc, tb):
     sys.exit(1)
 
 
+def yes_no_prompt(prompt):
+    """
+    Raise a prompt, returns True if yes is entered, False if no is entered.
+    Will reraise prompt in case of any other reply.
+    """
+    yes = {"yes", "ye", "y", ""}
+    no = {"no", "n"}
+
+    reply = None
+    while reply not in yes and reply not in no:
+        reply = input(f"{prompt} [Y/n] ").lower()
+
+    return reply in yes
+
+
 # Assume we should print tracebacks until we get command line arguments
 excepthook.verbose = True
 excepthook.output = "ansi"
@@ -251,6 +266,19 @@ def main():
             internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
+
+        # If there are simple yml based checks, compile them
+        if isinstance(config["checks"], dict):
+            # Prompt to replace __init__.py (compile destination)
+            if args.dev and os.path.exists(internal.check_dir / "__init__.py"):
+                if not yes_no_prompt("check50 will compile the .yml checks to __init__.py, are you sure you want to overwrite its contents?"):
+                    raise Error("Aborting: could not write to __init__.py")
+
+            # Compile simple checks
+            with open(internal.check_dir / "__init__.py", "w") as f:
+                f.write(simple.compile(config["checks"]))
+            config["checks"] = "__init__.py"
+
         install_translations(config["translations"])
 
         if not args.offline:
