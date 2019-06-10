@@ -54,7 +54,11 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
 
     out_flag = f" -o {exe_name} " if exe_name is not None else " "
 
-    run(f"{cc} {files}{out_flag}{flags}").exit(0)
+    process = run(f"{cc} {files}{out_flag}{flags}")
+    stdout = process.stdout()
+    if process.exitcode != 0:
+        raise Failure(rationale=stdout,
+                      help="Try to compile your code on your own first, before running check50 again")
 
 
 def valgrind(command, env={}):
