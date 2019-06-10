@@ -15,6 +15,21 @@ class Base(unittest.TestCase):
     def tearDown(self):
         self.working_directory.cleanup()
 
+
+class SimpleBase(Base):
+    compiled_loc = None
+
+    def setUp(self):
+        super().setUp()
+        if os.path.exists(self.compiled_loc):
+            os.remove(self.compiled_loc)
+
+    def tearDown(self):
+        super().tearDown()
+        if os.path.exists(self.compiled_loc):
+            os.remove(self.compiled_loc)
+
+
 class TestExists(Base):
     def test_no_file(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exists")
@@ -29,6 +44,7 @@ class TestExists(Base):
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.close(force=True)
+
 
 class TestExitPy(Base):
     def test_no_file(self):
@@ -49,6 +65,7 @@ class TestExitPy(Base):
         process.expect_exact(":)")
         process.expect_exact("foo.py exits properly")
         process.close(force=True)
+
 
 class TestStdoutPy(Base):
     def test_no_file(self):
@@ -84,6 +101,7 @@ class TestStdoutPy(Base):
         process.expect_exact("prints hello")
         process.close(force=True)
 
+
 class TestStdinPy(Base):
     def test_no_file(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
@@ -116,6 +134,7 @@ class TestStdinPy(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
         process.close(force=True)
+
 
 class TestStdinPromptPy(Base):
     def test_no_file(self):
@@ -150,6 +169,7 @@ class TestStdinPromptPy(Base):
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
         process.close(force=True)
+
 
 class TestStdinMultiline(Base):
     def test_no_file(self):
@@ -209,7 +229,10 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining) (order)")
         process.close(force=True)
 
-class TestCompileExit(Base):
+
+class TestCompileExit(SimpleBase):
+    compiled_loc = CHECKS_DIRECTORY / "compile_exit" / "__init__.py"
+
     def test_no_file(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
         process.expect_exact(":(")
@@ -223,7 +246,10 @@ class TestCompileExit(Base):
         process.expect_exact("exit")
         process.close(force=True)
 
-class TestCompileStd(Base):
+
+class TestCompileStd(SimpleBase):
+    compiled_loc = CHECKS_DIRECTORY / "compile_std" / "__init__.py"
+
     def test_no_file(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
         process.expect_exact(":(")
@@ -247,6 +273,19 @@ class TestCompileStd(Base):
         process.expect_exact(":)")
         process.expect_exact("std")
         process.close(force=True)
+
+
+class TestCompilePrompt(SimpleBase):
+    compiled_loc = CHECKS_DIRECTORY / "compile_prompt" / "__init__.py"
+
+    def test_prompt_dev(self):
+        with open("foo.py", "w"), open(self.compiled_loc, "w"):
+            pass
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_prompt")
+        process.expect_exact("overwrite its contents?")
+        process.close(force=True)
+
 
 if __name__ == "__main__":
     unittest.main()

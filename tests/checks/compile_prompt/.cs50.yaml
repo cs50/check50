@@ -1,0 +1,5 @@
+check50:
+  checks:
+    prompt:
+      - run: python3 foo.py
+        exit: 0
