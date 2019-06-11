@@ -66,9 +66,7 @@ def yes_no_prompt(prompt):
     """
     yes = {"yes", "ye", "y", ""}
 
-    reply = None
-    while reply not in yes:
-        reply = input(f"{prompt} [Y/n] ").lower()
+    reply = input(f"{prompt} [Y/n] ").lower()
 
     return reply in yes
 
