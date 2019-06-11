@@ -149,14 +149,14 @@ def compile_checks(checks, prompt=False, out_file="__init__.py"):
     :rtype: str
     """
 
-    file_path = internal.check_dir / out_file
+    file_path = check_dir / out_file
     # Prompt to replace __init__.py (compile destination)
     if prompt and file_path.exists():
         if not _yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
             raise Error("Aborting: could not overwrite to __init__.py")
 
     # Compile simple checks
-    with open(internal.check_dir / out_file, "w") as f:
+    with open(check_dir / out_file, "w") as f:
         f.write(simple.compile(checks))
 
     return out_file
