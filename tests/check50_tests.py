@@ -297,10 +297,13 @@ class TestHiddenCheck(Base):
 
 class TestPayloadCheck(Base):
     def test_hidden_check(self):
-        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
-        expected = [{'name': 'check', 'description': None, 'passed': False, 'log': [], 'cause': {}, 'data': {}, 'dependency': None}]
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/payload")
         with open("foo.json", "r") as f:
-            self.assertEqual(json.load(f)["results"], expected)
+            error = json.load(f)["error"]
+        self.assertEqual(error["type"], "MissingFilesError")
+        self.assertEqual(error["data"]["files"], ["missing.c"])
+        self.assertEqual(error["data"]["dir"], self.working_directory.name)
+
 
 if __name__ == "__main__":
     unittest.main()
