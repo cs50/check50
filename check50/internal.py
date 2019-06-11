@@ -182,4 +182,3 @@ def _yes_no_prompt(prompt):
     Will reraise prompt in case of any other reply.
     """
     return _("yes").startswith(input(_("{} [Y/n] ").format(prompt)).lower())
-

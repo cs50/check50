@@ -259,7 +259,10 @@ def main():
                 raise internal.Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
-            internal.check_dir = lib50.local(args.slug, offline=args.offline)
+            try:
+                internal.check_dir = lib50.local(args.slug, offline=args.offline)
+            except lib50.ConnectionError:
+                raise Error("Check50 could not retrieve checks from GitHub. Try running check50 again with --offline.".format(args.slug))
 
         # Load config
         config = internal.load_config(internal.check_dir)
