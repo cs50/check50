@@ -33,7 +33,7 @@ lib50.LOCAL_PATH = "~/.local/share/check50"
 
 @contextlib.contextmanager
 def nullcontext(entry_result=None):
-    """This is contextlib.nullcontext but this function is only available in 3.7+. """
+    """This is just contextlib.nullcontext but that function is only available in 3.7+."""
     yield entry_result
 
 
