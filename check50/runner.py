@@ -73,7 +73,7 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60):
+def check(dependency=None, timeout=60, hidden=False):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
@@ -135,7 +135,8 @@ def check(dependency=None, timeout=60):
                     state = check(*args)
             except Failure as e:
                 result.passed = False
-                result.cause = e.payload
+                if not hidden:
+                    result.cause = e.payload
             except BaseException as e:
                 result.passed = None
                 result.cause = {"rationale": _("check50 ran into an error while running checks!")}
@@ -146,7 +147,8 @@ def check(dependency=None, timeout=60):
             else:
                 result.passed = True
             finally:
-                result.log = _log
+                if not hidden:
+                    result.log = _log
                 result.data = _data
                 return result, state
         return wrapper
