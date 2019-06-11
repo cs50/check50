@@ -262,7 +262,13 @@ def main():
             try:
                 internal.check_dir = lib50.local(args.slug, offline=args.offline)
             except lib50.ConnectionError:
-                raise Error("Check50 could not retrieve checks from GitHub. Try running check50 again with --offline.".format(args.slug))
+                raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(args.slug))
+            except lib50.InvalidSlugError:
+                if args.offline:
+                    raise internal.Error(_("Could not find checks for {} locally."
+                                  " If you are confident the slug is correct and you have an internet connection,"
+                                  " try running without --offline.").format(args.slug))
+                raise
 
         # Load config
         config = internal.load_config(internal.check_dir)
