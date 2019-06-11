@@ -283,7 +283,7 @@ class TestCompilePrompt(SimpleBase):
             pass
 
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_prompt")
-        process.expect_exact("check50 will compile the .yml checks to __init__.py")
+        process.expect_exact("check50 will compile the YAML checks to __init__.py")
         process.close(force=True)
 
 

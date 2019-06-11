@@ -159,6 +159,20 @@ def install_translations(config):
     _translation.add_fallback(checks_translation)
 
 
+def compile_checks(checks, prompt=False):
+    # Prompt to replace __init__.py (compile destination)
+    if prompt and os.path.exists(internal.check_dir / "__init__.py"):
+        if not yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
+            raise Error("Aborting: could not overwrite to __init__.py")
+
+    # Compile simple checks
+    with open(internal.check_dir / "__init__.py", "w") as f:
+        f.write(simple.compile(checks))
+
+    return "__init__.py"
+
+
+
 def await_results(url, pings=45, sleep=2):
     """
     Ping {url} until it returns a results payload, timing out after
@@ -266,18 +280,10 @@ def main():
             internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
 
         config = internal.load_config(internal.check_dir)
-
-        # If there are simple yml based checks, compile them
+        # Compile local checks if necessary
         if isinstance(config["checks"], dict):
-            # Prompt to replace __init__.py (compile destination)
-            if args.dev and os.path.exists(internal.check_dir / "__init__.py"):
-                if not yes_no_prompt("check50 will compile the .yml checks to __init__.py, are you sure you want to overwrite its contents?"):
-                    raise Error("Aborting: could not write to __init__.py")
+            config["checks"] = compile_checks(config["checks"], prompt=args.dev)
 
-            # Compile simple checks
-            with open(internal.check_dir / "__init__.py", "w") as f:
-                f.write(simple.compile(config["checks"]))
-            config["checks"] = "__init__.py"
 
         install_translations(config["translations"])
 
