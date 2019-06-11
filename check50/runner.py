@@ -80,6 +80,8 @@ def check(dependency=None, timeout=60, hidden=False):
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param hidden: true if cause and log should be hidden from student
+    :type hidden: bool
 
     When a check depends on another, the former will only run if the latter passes.
     Additionally, the dependent check will inherit the filesystem of its dependency.
