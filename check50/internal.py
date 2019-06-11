@@ -135,6 +135,33 @@ def load_config(check_dir):
     return options
 
 
+def compile_checks(checks, prompt=False, out_file="__init__.py"):
+    """
+    Compile YAML checks to a Python file
+
+    :param checks: YAML checks read from config
+    :type checkcs: dict
+    :param prompt: prompt user if ``out_file`` already exists
+    :type prompt: bool
+    :param out_file: file to write compiled checks
+    :type out_file: str
+    :returns: ``out_file``
+    :rtype: str
+    """
+
+    file_path = internal.check_dir / out_file
+    # Prompt to replace __init__.py (compile destination)
+    if prompt and file_path.exists()
+        if not _yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
+            raise Error("Aborting: could not overwrite to __init__.py")
+
+    # Compile simple checks
+    with open(internal.check_dir / out_file, "w") as f:
+        f.write(simple.compile(checks))
+
+    return out_file
+
+
 def import_file(name, path):
     """
     Import a file given a raw file path.
@@ -148,3 +175,11 @@ def import_file(name, path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+def _yes_no_prompt(prompt):
+    """
+    Raise a prompt, returns True if yes is entered, False if no is entered.
+    Will reraise prompt in case of any other reply.
+    """
+    return _("yes").startswith(input(_("{} [Y/n] ").format(prompt)).lower())
+
