@@ -289,7 +289,7 @@ class TestCompilePrompt(SimpleBase):
 
 
 class TestHiddenCheck(Base):
-    def test_no_file(self):
+    def test_hidden_check(self):
         pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
         expected = [{'name': 'check', 'description': None, 'passed': False, 'log': [], 'cause': {}, 'data': {}, 'dependency': None}]
         with open("foo.json", "r") as f:
