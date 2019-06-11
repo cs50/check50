@@ -48,6 +48,7 @@ class TestValgrind(Base):
             raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
 
     def test_no_leak(self):
+        check50.internal.check_running = True
         with open("foo.c", "w") as f:
             src = 'int main() {}'
             f.write(src)
@@ -57,6 +58,7 @@ class TestValgrind(Base):
             check50.c.valgrind("./foo").exit()
 
     def test_leak(self):
+        check50.internal.check_running = True
         with open("leak.c", "w") as f:
             src =   '#include <stdlib.h>\n'\
                     'void leak() {malloc(sizeof(int));}\n'\
