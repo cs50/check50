@@ -107,14 +107,26 @@ def load_config(check_dir):
         "domain": "messages",
     }
 
-    config_file = Path(check_dir) / ".cs50.yaml"
+    # Get config file
+    try:
+        config_file = lib50.config.get_config_filepath(check_dir)
+    except lib50.Error:
+        raise Error(_("Invalid slug for check50. Did you mean something else?"))
 
+    # Load config
     with open(config_file) as f:
-        config = lib50.config.load(f.read(), "check50")
+        loader = lib50.config.Loader("check50")
+        loader.scope("files", "include", "exclude", "require")
+        try:
+            config = loader.load(f.read())
+        except lib50.MissingToolError:
+            raise Error(_("Invalid slug for check50. Did you mean something else?"))
 
+    # Update the config with defaults
     if isinstance(config, dict):
         options.update(config)
 
+    # Apply translations
     if options["translations"]:
         if isinstance(options["translations"], dict):
             translation_options.update(options["translations"])

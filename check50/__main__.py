@@ -27,7 +27,7 @@ from . import internal, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, CheckResult
 
-lib50.api.LOCAL_PATH = "~/.local/share/check50"
+lib50._api.LOCAL_PATH = "~/.local/share/check50"
 
 
 
@@ -285,13 +285,14 @@ def main():
                 raise internal.Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
-            internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
+            internal.check_dir = lib50.local(args.slug, offline=args.offline)
 
+        # Load config
         config = internal.load_config(internal.check_dir)
+
         # Compile local checks if necessary
         if isinstance(config["checks"], dict):
             config["checks"] = compile_checks(config["checks"], prompt=args.dev)
-
 
         install_translations(config["translations"])
 
@@ -302,7 +303,6 @@ def main():
 
         # Have lib50 decide which files to include
         included = lib50.files(config.get("files"))[0]
-
 
         # Only open devnull conditionally
         ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
