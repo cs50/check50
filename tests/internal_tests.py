@@ -4,6 +4,7 @@ import check50.internal
 
 class TestRegisterAfterCheck(unittest.TestCase):
     def test_after_check(self):
+        check50.internal.check_running = True
         l = []
         check50.internal.register.after_check(lambda : l.append("foo"))
 
@@ -16,6 +17,7 @@ class TestRegisterAfterCheck(unittest.TestCase):
             self.assertEqual(l, ["foo"])
 
         self.assertEqual(l, ["foo"])
+        check50.internal.check_running = False
 
 class TestRegisterAfterEvery(unittest.TestCase):
     def test_after_every(self):
