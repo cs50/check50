@@ -295,6 +295,12 @@ class TestHiddenCheck(Base):
         with open("foo.json", "r") as f:
             self.assertEqual(json.load(f)["results"], expected)
 
+class TestPayloadCheck(Base):
+    def test_hidden_check(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
+        expected = [{'name': 'check', 'description': None, 'passed': False, 'log': [], 'cause': {}, 'data': {}, 'dependency': None}]
+        with open("foo.json", "r") as f:
+            self.assertEqual(json.load(f)["results"], expected)
 
 if __name__ == "__main__":
     unittest.main()
