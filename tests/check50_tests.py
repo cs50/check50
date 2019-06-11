@@ -1,4 +1,5 @@
 import unittest
+import json
 import pexpect
 import pathlib
 import shutil
@@ -285,6 +286,14 @@ class TestCompilePrompt(SimpleBase):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_prompt")
         process.expect_exact("check50 will compile the YAML checks to __init__.py")
         process.close(force=True)
+
+
+class TestHiddenCheck(Base):
+    def test_no_file(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
+        expected = [{'name': 'check', 'description': None, 'passed': False, 'log': [], 'cause': {}, 'data': {}, 'dependency': None}]
+        with open("foo.json", "r") as f:
+            self.assertEqual(json.load(f)["results"], expected)
 
 
 if __name__ == "__main__":
