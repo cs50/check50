@@ -119,7 +119,7 @@ def load_config(check_dir):
         loader.scope("files", "include", "exclude", "require")
         try:
             config = loader.load(f.read())
-        except lib50.MissingToolError:
+        except lib50.InvalidConfigError:
             raise Error(_("Invalid slug for check50. Did you mean something else?"))
 
     # Update the config with defaults
