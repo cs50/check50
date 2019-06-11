@@ -59,6 +59,12 @@ def excepthook(cls, exc, tb):
     sys.exit(1)
 
 
+# Assume we should print tracebacks until we get command line arguments
+excepthook.verbose = True
+excepthook.output = "ansi"
+sys.excepthook = excepthook
+
+
 def yes_no_prompt(prompt):
     """
     Raise a prompt, returns True if yes is entered, False if no is entered.
@@ -69,12 +75,6 @@ def yes_no_prompt(prompt):
     reply = input(f"{prompt} [Y/n] ").lower()
 
     return reply in yes
-
-
-# Assume we should print tracebacks until we get command line arguments
-excepthook.verbose = True
-excepthook.output = "ansi"
-sys.excepthook = excepthook
 
 
 class Encoder(json.JSONEncoder):
@@ -288,17 +288,20 @@ def main():
         # Have lib50 decide which files to include
         included = lib50.files(config.get("files"))[0]
 
-        if args.verbose:
-            stdout = sys.stdout
-            stderr = sys.stderr
-        else:
-            stdout = stderr = open(os.devnull, "w")
+        with open(os.devnull, "w") as devnull:
+            if args.verbose:
+                stdout = sys.stdout
+                stderr = sys.stderr
+            else:
+                stdout = stderr = devnull
 
-        # Create a working_area (temp dir) with all included student files named -
-        with lib50.working_area(included, name='-') as working_area, \
-                contextlib.redirect_stdout(stdout), \
-                contextlib.redirect_stderr(stderr):
-            results = CheckRunner(checks_file).run(included, working_area)
+            # Create a working_area (temp dir) with all included student files named -
+            with lib50.working_area(included, name='-') as working_area, \
+                    contextlib.redirect_stdout(stdout), \
+                    contextlib.redirect_stderr(stderr):
+                # Run checks
+                results = CheckRunner(checks_file).run(included, working_area)
+
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
