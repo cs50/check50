@@ -65,10 +65,9 @@ def yes_no_prompt(prompt):
     Will reraise prompt in case of any other reply.
     """
     yes = {"yes", "ye", "y", ""}
-    no = {"no", "n"}
 
     reply = None
-    while reply not in yes and reply not in no:
+    while reply not in yes:
         reply = input(f"{prompt} [Y/n] ").lower()
 
     return reply in yes
