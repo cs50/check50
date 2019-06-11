@@ -30,16 +30,25 @@ from .runner import CheckRunner, CheckResult
 lib50.api.LOCAL_PATH = "~/.local/share/check50"
 
 
+
+@contextlib.contextmanager
+def nullcontext(entry_result=None):
+    """This is contextlib.nullcontext but this function is only available in 3.7+. """
+    yield entry_result
+
+
 def excepthook(cls, exc, tb):
     if excepthook.output == "json":
-        json.dump({
-            "error": {
-                "type": cls.__name__,
-                "value": str(exc),
-            },
-            "version": __version__
-        }, sys.stdout, indent=4)
-        print()
+        ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
+        with ctxmanager as output_file:
+            json.dump({
+                "error": {
+                    "type": cls.__name__,
+                    "value": str(exc),
+                },
+                "version": __version__
+            }, output_file, indent=4)
+            output_file.write("\n")
     else:
         if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
             cprint(str(exc), "red", file=sys.stderr)
@@ -62,6 +71,7 @@ def excepthook(cls, exc, tb):
 # Assume we should print tracebacks until we get command line arguments
 excepthook.verbose = True
 excepthook.output = "ansi"
+excepthook.output_file = None
 sys.excepthook = excepthook
 
 
@@ -89,28 +99,28 @@ class Encoder(json.JSONEncoder):
             return o.__dict__
 
 
-def print_json(results):
-    json.dump({"results": list(results), "version": __version__}, sys.stdout, cls=Encoder, indent=4)
-    print()
+def print_json(results, file=sys.stdout):
+    json.dump({"results": list(results), "version": __version__}, file, cls=Encoder, indent=4)
+    file.write("\n")
 
 
-def print_ansi(results, log=False):
+def print_ansi(results, log=False, file=sys.stdout):
     for result in results:
         if result.passed:
-            cprint(f":) {result.description}", "green")
+            cprint(f":) {result.description}", "green", file=file)
         elif result.passed is None:
-            cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
+            cprint(f":| {result.description}", "yellow", file=file)
+            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow", file=file)
         else:
-            cprint(f":( {result.description}", "red")
+            cprint(f":( {result.description}", "red", file=file)
             if result.cause.get("rationale") is not None:
-                cprint(f"    {result.cause['rationale']}", "red")
+                cprint(f"    {result.cause['rationale']}", "red", file=file)
             if result.cause.get("help") is not None:
-                cprint(f"    {result.cause['help']}", "red")
+                cprint(f"    {result.cause['help']}", "red", file=file)
 
         if log:
             for line in result.log:
-                print(f"    {line}")
+                print(f"    {line}", file=file)
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -233,6 +243,10 @@ def main():
                         default="ansi",
                         choices=["ansi", "json"],
                         help=_("format of check results"))
+    parser.add_argument("--output-file",
+                        action="store",
+                        metavar="FILE",
+                        help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help=_("display the full tracebacks of any errors (also implies --log)"))
@@ -261,6 +275,7 @@ def main():
 
     excepthook.verbose = args.verbose
     excepthook.output = args.output
+    excepthook.output_file = args.output_file
 
     if args.local:
         # If developing, assume slug is a path to check_dir
@@ -288,7 +303,10 @@ def main():
         # Have lib50 decide which files to include
         included = lib50.files(config.get("files"))[0]
 
-        with open(os.devnull, "w") as devnull:
+
+        # Only open devnull conditionally
+        ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
+        with ctxmanager as devnull:
             if args.verbose:
                 stdout = sys.stdout
                 stderr = sys.stderr
@@ -308,10 +326,13 @@ def main():
         username, commit_hash = lib50.push("check50", args.slug)
         results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
 
-    if args.output == "json":
-        print_json(results)
-    else:
-        print_ansi(results, log=args.log)
+
+    file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
+    with file_manager as output_file:
+        if args.output == "json":
+            print_json(results, file=output_file)
+        else:
+            print_ansi(results, log=args.log, file=output_file)
 
 
 if __name__ == "__main__":
