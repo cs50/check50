@@ -151,7 +151,7 @@ def compile_checks(checks, prompt=False, out_file="__init__.py"):
 
     file_path = internal.check_dir / out_file
     # Prompt to replace __init__.py (compile destination)
-    if prompt and file_path.exists()
+    if prompt and file_path.exists():
         if not _yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
             raise Error("Aborting: could not overwrite to __init__.py")
 

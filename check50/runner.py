@@ -137,8 +137,7 @@ def check(dependency=None, timeout=60, hidden=False):
                     state = check(*args)
             except Failure as e:
                 result.passed = False
-                if not hidden:
-                    result.cause = e.payload
+                result.cause = {} if hidden else e.payload
             except BaseException as e:
                 result.passed = None
                 result.cause = {"rationale": _("check50 ran into an error while running checks!")}
