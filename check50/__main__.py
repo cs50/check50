@@ -45,6 +45,7 @@ def excepthook(cls, exc, tb):
                 "error": {
                     "type": cls.__name__,
                     "value": str(exc),
+                    "data" : exc.payload if hasattr(exc, "payload") else {}
                 },
                 "version": __version__
             }, output_file, indent=4)
