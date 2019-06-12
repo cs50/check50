@@ -222,6 +222,10 @@ def main():
                         default="ansi",
                         choices=["ansi", "json"],
                         help=_("format of check results"))
+    parser.add_argument("--target",
+                        action="store",
+                        nargs="+",
+                        help=_("target specific checks to run"))
     parser.add_argument("--output-file",
                         action="store",
                         metavar="FILE",
@@ -305,8 +309,14 @@ def main():
             with lib50.working_area(included, name='-') as working_area, \
                     contextlib.redirect_stdout(stdout), \
                     contextlib.redirect_stderr(stderr):
+
+                runner = CheckRunner(checks_file)
+
                 # Run checks
-                results = CheckRunner(checks_file).run(included, working_area)
+                if args.target:
+                    results = runner.run_targetted(args.target, included, working_area)
+                else:
+                    results = runner.run(included, working_area)
 
     else:
         # TODO: Remove this before we ship

@@ -173,10 +173,11 @@ class CheckRunner:
         _check_names.clear()
 
         # Map each check to tuples containing the names and descriptions of the checks that depend on it
-        self.child_map = collections.defaultdict(set)
+        self.dependency_map = collections.defaultdict(set)
         for name, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency")):
             dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
-            self.child_map[dependency].add((name, check.__doc__))
+            self.dependency_map[dependency].add((name, check.__doc__))
+
 
     def run(self, files, working_area):
         """
@@ -192,7 +193,7 @@ class CheckRunner:
 
             # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
-                           for name, _ in self.child_map[None])
+                           for name, _ in self.dependency_map[None])
             not_passed = []
 
             while not_done:
@@ -203,7 +204,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.passed:
                         # Dispatch dependent checks
-                        for child_name, _ in self.child_map[result.name]:
+                        for child_name, _ in self.dependency_map[result.name]:
                             not_done.add(executor.submit(
                                 run_check(child_name, self.checks_spec, checks_root, state)))
                     else:
@@ -214,12 +215,80 @@ class CheckRunner:
 
         return results.values()
 
+
+    def run_targetted(self, check_names, files, working_area):
+        """
+        Run just the targetted checks, and the checks they depends on.
+        Returns just the result of the targetted checks.
+        """
+        if len(set(check_names)) < len(check_names):
+            raise internal.Error(_("Duplicate checks targetted: {}".format(check_names)))
+
+        # Reconstruct a new dependency_map, consisting of the targetted checks and their dependencies
+        new_dependency_map = collections.defaultdict(set)
+
+        # For every targetted check
+        for check_name in check_names:
+
+            # Get dependencies just for targetted check
+            dependencies = self._get_dependencies(check_name)
+
+            if not dependencies:
+                raise internal.Error(_("Unknown check {}").format(check_name))
+
+            # Create a dependency map just for check_name
+            dependency_map = {a[0]:{b} for a,b in zip([(None, None)] + dependencies[:-1], dependencies)}
+
+            # Merge dependency map with new_dependency_map
+            for name, dependent in dependency_map.items():
+                new_dependency_map[name] |= dependent
+
+        # Temporarily replace dependency_map and run
+        try:
+            old_dependency_map = self.dependency_map
+            self.dependency_map = new_dependency_map
+            results = self.run(files, working_area)
+        finally:
+            self.dependency_map = old_dependency_map
+
+        # Filter out all results except the targetted checks
+        return [result for result in results if result and result.name in check_names]
+
+
+    def _get_dependencies(self, check_name):
+        """
+        Gather all dependencies of a check.
+        Returns a list of check_names in order of execution, or None if check_name does not exist.
+        """
+        # Depth-first search through the dependency tree
+        # Keep track of all routes (lists of checks) on a stack
+        routes = [[d] for d in self.dependency_map[None]]
+
+        # While there are still unexplored routes
+        while routes:
+            # Visit most recent route
+            cur_route = routes.pop()
+            cur_end = cur_route[-1][0]
+
+            # Gather all checks that follow the last check in route (connecting nodes)
+            for dependency in self.dependency_map[cur_end]:
+                # Create a new route for each check
+                route = cur_route + [dependency]
+
+                # If new route ends at the check we are looking for, return
+                if dependency[0] == check_name:
+                    return route
+
+                # Otherwise, add route to the stack
+                routes.append(route)
+
+
     def _skip_children(self, check_name, results):
         """
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
-        for name, description in self.child_map[check_name]:
+        for name, description in self.dependency_map[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),
                                             passed=None,
@@ -248,4 +317,3 @@ class run_check:
             return getattr(mod, self.check_name)(self.checks_root, self.state)
         finally:
             internal.check_running = False
-
