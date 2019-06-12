@@ -23,7 +23,7 @@ from pexpect.exceptions import EOF
 import requests
 from termcolor import cprint
 
-from . import internal, __version__, simple, api
+from . import internal, _renderer, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, CheckResult
 
@@ -89,8 +89,12 @@ class Encoder(json.JSONEncoder):
             return o.__dict__
 
 
+def to_json(results):
+    return {"results": list(results), "version": __version__}
+
+
 def print_json(results, file=sys.stdout):
-    json.dump({"results": list(results), "version": __version__}, file, cls=Encoder, indent=4)
+    json.dump(to_json(results), file, cls=Encoder, indent=4)
 
 
 def print_ansi(results, log=False, file=sys.stdout):
@@ -317,7 +321,8 @@ def main():
             print_json(results, file=output_file)
         else:
             print_ansi(results, log=args.log, file=output_file)
-
+            webview_filepath = _renderer.render(args.slug, to_json(results))
+            cprint(_("See {} for more detail.").format(webview_filepath), "blue")
 
 if __name__ == "__main__":
     main()

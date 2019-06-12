@@ -14,13 +14,13 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["attrs>=18", "bs4", "pexpect", "lib50>=1.0.1", "pyyaml", "requests", "termcolor"],
+    install_requires=["attrs>=18", "bs4", "pexpect", "lib50>=1.0.1", "pyyaml", "requests", "termcolor", "jinja2"],
     extras_require = {
         "develop": ["sphinx", "sphinx_rtd_theme"]
     },
     keywords=["check", "check50"],
     name="check50",
-    packages=["check50"],
+    packages=["check50", "check50._renderer"],
     python_requires=">= 3.6",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
