@@ -302,7 +302,7 @@ class TestPayloadCheck(Base):
             error = json.load(f)["error"]
         self.assertEqual(error["type"], "MissingFilesError")
         self.assertEqual(error["data"]["files"], ["missing.c"])
-        self.assertEqual(error["data"]["dir"], self.working_directory.name)
+        self.assertEqual(pathlib.Path(error["data"]["dir"]).stem, pathlib.Path(self.working_directory.name).stem)
 
 
 if __name__ == "__main__":
