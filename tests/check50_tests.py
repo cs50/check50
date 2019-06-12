@@ -295,6 +295,7 @@ class TestHiddenCheck(Base):
         with open("foo.json", "r") as f:
             self.assertEqual(json.load(f)["results"], expected)
 
+
 class TestPayloadCheck(Base):
     def test_payload_check(self):
         pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/payload")
@@ -303,6 +304,41 @@ class TestPayloadCheck(Base):
         self.assertEqual(error["type"], "MissingFilesError")
         self.assertEqual(error["data"]["files"], ["missing.c"])
         self.assertEqual(pathlib.Path(error["data"]["dir"]).stem, pathlib.Path(self.working_directory.name).stem)
+
+
+class TestTarget(Base):
+    def test_target(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 1)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+
+
+    def test_target_with_dependency(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists3 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 1)
+        self.assertEqual(output["results"][0]["name"], "exists3")
+
+
+    def test_two_targets(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 exists2 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+        self.assertEqual(output["results"][1]["name"], "exists2")
 
 
 if __name__ == "__main__":

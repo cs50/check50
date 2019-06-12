@@ -260,9 +260,17 @@ class CheckRunner:
         Gather all dependencies of a check.
         Returns a list of check_names in order of execution, or None if check_name does not exist.
         """
+        # Find all checks with no dependencies
+        checks = self.dependency_map[None]
+
+        # If target check has no dependency return
+        for other_check_name, description in checks:
+            if check_name == other_check_name:
+                return [(check_name, description)]
+
         # Depth-first search through the dependency tree
         # Keep track of all routes (lists of checks) on a stack
-        routes = [[d] for d in self.dependency_map[None]]
+        routes = [[d] for d in checks]
 
         # While there are still unexplored routes
         while routes:
