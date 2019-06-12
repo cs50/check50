@@ -213,7 +213,7 @@ class CheckRunner:
         for name in not_passed:
             self._skip_children(name, results)
 
-        return results.values()
+        return list(results.values())
 
 
     def run_targetted(self, check_names, files, working_area):

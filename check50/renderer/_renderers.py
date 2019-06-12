@@ -8,6 +8,7 @@ from pexpect.exceptions import EOF
 import termcolor
 
 from .. import __version__
+from ..runner import CheckResult
 
 TEMPLATES = pathlib.Path(pkg_resources.resource_filename("check50.renderer", "templates"))
 
