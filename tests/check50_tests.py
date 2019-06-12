@@ -296,7 +296,7 @@ class TestHiddenCheck(Base):
             self.assertEqual(json.load(f)["results"], expected)
 
 class TestPayloadCheck(Base):
-    def test_hidden_check(self):
+    def test_payload_check(self):
         pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/payload")
         with open("foo.json", "r") as f:
             error = json.load(f)["error"]
