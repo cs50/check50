@@ -19,16 +19,14 @@ import time
 
 import attr
 import lib50
-from pexpect.exceptions import EOF
 import requests
-from termcolor import cprint
+import termcolor
 
-from . import internal, _renderer, __version__, simple, api
+from . import internal, renderer, __version__, simple, api
 from .api import Failure
 from .runner import CheckRunner, CheckResult
 
-lib50.LOCAL_PATH = "~/.local/share/check50"
-
+lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
 
 @contextlib.contextmanager
@@ -52,16 +50,16 @@ def excepthook(cls, exc, tb):
             output_file.write("\n")
     else:
         if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
-            cprint(str(exc), "red", file=sys.stderr)
+            termcolor.cprint(str(exc), "red", file=sys.stderr)
         elif issubclass(cls, FileNotFoundError):
-            cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
+            termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
         elif issubclass(cls, KeyboardInterrupt):
-            cprint(f"check cancelled", "red")
+            termcolor.cprint(f"check cancelled", "red")
         elif not issubclass(cls, Exception):
             # Class is some other BaseException, better just let it go
             return
         else:
-            cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+            termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
 
         if excepthook.verbose:
             traceback.print_exception(cls, exc, tb)
@@ -74,46 +72,6 @@ excepthook.verbose = True
 excepthook.output = "ansi"
 excepthook.output_file = None
 sys.excepthook = excepthook
-
-
-
-class Encoder(json.JSONEncoder):
-    """Custom class for JSON encoding."""
-
-    def default(self, o):
-        if o == EOF:
-            return "EOF"
-        elif isinstance(o, CheckResult):
-            return attr.asdict(o)
-        else:
-            return o.__dict__
-
-
-def to_json(results):
-    return {"results": list(results), "version": __version__}
-
-
-def print_json(results, file=sys.stdout):
-    json.dump(to_json(results), file, cls=Encoder, indent=4)
-
-
-def print_ansi(results, log=False, file=sys.stdout):
-    for result in results:
-        if result.passed:
-            cprint(f":) {result.description}", "green", file=file)
-        elif result.passed is None:
-            cprint(f":| {result.description}", "yellow", file=file)
-            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow", file=file)
-        else:
-            cprint(f":( {result.description}", "red", file=file)
-            if result.cause.get("rationale") is not None:
-                cprint(f"    {result.cause['rationale']}", "red", file=file)
-            if result.cause.get("help") is not None:
-                cprint(f"    {result.cause['help']}", "red", file=file)
-
-        if log:
-            for line in result.log:
-                print(f"    {line}", file=file)
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -196,7 +154,7 @@ class LogoutAction(argparse.Action):
         except lib50.Error:
             raise internal.Error(_("failed to logout"))
         else:
-            termcolor.cprint(_("logged out successfully"), "green")
+            termcolor.termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
 
 
@@ -328,11 +286,14 @@ def main():
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:
         if args.output == "json":
-            print_json(results, file=output_file)
+            output_file.write(renderer.to_json(args.slug, results))
+            output_file.write("\n")
         else:
-            print_ansi(results, log=args.log, file=output_file)
-            webview_filepath = _renderer.render(args.slug, to_json(results))
-            cprint(_("See {} for more detail.").format(webview_filepath), "blue")
+            output_file.write(renderer.to_ansi(args.slug, results, log=args.log))
+            output_file.write("\n")
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as html_file:
+                html_file.write(renderer.to_html(args.slug, results))
+            termcolor.cprint(_("See file://{} for more detail.").format(html_file.name), "white", attrs=["bold"])
 
 if __name__ == "__main__":
     main()
