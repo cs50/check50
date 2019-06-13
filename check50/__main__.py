@@ -56,8 +56,10 @@ def excepthook(cls, exc, tb):
                 output_file.write("\n")
 
         elif output == "ansi" or output == "html":
-            outputs.remove("ansi")
-            outputs.remove("html")
+            if output == "ansi":
+                outputs.remove("ansi")
+            else:
+                outputs.remove("html")
 
             if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
                 termcolor.cprint(str(exc), "red", file=sys.stderr)
