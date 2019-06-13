@@ -319,7 +319,7 @@ def main():
             elif output == "html":
                 with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
                     html_file.write(renderer.to_html(**results))
-                termcolor.cprint(_("To see the results in your browser go to file://{}.").format(html_file.name), "white", attrs=["bold"])
+                termcolor.cprint(_("To see the results in your browser go to file://{}").format(html_file.name), "white", attrs=["bold"])
 
 
 if __name__ == "__main__":
