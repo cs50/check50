@@ -44,6 +44,25 @@
                               {% endfor %}
                           {% endif %}
 
+                          {% if check.cause and check.cause.error %}
+                              <div class="row">
+                                  <div class="col-md-12">
+                                      <br/>
+                                      <b>Error</b>
+                                      <div style="background-color:black; color:white;">
+                                          <samp>
+                                              {{check.cause.error.type}}: {{check.cause.error.value}}
+                                              <br/>
+                                              {% for line in check.cause.error.traceback%}
+                                                  &nbsp;&nbsp;&nbsp;&nbsp;{{line}}
+                                                  <br/>
+                                              {% endfor %}
+                                          </samp>
+                                      </div>
+                                 </div>
+                              </div>
+                          {% endif %}
+
                           {# Mismatch if there was one #}
                           {% if check.cause and "actual" in check.cause and "expected" in check.cause %}
                               <br/>

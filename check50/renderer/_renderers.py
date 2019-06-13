@@ -50,6 +50,9 @@ def to_ansi(slug, results, version=__version__, log=False):
         elif result.passed is None:
             lines.append(termcolor.colored(f":| {result.description}", "yellow"))
             lines.append(termcolor.colored(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow"))
+            if result.cause.get("error") is not None:
+                lines.append(f"    {result.cause['error']['type']}: {result.cause['error']['value']}")
+                lines += (f"    {line.rstrip()}" for line in result.cause["error"]["traceback"])
         else:
             lines.append(termcolor.colored(f":( {result.description}", "red"))
             if result.cause.get("rationale") is not None:

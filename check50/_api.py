@@ -24,7 +24,7 @@ def log(line):
 
     The check log is student-visible via the ``--log`` flag to ``check50``.
     """
-    _log.append(line)
+    _log.append(line.replace("\n", "\\n"))
 
 
 _data = {}
