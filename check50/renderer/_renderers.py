@@ -60,3 +60,10 @@ def to_ansi(slug, results, version=__version__, log=False):
         if log:
             lines += (f"    {line}" for line in result.log)
     return "\n".join(lines)
+
+
+def from_json(json_str):
+    data = json.loads(json_str)
+    data["results"] = list(map(CheckResult.from_dict, data["results"]))
+    return data
+

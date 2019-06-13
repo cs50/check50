@@ -22,8 +22,7 @@ import lib50
 import requests
 import termcolor
 
-from . import internal, renderer, __version__, simple, api
-from .api import Failure
+from . import internal, renderer, __version__
 from .runner import CheckRunner, CheckResult
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
@@ -123,11 +122,9 @@ def await_results(url, pings=45, sleep=2):
     print("Checking...", end="", flush=True)
     for _ in range(pings):
         # Query for check results.
-        res = requests.post(url)
-        if res.status_code != 200:
-            continue
-        payload = res.json()
-        if payload["complete"]:
+        res = requests.post(url, params={"format": "json"})
+        if res.status_code == 200:
+            print()
             break
         print(".", end="", flush=True)
         time.sleep(sleep)
@@ -135,12 +132,16 @@ def await_results(url, pings=45, sleep=2):
         # Terminate if no response
         print()
         raise internal.Error(
-            _("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
-    print()
+            _("check50 is taking longer than normal!\nSee {} for more detail.").format(url))
 
-    # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
+    payload= res.json()
+    # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
-    return (CheckResult(**result) for result in payload["checks"]["results"])
+    return {
+        "slug": payload["slug"],
+        "results": list(map(CheckResult.from_dict, payload["results"])),
+        "version": payload["version"]
+    }
 
 
 class LogoutAction(argparse.Action):
@@ -273,27 +274,33 @@ def main():
 
                 # Run checks
                 if args.target:
-                    results = runner.run_targetted(args.target, included, working_area)
+                    check_results = runner.run_targetted(args.target, included, working_area)
                 else:
-                    results = runner.run(included, working_area)
+                    check_results = runner.run(included, working_area)
+
+                results = {
+                    "slug": args.slug,
+                    "results": check_results,
+                    "version": __version__
+                }
 
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        username, commit_hash = lib50.push("check50", args.slug)
-        results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
+        commit_hash = lib50.push("check50", args.slug)[1]
+        results = await_results(f"https://check.cs50.io/{commit_hash}")
 
 
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:
         if args.output == "json":
-            output_file.write(renderer.to_json(args.slug, results))
+            output_file.write(renderer.to_json(**results))
             output_file.write("\n")
         else:
-            output_file.write(renderer.to_ansi(args.slug, results, log=args.log))
+            output_file.write(renderer.to_ansi(**results, log=args.log))
             output_file.write("\n")
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as html_file:
-                html_file.write(renderer.to_html(args.slug, results))
+                html_file.write(renderer.to_html(**results))
             termcolor.cprint(_("See file://{} for more detail.").format(html_file.name), "white", attrs=["bold"])
 
 if __name__ == "__main__":

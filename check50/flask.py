@@ -6,7 +6,7 @@ import warnings
 
 from bs4 import BeautifulSoup
 
-from .api import log, Failure
+from ._api import log, Failure
 from . import internal
 
 

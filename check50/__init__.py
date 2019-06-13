@@ -32,7 +32,7 @@ def _setup_translation():
 _set_version()
 _setup_translation()
 
-from .api import (
+from ._api import (
     import_checks,
     data, _data,
     exists,

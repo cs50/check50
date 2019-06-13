@@ -6,7 +6,6 @@ import sys
 import tempfile
 
 import check50
-import check50.api
 import check50.internal
 
 

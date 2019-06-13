@@ -8,7 +8,7 @@ import sys
 
 import lib50
 
-from . import simple
+from . import _simple
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -157,7 +157,7 @@ def compile_checks(checks, prompt=False, out_file="__init__.py"):
 
     # Compile simple checks
     with open(check_dir / out_file, "w") as f:
-        f.write(simple.compile(checks))
+        f.write(_simple.compile(checks))
 
     return out_file
 

@@ -16,7 +16,7 @@ import traceback
 import attr
 
 from . import internal
-from .api import log, Failure, _copy, _log, _data
+from ._api import log, Failure, _copy, _log, _data
 
 _check_names = []
 
@@ -41,6 +41,13 @@ class CheckResult:
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
+
+    @classmethod
+    def from_dict(cls, d):
+        """Create a CheckResult given a dict. Dict must contain at least the fields in the CheckResult.
+        Throws a KeyError if not."""
+        return cls(**{field: d[field] for field in attr.fields(cls)})
+
 
 
 class Timeout(Failure):

@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 import xml.etree.cElementTree as ET
 
-from .api import run, log, Failure
+from ._api import run, log, Failure
 from . import internal
 
 #: Default compiler for :func:`check50.c.compile`
