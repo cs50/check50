@@ -46,7 +46,7 @@ class CheckResult:
     def from_dict(cls, d):
         """Create a CheckResult given a dict. Dict must contain at least the fields in the CheckResult.
         Throws a KeyError if not."""
-        return cls(**{field: d[field] for field in attr.fields(cls)})
+        return cls(**{field: d[field.name] for field.name in attr.fields(cls)})
 
 
 
