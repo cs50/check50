@@ -140,11 +140,18 @@ def check(dependency=None, timeout=60, hidden=False):
                 result.cause = e.payload if not hidden else {}
             except BaseException as e:
                 result.passed = None
-                result.cause = {"rationale": _("check50 ran into an error while running checks!")}
-                log(repr(e))
-                for line in traceback.format_tb(e.__traceback__):
-                    log(line.rstrip())
-                log(_("Contact sysadmins@cs50.harvard.edu with the URL of this check!"))
+                result.cause = {"rationale": _("check50 ran into an error while running checks!"),
+                                "error": {
+                                    "type": type(e).__name__,
+                                    "value": str(e),
+                                    "traceback": traceback.format_tb(e.__traceback__),
+                                    "data" : e.payload if hasattr(e, "payload") else {}
+                                }}
+
+                # log(repr(e))
+                # for line in traceback.format_tb(e.__traceback__):
+                #     log(line.rstrip())
+                # log(_("Contact sysadmins@cs50.harvard.edu with the slug of this check!"))
             else:
                 result.passed = True
             finally:
@@ -224,24 +231,31 @@ class CheckRunner:
         if len(set(check_names)) < len(check_names):
             raise internal.Error(_("Duplicate checks targetted: {}".format(check_names)))
 
-        # Reconstruct a new dependency_map, consisting of the targetted checks and their dependencies
-        new_dependency_map = collections.defaultdict(set)
+        # Find the docs for every check in the dependency map
+        check_docs = {}
+        for dependents in self.dependency_map.values():
+            for dependent, doc in dependents:
+                check_docs[dependent] = doc
 
-        # For every targetted check
+        # For every targetted check, validate that it exists
         for check_name in check_names:
-
-            # Get dependencies just for targetted check
-            dependencies = self._get_dependencies(check_name)
-
-            if not dependencies:
+            if check_name not in check_docs:
                 raise internal.Error(_("Unknown check {}").format(check_name))
 
-            # Create a dependency map just for check_name
-            dependency_map = {a[0]:{b} for a,b in zip([(None, None)] + dependencies[:-1], dependencies)}
+        # Build an inverse dependency map, from a check to its dependency
+        inverse_dependency_map = {}
+        for check_name, dependents in self.dependency_map.items():
+            for dependent_name, _ in dependents:
+                inverse_dependency_map[dependent_name] = check_name
 
-            # Merge dependency map with new_dependency_map
-            for name, dependent in dependency_map.items():
-                new_dependency_map[name] |= dependent
+        # Reconstruct a new dependency_map, consisting of the targetted checks and their dependencies
+        new_dependency_map = collections.defaultdict(set)
+        for check_name in check_names:
+            cur_check_name = check_name
+            while cur_check_name != None:
+                dependency_name = inverse_dependency_map[cur_check_name]
+                new_dependency_map[dependency_name].add((cur_check_name, check_docs[cur_check_name]))
+                cur_check_name = dependency_name
 
         # Temporarily replace dependency_map and run
         try:
@@ -251,44 +265,26 @@ class CheckRunner:
         finally:
             self.dependency_map = old_dependency_map
 
+        # Filter out all occurances of None in results (results of non targetted checks)
+        results = [result for result in results if result != None]
+
         # Filter out all results except the targetted checks
-        return [result for result in results if result and result.name in check_names]
+        targetted_results = [result for result in results if result and result.name in check_names]
 
+        # If a targetted check was skipped, add the result that caused it to be skipped
+        for targetted_result in targetted_results[:]:
+            if targetted_result.passed is None:
+                # Find a check up the dependency chain that has failed or errored
+                cur_result = targetted_result
+                while cur_result.passed != False and "error" not in cur_result.cause:
+                    cur_result = [r for r in results if r.name == targetted_result.dependency][0]
 
-    def _get_dependencies(self, check_name):
-        """
-        Gather all dependencies of a check.
-        Returns a list of check_names in order of execution, or None if check_name does not exist.
-        """
-        # Find all checks with no dependencies
-        checks = self.dependency_map[None]
+                # Add that check to the results
+                if cur_result not in targetted_results:
+                    targetted_results.append(cur_result)
 
-        # If target check has no dependency return
-        for other_check_name, description in checks:
-            if check_name == other_check_name:
-                return [(check_name, description)]
-
-        # Depth-first search through the dependency tree
-        # Keep track of all routes (lists of checks) on a stack
-        routes = [[d] for d in checks]
-
-        # While there are still unexplored routes
-        while routes:
-            # Visit most recent route
-            cur_route = routes.pop()
-            cur_end = cur_route[-1][0]
-
-            # Gather all checks that follow the last check in route (connecting nodes)
-            for dependency in self.dependency_map[cur_end]:
-                # Create a new route for each check
-                route = cur_route + [dependency]
-
-                # If new route ends at the check we are looking for, return
-                if dependency[0] == check_name:
-                    return route
-
-                # Otherwise, add route to the stack
-                routes.append(route)
+        # Return results (in order) of the checks targetted and checks that caused skips
+        return [result for result in results if result in targetted_results]
 
 
     def _skip_children(self, check_name, results):

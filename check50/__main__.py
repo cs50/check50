@@ -43,6 +43,7 @@ def excepthook(cls, exc, tb):
                 "error": {
                     "type": cls.__name__,
                     "value": str(exc),
+                    "traceback": traceback.format_tb(exc.__traceback__),
                     "data" : exc.payload if hasattr(exc, "payload") else {}
                 },
                 "version": __version__
