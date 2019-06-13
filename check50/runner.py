@@ -192,7 +192,7 @@ class CheckRunner:
             self.dependency_map[dependency].add((name, check.__doc__))
 
 
-    def run(self, files, working_area):
+    def run_all(self, files, working_area):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
@@ -229,9 +229,9 @@ class CheckRunner:
         return list(results.values())
 
 
-    def run_targetted(self, check_names, files, working_area):
+    def run(self, check_names, files, working_area):
         """
-        Run just the targetted checks, and the checks they depends on.
+        Run just the targeted checks, and the checks they depends on.
         Returns just the result of the targetted checks.
         """
         if len(set(check_names)) < len(check_names):
@@ -267,7 +267,7 @@ class CheckRunner:
         try:
             old_dependency_map = self.dependency_map
             self.dependency_map = new_dependency_map
-            results = self.run(files, working_area)
+            results = self.run_all(files, working_area)
         finally:
             self.dependency_map = old_dependency_map
 

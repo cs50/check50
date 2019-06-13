@@ -274,9 +274,9 @@ def main():
 
                 # Run checks
                 if args.target:
-                    check_results = runner.run_targetted(args.target, included, working_area)
+                    check_results = runner.run(args.target, included, working_area)
                 else:
-                    check_results = runner.run(included, working_area)
+                    check_results = runner.run_all(included, working_area)
 
                 results = {
                     "slug": args.slug,
