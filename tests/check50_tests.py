@@ -288,6 +288,36 @@ class TestCompilePrompt(SimpleBase):
         process.close(force=True)
 
 
+class TestOutputModes(Base):
+    def test_json_output(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/output")
+        with open("foo.json", "r") as f:
+            json_out = json.load(f)
+            self.assertEqual(json_out["results"][0]["name"], "exists")
+
+    def test_ansi_output(self):
+        process = pexpect.spawn(f"check50 --dev -o ansi -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact(":(")
+        process.close(force=True)
+
+    def test_html_output(self):
+        process = pexpect.spawn(f"check50 --dev -o html -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact("file://")
+        process.close(force=True)
+
+    def test_multiple_outputs(self):
+        process = pexpect.spawn(f"check50 --dev -o html ansi -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact("file://")
+        process.expect_exact(":(")
+        process.close(force=True)
+
+    def test_default(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/output")
+        process.expect_exact(":(")
+        process.expect_exact("file://")
+        process.close(force=True)
+
+
 class TestHiddenCheck(Base):
     def test_hidden_check(self):
         pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")

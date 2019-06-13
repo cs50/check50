@@ -35,34 +35,44 @@ def nullcontext(entry_result=None):
 
 
 def excepthook(cls, exc, tb):
-    if excepthook.output == "json":
-        ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
-        with ctxmanager as output_file:
-            json.dump({
-                "error": {
-                    "type": cls.__name__,
-                    "value": str(exc),
-                    "traceback": traceback.format_tb(exc.__traceback__),
-                    "data" : exc.payload if hasattr(exc, "payload") else {}
-                },
-                "version": __version__
-            }, output_file, indent=4)
-            output_file.write("\n")
-    else:
-        if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
-            termcolor.cprint(str(exc), "red", file=sys.stderr)
-        elif issubclass(cls, FileNotFoundError):
-            termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-        elif issubclass(cls, KeyboardInterrupt):
-            termcolor.cprint(f"check cancelled", "red")
-        elif not issubclass(cls, Exception):
-            # Class is some other BaseException, better just let it go
-            return
-        else:
-            termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+    # All channels to output to
+    outputs = excepthook.outputs
 
-        if excepthook.verbose:
-            traceback.print_exception(cls, exc, tb)
+    for output in excepthook.outputs:
+        if output == "json":
+            outputs.remove("json")
+
+            ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
+            with ctxmanager as output_file:
+                json.dump({
+                    "error": {
+                        "type": cls.__name__,
+                        "value": str(exc),
+                        "traceback": traceback.format_tb(exc.__traceback__),
+                        "data" : exc.payload if hasattr(exc, "payload") else {}
+                    },
+                    "version": __version__
+                }, output_file, indent=4)
+                output_file.write("\n")
+
+        elif output == "ansi" or output == "html":
+            outputs.remove("ansi")
+            outputs.remove("html")
+
+            if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
+                termcolor.cprint(str(exc), "red", file=sys.stderr)
+            elif issubclass(cls, FileNotFoundError):
+                termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
+            elif issubclass(cls, KeyboardInterrupt):
+                termcolor.cprint(f"check cancelled", "red")
+            elif not issubclass(cls, Exception):
+                # Class is some other BaseException, better just let it go
+                return
+            else:
+                termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+
+            if excepthook.verbose:
+                traceback.print_exception(cls, exc, tb)
 
     sys.exit(1)
 
@@ -179,8 +189,9 @@ def main():
                         help=_("display more detailed information about check results"))
     parser.add_argument("-o", "--output",
                         action="store",
-                        default="ansi",
-                        choices=["ansi", "json"],
+                        nargs="+",
+                        default=["ansi", "html"],
+                        choices=["ansi", "json", "html"],
                         help=_("format of check results"))
     parser.add_argument("--target",
                         action="store",
@@ -216,8 +227,13 @@ def main():
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
+    # Filter out any duplicates from args.output
+    seen_output = set()
+    args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
+
+    # Set excepthook
     excepthook.verbose = args.verbose
-    excepthook.output = args.output
+    excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
     if args.local:
@@ -290,18 +306,21 @@ def main():
         commit_hash = lib50.push("check50", args.slug)[1]
         results = await_results(f"https://check.cs50.io/{commit_hash}")
 
-
+    # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:
-        if args.output == "json":
-            output_file.write(renderer.to_json(**results))
-            output_file.write("\n")
-        else:
-            output_file.write(renderer.to_ansi(**results, log=args.log))
-            output_file.write("\n")
-            with tempfile.NamedTemporaryFile(mode="w", delete=False) as html_file:
-                html_file.write(renderer.to_html(**results))
-            termcolor.cprint(_("See file://{} for more detail.").format(html_file.name), "white", attrs=["bold"])
+        for output in args.output:
+            if output == "json":
+                output_file.write(renderer.to_json(**results))
+                output_file.write("\n")
+            elif output == "ansi":
+                output_file.write(renderer.to_ansi(**results, log=args.log))
+                output_file.write("\n")
+            elif output == "html":
+                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
+                    html_file.write(renderer.to_html(**results))
+                termcolor.cprint(_("To see the results in your browser go to file://{}.").format(html_file.name), "white", attrs=["bold"])
+
 
 if __name__ == "__main__":
     main()
