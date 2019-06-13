@@ -19,6 +19,10 @@ run_dir = None
 #: Boolean that indicates if a check is currently running
 check_running = False
 
+#: ``lib50`` config loadr
+CONFIG_LOADER = lib50.config.Loader("check50")
+CONFIG_LOADER.scope("files", "include", "exclude", "require")
+
 
 class Error(Exception):
     """Exception for internal check50 errors."""
@@ -115,10 +119,8 @@ def load_config(check_dir):
 
     # Load config
     with open(config_file) as f:
-        loader = lib50.config.Loader("check50")
-        loader.scope("files", "include", "exclude", "require")
         try:
-            config = loader.load(f.read())
+            config = CONFIG_LOADER.load(f.read())
         except lib50.InvalidConfigError:
             raise Error(_("Invalid slug for check50. Did you mean something else?"))
 
