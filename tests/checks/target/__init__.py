@@ -15,7 +15,6 @@ def exists3():
     """foo.py exists"""
     check50.exists("foo.py")
 
-
 @check50.check()
 def exists4():
     """foo.py exists"""

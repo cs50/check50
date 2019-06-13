@@ -272,25 +272,7 @@ class CheckRunner:
             self.dependency_map = old_dependency_map
 
         # Filter out all occurances of None in results (results of non targetted checks)
-        results = [result for result in results if result != None]
-
-        # Filter out all results except the targetted checks
-        targetted_results = [result for result in results if result.name in check_names]
-
-        # If a targetted check was skipped, add the result that caused it to be skipped
-        for targetted_result in targetted_results[:]:
-            if targetted_result.passed is None:
-                # Find a check up the dependency chain that has failed or errored
-                cur_result = targetted_result
-                while cur_result.passed != False and "error" not in cur_result.cause:
-                    cur_result = [r for r in results if r.name == targetted_result.dependency][0]
-
-                # Add that check to the results
-                if cur_result not in targetted_results:
-                    targetted_results.append(cur_result)
-
-        # Return results (in order) of the checks targetted and checks that caused skips
-        return [result for result in results if result in targetted_results]
+        return [result for result in results if result != None]
 
 
     def _skip_children(self, check_name, results):

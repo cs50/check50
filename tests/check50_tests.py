@@ -325,8 +325,9 @@ class TestTarget(Base):
         with open("foo.json", "r") as f:
             output = json.load(f)
 
-        self.assertEqual(len(output["results"]), 1)
-        self.assertEqual(output["results"][0]["name"], "exists3")
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+        self.assertEqual(output["results"][1]["name"], "exists3")
 
 
     def test_two_targets(self):
