@@ -341,5 +341,17 @@ class TestTarget(Base):
         self.assertEqual(output["results"][1]["name"], "exists2")
 
 
+    def test_target_failing_dependency(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists5 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists4")
+        self.assertEqual(output["results"][1]["name"], "exists5")
+
+
 if __name__ == "__main__":
     unittest.main()

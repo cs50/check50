@@ -163,7 +163,6 @@ def check(dependency=None, timeout=60, hidden=False):
     return decorator
 
 
-# Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, checks_path):
 
@@ -269,7 +268,7 @@ class CheckRunner:
         results = [result for result in results if result != None]
 
         # Filter out all results except the targetted checks
-        targetted_results = [result for result in results if result and result.name in check_names]
+        targetted_results = [result for result in results if result.name in check_names]
 
         # If a targetted check was skipped, add the result that caused it to be skipped
         for targetted_result in targetted_results[:]:
