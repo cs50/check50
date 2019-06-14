@@ -178,7 +178,7 @@ def raise_invalid_slug(slug, offline=False):
 
     similar_slugs = lib50.get_local_slugs("check50", similar_to=slug)[:3]
     if similar_slugs:
-        msg += _(" Did you mean?")
+        msg += _(" Did you mean:")
         for similar_slug in similar_slugs:
             msg += f"\n    {similar_slug}"
         msg += _("\nDo refer back to the problem specification if unsure.")
