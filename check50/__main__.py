@@ -172,6 +172,24 @@ class LogoutAction(argparse.Action):
         parser.exit()
 
 
+def raise_invalid_slug(slug, offline=False):
+    """Raise an error signalling slug is invalid for check50."""
+    msg = _("Could not find checks for {}.").format(slug)
+
+    similar_slugs = lib50.get_local_slugs("check50", similar_to=slug)[:3]
+    if similar_slugs:
+        msg += _(" Did you mean?")
+        for similar_slug in similar_slugs:
+            msg += f"\n    {similar_slug}"
+        msg += _("\nDo refer back to the problem specification if unsure.")
+
+    if offline:
+        msg += _("\nIf you are confident the slug is correct and you have an internet connection," \
+                " try running without --offline.")
+
+    raise internal.Error(msg)
+
+
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
@@ -251,11 +269,7 @@ def main():
             except lib50.ConnectionError:
                 raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(args.slug))
             except lib50.InvalidSlugError:
-                if args.offline:
-                    raise internal.Error(_("Could not find checks for {} locally."
-                                  " If you are confident the slug is correct and you have an internet connection,"
-                                  " try running without --offline.").format(args.slug))
-                raise
+                raise_invalid_slug(args.slug, offline=args.offline)
 
         # Load config
         config = internal.load_config(internal.check_dir)
