@@ -6,7 +6,9 @@
    :maxdepth: 3
    :caption: Contents:
 
+   check50_user
    api
+   json_specification
    check_writer
    extension_writer
 
