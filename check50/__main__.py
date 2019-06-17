@@ -27,6 +27,8 @@ from .runner import CheckRunner, CheckResult
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
+SLUG = None
+
 
 @contextlib.contextmanager
 def nullcontext(entry_result=None):
@@ -45,6 +47,7 @@ def excepthook(cls, exc, tb):
             ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
             with ctxmanager as output_file:
                 json.dump({
+                    "slug": SLUG,
                     "error": {
                         "type": cls.__name__,
                         "value": str(exc),
@@ -231,6 +234,9 @@ def main():
 
     args = parser.parse_args()
 
+    global SLUG
+    SLUG = args.slug
+
     # TODO: remove this when submit.cs50.io API is stabilized
     args.local = True
 
@@ -259,17 +265,17 @@ def main():
     if args.local:
         # If developing, assume slug is a path to check_dir
         if args.dev:
-            internal.check_dir = Path(args.slug).expanduser().resolve()
+            internal.check_dir = Path(SLUG).expanduser().resolve()
             if not internal.check_dir.is_dir():
                 raise internal.Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
             try:
-                internal.check_dir = lib50.local(args.slug, offline=args.offline)
+                internal.check_dir = lib50.local(SLUG, offline=args.offline)
             except lib50.ConnectionError:
-                raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(args.slug))
+                raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
             except lib50.InvalidSlugError:
-                raise_invalid_slug(args.slug, offline=args.offline)
+                raise_invalid_slug(SLUG, offline=args.offline)
 
         # Load config
         config = internal.load_config(internal.check_dir)
@@ -311,7 +317,7 @@ def main():
                     check_results = runner.run_all(included, working_area)
 
                 results = {
-                    "slug": args.slug,
+                    "slug": SLUG,
                     "results": check_results,
                     "version": __version__
                 }
@@ -319,7 +325,7 @@ def main():
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        commit_hash = lib50.push("check50", args.slug, commit_suffix="[skip submit]")[1]
+        commit_hash = lib50.push("check50", SLUG, commit_suffix="[skip submit]")[1]
         results = await_results(f"https://check.cs50.io/{commit_hash}")
 
     # Render output
