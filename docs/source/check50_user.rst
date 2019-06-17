@@ -18,27 +18,32 @@ Why? Well, anyone can write checks for check50 without needing to ask for permis
 * branch
 * path to problem
 
-These four pieces of information concatenated with a / is what check50 calls a slug, a string that uniquely identifies a set of checks. For instance the slug `cs50/problems/2018/x/caesar` uniquely identifies the org `cs50`, the repository `problems`, the branch `2018/x` and the path `caesar`.
+These four pieces of information separated by a / is what check50 calls a slug, a string that uniquely identifies a set of checks. For instance the slug :code:`cs50/problems/2018/x/caesar` uniquely identifies the org :code:`cs50`, the repository :code:`problems`, the branch :code:`2018/x` and the path :code:`caesar`.
 
 
 Operation modes
 **********************
+Check50 can run in four mutually exclusive modes of operation.
 
 **********************
 local
 **********************
+By default check50 runs locally. That means the checks run locally on the machine you run check50 on. The checks however are fetched remotely from GitHub.
 
 **********************
 offline
 **********************
+Running with :code:`--offline` runs the checks locally and has check50 look for checks locally. check50 will not try to fetch checks remotely in this mode.
 
 **********************
 online
 **********************
+Running with :code:`--online` runs the checks remotely and then waits for the results to come back.
 
 **********************
 dev
 **********************
+The :code:`--dev` flag signals check50 to run in developer mode. This implies :code:`--offline`. More on this mode in :ref:`check_writer`.
 
 
 Additional output
@@ -63,9 +68,9 @@ target
 
 Output modes
 **********************
-check50 supports three output modes: `ansi`, `html` and `json`. In short, the `ansi` output mode is text-based output meant to be displayed in a terminal. `html` is an extension of `ansi` showing the same results but in a webpage. This allows for visual comparisons and more information to be displayed in general. Finally, the `json` output mode provides a machine readable form of output, that can for instance be used for automatic grading.
+check50 supports three output modes: :code:`ansi`, :code:`html` and :code:`json`. In short, the :code:`ansi` output mode is text-based output meant to be displayed in a terminal. :code:`html` is an extension of :code:`ansi` showing the same results but in a webpage. This allows for visual comparisons and more information to be displayed in general. Finally, the :code:`json` output mode provides a machine readable form of output, that can for instance be used for automatic grading.
 
-The output modes can be mixed and matched through the `--output` or `-o` flag.
+The output modes can be mixed and matched through the :code:`--output` or :code:`-o` flag.
 
 .. code-block:: bash
 
@@ -73,26 +78,26 @@ The output modes can be mixed and matched through the `--output` or `-o` flag.
     check50 <slug> -o ansi html # equivalent to check50 <slug>
     check50 <slug> -o json
 
-By default `check50` shows both `ansi` and `html` output.
+By default check50 shows both :code:`ansi` and :code:`html` output.
 
 **********************
 ansi
 **********************
-The `ansi` output mode will have check50 print the results from the checks to stdout. This output mode keeps students in the terminal, the environment in which they are running check50 in the first place. Limited by its nature, check50's `ansi` output mode is not suited for large pieces of text or visual comparisons. The output format is sufficient for showing which checks passed and failed, and offering short text based help or explanation on those checks.
+The :code:`ansi` output mode will have check50 print the results from the checks to stdout. This output mode keeps students in the terminal, the environment in which they are running check50 in the first place. Limited by its nature, check50's :code:`ansi` output mode is not suited for large pieces of text or visual comparisons. The output format is sufficient for showing which checks passed and failed, and offering short text based help or explanation on those checks.
 
 .. image:: ansi_output.png
 
 **********************
 html
 **********************
-In addition to `ansi`, check50 comes with a `html` output mode. This output mode allows check50 to show results side by side and to display more verbose information like the log by default. check50 creates a local self contained static html file in `/tmp` and will output the path to file in stdout.
+In addition to :code:`ansi`, check50 comes with a :code:`html` output mode. This output mode allows check50 to show results side by side and to display more verbose information like the log by default. check50 creates a local self contained static html file in :code:`/tmp` and will output the path to file in stdout.
 
 .. image:: html_output.png
 
 **********************
 json
 **********************
-check50 can provide machine readable output in the form of `json`. By default this output mode will print to stdout, but like any other form of output check50 can write to a file with the `--output-file` command line option. For a complete overview of the `json` output please refer to the `json spec`.
+check50 can provide machine readable output in the form of :code:`json`. By default this output mode will print to stdout, but like any other form of output check50 can write to a file with the :code:`--output-file` command line option. For a complete overview of the :code:`json` output please refer to the :ref:`json_specification`.
 
 .. code-block:: json
 

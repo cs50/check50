@@ -90,7 +90,7 @@ Design
 
 Checks
 *******
-In check50 the actual checks are decoupled from the tool. You can find CS50's set of checks for CS50 problem sets at |cs50_checks|. If you would like to develop your own set of checks such that you can use check50 in your own course jump to  :ref:`check_writer`.
+In check50 the checks are decoupled from the tool. You can find CS50's set of checks for CS50 problem sets at |cs50_checks|. If you would like to develop your own set of checks such that you can use check50 in your own course jump to  :ref:`check_writer`.
 
 .. |cs50_checks| raw:: html
 
