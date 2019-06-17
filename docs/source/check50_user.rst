@@ -1,6 +1,6 @@
 .. _check50_user:
 
-Using check50
+Running check50
 ======================
 
 Slug
