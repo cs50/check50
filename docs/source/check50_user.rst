@@ -20,6 +20,47 @@ Why? Well, anyone can write checks for check50 without needing to ask for permis
 
 These four pieces of information concatenated with a / is what check50 calls a slug, a string that uniquely identifies a set of checks. For instance the slug `cs50/problems/2018/x/caesar` uniquely identifies the org `cs50`, the repository `problems`, the branch `2018/x` and the path `caesar`.
 
+
+Operation modes
+**********************
+
+**********************
+local
+**********************
+
+**********************
+offline
+**********************
+
+**********************
+online
+**********************
+
+**********************
+dev
+**********************
+
+
+Additional output
+**********************
+
+**********************
+verbose
+**********************
+
+**********************
+log
+**********************
+
+
+Targeting checks
+**********************
+
+**********************
+target
+**********************
+
+
 Output modes
 **********************
 check50 supports three output modes: `ansi`, `html` and `json`. In short, the `ansi` output mode is text-based output meant to be displayed in a terminal. `html` is an extension of `ansi` showing the same results but in a webpage. This allows for visual comparisons and more information to be displayed in general. Finally, the `json` output mode provides a machine readable form of output, that can for instance be used for automatic grading.

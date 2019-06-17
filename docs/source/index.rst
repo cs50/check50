@@ -80,6 +80,14 @@ For an overview of all flags run:
 
     check50 --help
 
+Design
+*******
+
+* **Write checks for code in code** check50 uses pure Python for checks and exposes a small Python api for common functionality.
+* **Extensibility in checks** Anyone can add checks to check50 without asking for permission. In fact, here is a tutorial to get you started: :ref:`check_writer`
+* **Extensibility in the tool itself** We cannot predict everything you need, nor can we cater for every use-case out of the box. This is why check50 provides you with a mechanism for adding your own code to the tool, once more without asking for permission. This lets you support different programming languages and add new functionality. Jump to :ref:`extension_writer` to learn more.
+* **PaaS** check50 can run online. This guarantees a consistent environment and lets you check code for correctness without introducing your own hardware.
+
 Checks
 *******
 In check50 the actual checks are decoupled from the tool. You can find CS50's set of checks for CS50 problem sets at |cs50_checks|. If you would like to develop your own set of checks such that you can use check50 in your own course jump to  :ref:`check_writer`.
