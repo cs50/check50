@@ -68,7 +68,7 @@ Top level
 *********
 Assuming `check50` is able to run successfully, you will find three keys at the top level of the json output: `slug`, `results` and `version`.
 
-* **slug** (`string`) indicates the slug with which `check50` was run, `cs50/problems/2018/x/caesar` in the above example.
+* **slug** (`string`) is the slug with which check50 was run, `cs50/problems/2018/x/caesar` in the above example.
 * **results** (`[object]`) is a list containing the results of each run check. More on this key below.
 * **version** (`string`) is the version of check50 used to run the checks.
 
