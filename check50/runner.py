@@ -249,10 +249,7 @@ class CheckRunner:
                 raise internal.Error(_("Unknown check {}").format(check_name))
 
         # Build an inverse dependency map, from a check to its dependency
-        inverse_dependency_map = {}
-        for check_name, dependents in self.dependency_map.items():
-            for dependent_name, _ in dependents:
-                inverse_dependency_map[dependent_name] = check_name
+        inverse_dependency_map = self._create_inverse_dependency_map()
 
         # Reconstruct a new dependency_map, consisting of the targetted checks and their dependencies
         new_dependency_map = collections.defaultdict(set)
@@ -273,6 +270,30 @@ class CheckRunner:
 
         # Filter out all occurances of None in results (results of non targetted checks)
         return [result for result in results if result != None]
+
+
+    def dependencies_of(self, check_names):
+        """Get the names of all direct and indirect dependencies of check_names."""
+        # Build an inverse dependency map, from a check to its dependency
+        inverse_dependency_map = self._create_inverse_dependency_map()
+
+        # Gather all dependencies from inverse_dependency_map
+        dependencies = set()
+        for check_name in check_names:
+            cur_check_name = inverse_dependency_map[check_name]
+            while cur_check_name != None:
+                dependencies.add(cur_check_name)
+                cur_check_name = inverse_dependency_map[cur_check_name]
+
+        return dependencies
+
+    def _create_inverse_dependency_map(self):
+        """Build an inverse dependency map, from a check to its dependency."""
+        inverse_dependency_map = {}
+        for check_name, dependents in self.dependency_map.items():
+            for dependent_name, _ in dependents:
+                inverse_dependency_map[dependent_name] = check_name
+        return inverse_dependency_map
 
 
     def _skip_children(self, check_name, results):
