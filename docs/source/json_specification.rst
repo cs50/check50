@@ -93,7 +93,7 @@ The cause key is `null` if the check passed and non-null. This key is by design 
 
 * **rationale** (`string`) is a stduent-facing explanation of why the check did not pass (e.g. the student's program did not output what was expected).
 * **help** (`string`) is an additional help message that may appear alongside the rationale giving additional context.
-* **expected** (`stirng`) and **actual** (`string`) are keys that always appear in a pair. In case you are expecting X as output, but Y was found instead, you will find these keys containing X and Y in the `cause` field. These appear when a check raises a `check50.Mismatch` exception.
+* **expected** (`string`) and **actual** (`string`) are keys that always appear in a pair. In case you are expecting X as output, but Y was found instead, you will find these keys containing X and Y in the `cause` field. These appear when a check raises a `check50.Mismatch` exception.
 * **error** (`object`) appears in `cause` when an unexpected error occurred during a check. It will contain the keys `type`, `value`, `traceback` and `data` with the same properties as in the top-level `error` key described below.
 
 
