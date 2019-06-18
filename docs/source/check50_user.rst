@@ -48,22 +48,27 @@ The :code:`--dev` flag signals check50 to run in developer mode. This implies :c
 
 Additional output
 **********************
+By default check50 will try to keep its output concise in its :code:`ansi` output mode. For each check you will see at most its description and rationale/help on why the check failed. check50 will by default hide tracebacks and log output. You can show both by running check50 with the :code:`--verbose` flag, or just the log with the :code:`--log` flag.
 
 **********************
 verbose
 **********************
+Running with :code:`--verbose` lets check50 output both the log and any tracebacks in the :code:`ansi` output mode.
 
 **********************
 log
 **********************
+Running check50 with :code:`--log` will have check50 print out its logs.
 
 
 Targeting checks
 **********************
+Check50 lets you target specific checks by name with the :code:`--target` flags. This will have check50 run just these checks and their dependencies.
 
 **********************
 target
 **********************
+With :code:`--target` you can target checks from a larger body of checks by name. check50 will only run and show these checks and their dependencies. 
 
 
 Output modes
