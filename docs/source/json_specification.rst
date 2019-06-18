@@ -84,7 +84,7 @@ If the results key exists (that is, check50 was able to run the checks successfu
 * **log** (`[string]`) contains the log accrewed during the execution of the check. Each element of the list is a line from the log.
 * **cause** (`object`, nullable) contains the reason that a check did not pass. If `passed` is `true`, `cause` will be `null` and `cause` will never be `null` if `passed` is not `true`. More detail about keys that may appear within `cause` below.
 * **data** (`object`) contains arbitrary data communicated by the check via the `check50.data` API call. Checks could use this to add additional information such as memory usage to the results, but check50 itself does not add anything to `data` by default.
-* **dependency** is the name of the check upon which this check depends.
+* **dependency** (`string`, nullable) is the name of the check upon which this check depends, or `null` if the check has no dependency.
 
 *****
 cause
