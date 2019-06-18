@@ -66,51 +66,44 @@ Produces the following:
 
 Top level
 *************************
-You will find three keys at the top level of the json output: `slug`, `results` and `version`.
+Assuming `check50` is able to run successfully, you will find three keys at the top level of the json output: `slug`, `results` and `version`.
 
-1. **slug** tells you the slug you ran check50 with. In the example above that is `cs50/problems/2018/x/caesar`.
-2. **results** is the payload of check50, a list of the results of all checks. More on this key below.
+1. **slug** indicates the slug with which `check50` was run, `cs50/problems/2018/x/caesar` in the above example.
+2. **results** is a list containing the results of each run check. More on this key below.
 3. **version** is the version of check50 used to run the checks.
 
-In case check50 ran into an error, for instance because of an invalid slug, you will find the following three keys at the top level:
-
-1. **slug** tells you the slug you ran check50 with. Note that this slug could be invalid.
-2. **error** is the information on the error check50 ran into. More on this key below.
-3. **version** is the version of check50 used to run the checks.
+If check50 encounters an error while running, e.g. due to an invalid slug, the `results` key will be replaced by an `error` key containing information about the error encountered.
 
 results
-*************************
-In case check50 ran successfully, that is not to say all checks passed but rather that check50 ran all checks, you will find a `results` key at the top level. This key contains a list of check results. Each result always contains the following keys:
+********
+If the results key exists (that is, check50 was able to run the checks successfully), it will contain a list of objects each corresponding to a check. The order of these objects corresponds to the order the checks appear in the file in which they were written. Each object will contain the following fields:
 
-1. **name** is the name of the check.
-2. **description** is the description of the check.
-3. **passed** is a tertiary value. `true`/`false` signals the check has passed or not respectively. The third possible state, `null`, signals that the check was skipped or an error occurred. You can distinct between the cases of an error or a skipped check by inspecting the `cause` key.
-4. **log** is a list of strings, each string is one entry in the log.
-5. **cause** is the cause of a failing check. In case a check passed, cause will be `null`. In every other case you will an object here with containing information on why it did not pass. More on this key below.
-6. **data** is always an object containing any additional data communicated during the check via the `check50.data` api call. More on this key below.
-7. **dependency** is the name of the check on which this check depends. This key allows you to trace the chain of dependencies.
+1. **name** (`string`) is the unique name of the check (the literal name of the Python function specifying the check).
+2. **description** (`string`) is a description of the check.
+3. **passed** (`bool`, nullable) is `true` if the check passed, `false` if the check failed, or `null` if the check was skipped (either because the check's dependency did not pass or because the check threw some unexpected error).
+4. **log** (`[string]`) contains the log accrewed during the execution of the check. Each element of the list is a line from the log.
+5. **cause** (`object`, nullable) contains the reason that a check did not pass. If `passed` is `true`, `cause` will be `null` and `cause` will never be `null` if `passed` is not `true`. More detail about keys that may appear within `cause` below.
+6. **data** (`object`) contains arbitrary data communicated by the check via the `check50.data` API call. Checks could use this to add additional information such as memory usage to the results, but check50 itself does not add anything to `data` by default.
+7. **dependency** is the name of the check upon which this check depends.
 
-*************************
+*****
 cause
-*************************
-The cause key of a result is either `null` in case the check passed or an object containing information on why the check did not pass. This key is by design an open-ended object. Everything in the `.payload` attribute of a `check50.Failure` will be put in the `cause` key. Through this mechanism you can communicate any information you want from a failing check to the results. Depending on what occurred check50 adds the following keys to `cause`:
+*****
+The cause key is `null` if the check passed and non-null. This key is by design an open-ended object. Everything in the `.payload` attribute of a `check50.Failure` will be put in the `cause` key. Through this mechanism you can communicate any information you want from a failing check to the results. Depending on what occurred, check50 adds the following keys to `cause`:
 
-1. **rationale** is an explanation of what went wrong and is always a part of `cause`. Could be that the code you are checking exited with a non-zero exitcode or output you were expecting was not printed.
-2. **help** is an additional help message that can be supplied alongside rationale.
-3. **expected** and **actual** are keys that always appear in a pair. In case you are expecting X as output, but Y was found instead, you will find these keys containing X and Y in the `cause` field. If you raise a `check50.Mismatch` from within a check, these are the keys you will find in the output.
-4. **error** appears in `cause` in case an error occurred during a check. This is an object containing `type`, `value` and `traceback` keys.
+1. **rationale** (`string`) is a stduent-facing explanation of why the check did not pass (e.g. the student's program did not output what was expected).
+2. **help** (`string`) is an additional help message that may appear alongside the rationale giving additional context.
+3. **expected** (`stirng`) and **actual** (`string`) are keys that always appear in a pair. In case you are expecting X as output, but Y was found instead, you will find these keys containing X and Y in the `cause` field. These appear when a check raises a `check50.Mismatch` exception.
+4. **error** (`object`) appears in `cause` when an unexpected error occurred during a check. It will contain the keys `type`, `value` and `traceback`.
 
-*************************
-data
-*************************
-The data key of a result contains an object in which you will find any key-values passed to the `check50.data` api call. The purpose of this is to provide a simple mechanism for communicating any additional data to the results. You could leverage this to for instance communicate runtime or memory usage. check50 itself does not add anything to `data` by default.
 
 
 error
-*************************
-If check50 errored, you will find the error key containing an object as on of the top-level keys in the json. The object will always contain the following four keys:
+*****
+If check50 encounters an unexpected error, the `error` key will replace the `results` key in the JSON output. It will contain the following keys:
 
-1. **type** telling you the type of the exception.
-2. **value** contains the message of the exception.
-3. **traceback** is a stack trace of the exception as a list of strings.
-4. **data** is an object containing any additional data the exception may carry in its payload attribute.
+1. **type** (`string`) contains the type name of the thrown exception.
+2. **value** (`string`) contains the result of converting the exception to a string.
+3. **traceback** (`[string]`) contains the stack trace of the thrown exception.
+4. **data** (`object`) contains any additional data the exception may carry in its `payload` attribute.
+
