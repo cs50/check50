@@ -1,0 +1,6 @@
+check50:
+  files:
+    - !exclude "*"
+    - !require "hello.js"
+  dependencies:
+    - "git+https://github.com/cs50/check50_js.git#egg=check50_js"
