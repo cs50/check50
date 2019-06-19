@@ -82,6 +82,21 @@ def excepthook(cls, exc, tb):
     sys.exit(1)
 
 
+def yes_no_prompt(prompt):
+    """
+    Raise a prompt, returns True if yes is entered, False if no is entered.
+    Will reraise prompt in case of any other reply.
+    """
+    yes = {"yes", "ye", "y", ""}
+    no = {"no", "n"}
+
+    reply = None
+    while reply not in yes and reply not in no:
+        reply = input(f"{prompt} [Y/n] ").lower()
+
+    return reply in yes
+
+
 # Assume we should print tracebacks until we get command line arguments
 excepthook.verbose = True
 excepthook.output = "ansi"
@@ -126,6 +141,20 @@ def install_translations(config):
                                              localedir=internal.check_dir / config["localedir"],
                                              fallback=True)
     _translation.add_fallback(checks_translation)
+
+
+def compile_checks(checks, prompt=False):
+    # Prompt to replace __init__.py (compile destination)
+    if prompt and os.path.exists(internal.check_dir / "__init__.py"):
+        if not yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
+            raise Error("Aborting: could not overwrite to __init__.py")
+
+    # Compile simple checks
+    with open(internal.check_dir / "__init__.py", "w") as f:
+        f.write(simple.compile(checks))
+
+    return "__init__.py"
+
 
 
 def await_results(url, pings=45, sleep=2):
@@ -279,7 +308,6 @@ def main():
 
         # Load config
         config = internal.load_config(internal.check_dir)
-
         # Compile local checks if necessary
         if isinstance(config["checks"], dict):
             config["checks"] = internal.compile_checks(config["checks"], prompt=args.dev)
