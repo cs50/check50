@@ -1,3 +1,5 @@
+.DS_store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -65,9 +67,6 @@ instance/
 
 # Sphinx documentation
 docs/build/
-
-# PyBuilder
-target/
 
 # Jupyter Notebook
 .ipynb_checkpoints

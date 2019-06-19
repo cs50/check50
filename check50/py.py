@@ -4,7 +4,7 @@ import py_compile
 import traceback
 
 from . import internal
-from .api import Failure, exists, log
+from ._api import Failure, exists, log
 
 
 def append_code(original, codefile):

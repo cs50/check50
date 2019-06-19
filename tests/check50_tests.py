@@ -1,4 +1,5 @@
 import unittest
+import json
 import pexpect
 import pathlib
 import shutil
@@ -285,6 +286,102 @@ class TestCompilePrompt(SimpleBase):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_prompt")
         process.expect_exact("check50 will compile the YAML checks to __init__.py")
         process.close(force=True)
+
+
+class TestOutputModes(Base):
+    def test_json_output(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/output")
+        with open("foo.json", "r") as f:
+            json_out = json.load(f)
+            self.assertEqual(json_out["results"][0]["name"], "exists")
+
+    def test_ansi_output(self):
+        process = pexpect.spawn(f"check50 --dev -o ansi -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact(":(")
+        process.close(force=True)
+
+    def test_html_output(self):
+        process = pexpect.spawn(f"check50 --dev -o html -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact("file://")
+        process.close(force=True)
+
+    def test_multiple_outputs(self):
+        process = pexpect.spawn(f"check50 --dev -o html ansi -- {CHECKS_DIRECTORY}/output")
+        process.expect_exact("file://")
+        process.expect_exact(":(")
+        process.close(force=True)
+
+    def test_default(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/output")
+        process.expect_exact(":(")
+        process.expect_exact("file://")
+        process.close(force=True)
+
+
+class TestHiddenCheck(Base):
+    def test_hidden_check(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
+        expected = [{'name': 'check', 'description': None, 'passed': False, 'log': [], 'cause': {}, 'data': {}, 'dependency': None}]
+        with open("foo.json", "r") as f:
+            self.assertEqual(json.load(f)["results"], expected)
+
+
+class TestPayloadCheck(Base):
+    def test_payload_check(self):
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/payload")
+        with open("foo.json", "r") as f:
+            error = json.load(f)["error"]
+        self.assertEqual(error["type"], "MissingFilesError")
+        self.assertEqual(error["data"]["files"], ["missing.c"])
+        self.assertEqual(pathlib.Path(error["data"]["dir"]).stem, pathlib.Path(self.working_directory.name).stem)
+
+
+class TestTarget(Base):
+    def test_target(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 1)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+
+
+    def test_target_with_dependency(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists3 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+        self.assertEqual(output["results"][1]["name"], "exists3")
+
+
+    def test_two_targets(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 exists2 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists1")
+        self.assertEqual(output["results"][1]["name"], "exists2")
+
+
+    def test_target_failing_dependency(self):
+        open("foo.py", "w").close()
+
+        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists5 -- {CHECKS_DIRECTORY}/target")
+        with open("foo.json", "r") as f:
+            output = json.load(f)
+
+        self.assertEqual(len(output["results"]), 2)
+        self.assertEqual(output["results"][0]["name"], "exists4")
+        self.assertEqual(output["results"][1]["name"], "exists5")
 
 
 if __name__ == "__main__":

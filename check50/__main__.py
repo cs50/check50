@@ -19,46 +19,65 @@ import time
 
 import attr
 import lib50
-from pexpect.exceptions import EOF
 import requests
-from termcolor import cprint
+import termcolor
 
-from . import internal, __version__, simple, api
-from .api import Failure
+from . import internal, renderer, __version__
 from .runner import CheckRunner, CheckResult
 
-lib50.api.LOCAL_PATH = "~/.local/share/check50"
+lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
+
+SLUG = None
 
 
-class Error(Exception):
-    pass
+@contextlib.contextmanager
+def nullcontext(entry_result=None):
+    """This is just contextlib.nullcontext but that function is only available in 3.7+."""
+    yield entry_result
 
 
 def excepthook(cls, exc, tb):
-    if excepthook.output == "json":
-        json.dump({
-            "error": {
-                "type": cls.__name__,
-                "value": str(exc),
-            },
-            "version": __version__
-        }, sys.stdout, indent=4)
-        print()
-    else:
-        if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
-            cprint(str(exc), "red", file=sys.stderr)
-        elif issubclass(cls, FileNotFoundError):
-            cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-        elif issubclass(cls, KeyboardInterrupt):
-            cprint(f"check cancelled", "red")
-        elif not issubclass(cls, Exception):
-            # Class is some other BaseException, better just let it go
-            return
-        else:
-            cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+    # All channels to output to
+    outputs = excepthook.outputs
 
-        if excepthook.verbose:
-            traceback.print_exception(cls, exc, tb)
+    for output in excepthook.outputs:
+        if output == "json":
+            outputs.remove("json")
+
+            ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
+            with ctxmanager as output_file:
+                json.dump({
+                    "slug": SLUG,
+                    "error": {
+                        "type": cls.__name__,
+                        "value": str(exc),
+                        "traceback": traceback.format_tb(exc.__traceback__),
+                        "data" : exc.payload if hasattr(exc, "payload") else {}
+                    },
+                    "version": __version__
+                }, output_file, indent=4)
+                output_file.write("\n")
+
+        elif output == "ansi" or output == "html":
+            if output == "ansi":
+                outputs.remove("ansi")
+            else:
+                outputs.remove("html")
+
+            if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
+                termcolor.cprint(str(exc), "red", file=sys.stderr)
+            elif issubclass(cls, FileNotFoundError):
+                termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
+            elif issubclass(cls, KeyboardInterrupt):
+                termcolor.cprint(f"check cancelled", "red")
+            elif not issubclass(cls, Exception):
+                # Class is some other BaseException, better just let it go
+                return
+            else:
+                termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+
+            if excepthook.verbose:
+                traceback.print_exception(cls, exc, tb)
 
     sys.exit(1)
 
@@ -81,43 +100,8 @@ def yes_no_prompt(prompt):
 # Assume we should print tracebacks until we get command line arguments
 excepthook.verbose = True
 excepthook.output = "ansi"
+excepthook.output_file = None
 sys.excepthook = excepthook
-
-
-class Encoder(json.JSONEncoder):
-    """Custom class for JSON encoding."""
-
-    def default(self, o):
-        if o == EOF:
-            return "EOF"
-        elif isinstance(o, CheckResult):
-            return attr.asdict(o)
-        else:
-            return o.__dict__
-
-
-def print_json(results):
-    json.dump({"results": list(results), "version": __version__}, sys.stdout, cls=Encoder, indent=4)
-    print()
-
-
-def print_ansi(results, log=False):
-    for result in results:
-        if result.passed:
-            cprint(f":) {result.description}", "green")
-        elif result.passed is None:
-            cprint(f":| {result.description}", "yellow")
-            cprint(f"    {result.cause.get('rationale') or _('check skipped')}", "yellow")
-        else:
-            cprint(f":( {result.description}", "red")
-            if result.cause.get("rationale") is not None:
-                cprint(f"    {result.cause['rationale']}", "red")
-            if result.cause.get("help") is not None:
-                cprint(f"    {result.cause['help']}", "red")
-
-        if log:
-            for line in result.log:
-                print(f"    {line}")
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -141,7 +125,7 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise Error(_("failed to install dependencies"))
+            raise internal.Error(_("failed to install dependencies"))
 
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
@@ -182,24 +166,26 @@ def await_results(url, pings=45, sleep=2):
     print("Checking...", end="", flush=True)
     for _ in range(pings):
         # Query for check results.
-        res = requests.post(url)
-        if res.status_code != 200:
-            continue
-        payload = res.json()
-        if payload["complete"]:
+        res = requests.post(url, params={"format": "json"})
+        if res.status_code == 200:
+            print()
             break
         print(".", end="", flush=True)
         time.sleep(sleep)
     else:
         # Terminate if no response
         print()
-        raise Error(
-            _("check50 is taking longer than normal!\nSee https://cs50.me/checks/{} for more detail.").format(commit_hash))
-    print()
+        raise internal.Error(
+            _("check50 is taking longer than normal!\nSee {} for more detail.").format(url))
 
-    # TODO: Should probably check payload["checks"]["version"] here to make sure major version is same as __version__
+    payload= res.json()
+    # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
-    return (CheckResult(**result) for result in payload["checks"]["results"])
+    return {
+        "slug": payload["slug"],
+        "results": list(map(CheckResult.from_dict, payload["results"])),
+        "version": payload["version"]
+    }
 
 
 class LogoutAction(argparse.Action):
@@ -212,10 +198,28 @@ class LogoutAction(argparse.Action):
         try:
             lib50.logout()
         except lib50.Error:
-            raise Error(_("failed to logout"))
+            raise internal.Error(_("failed to logout"))
         else:
-            termcolor.cprint(_("logged out successfully"), "green")
+            termcolor.termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
+
+
+def raise_invalid_slug(slug, offline=False):
+    """Raise an error signalling slug is invalid for check50."""
+    msg = _("Could not find checks for {}.").format(slug)
+
+    similar_slugs = lib50.get_local_slugs("check50", similar_to=slug)[:3]
+    if similar_slugs:
+        msg += _(" Did you mean:")
+        for similar_slug in similar_slugs:
+            msg += f"\n    {similar_slug}"
+        msg += _("\nDo refer back to the problem specification if unsure.")
+
+    if offline:
+        msg += _("\nIf you are confident the slug is correct and you have an internet connection," \
+                " try running without --offline.")
+
+    raise internal.Error(msg)
 
 
 def main():
@@ -237,9 +241,18 @@ def main():
                         help=_("display more detailed information about check results"))
     parser.add_argument("-o", "--output",
                         action="store",
-                        default="ansi",
-                        choices=["ansi", "json"],
+                        nargs="+",
+                        default=["ansi", "html"],
+                        choices=["ansi", "json", "html"],
                         help=_("format of check results"))
+    parser.add_argument("--target",
+                        action="store",
+                        nargs="+",
+                        help=_("target specific checks to run"))
+    parser.add_argument("--output-file",
+                        action="store",
+                        metavar="FILE",
+                        help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help=_("display the full tracebacks of any errors (also implies --log)"))
@@ -249,6 +262,9 @@ def main():
     parser.add_argument("--logout", action=LogoutAction)
 
     args = parser.parse_args()
+
+    global SLUG
+    SLUG = args.slug
 
     # TODO: remove this when submit.cs50.io API is stabilized
     args.local = True
@@ -266,24 +282,35 @@ def main():
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
+    # Filter out any duplicates from args.output
+    seen_output = set()
+    args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
+
+    # Set excepthook
     excepthook.verbose = args.verbose
-    excepthook.output = args.output
+    excepthook.outputs = args.output
+    excepthook.output_file = args.output_file
 
     if args.local:
         # If developing, assume slug is a path to check_dir
         if args.dev:
-            internal.check_dir = Path(args.slug).expanduser().resolve()
+            internal.check_dir = Path(SLUG).expanduser().resolve()
             if not internal.check_dir.is_dir():
-                raise Error(_("{} is not a directory").format(internal.check_dir))
+                raise internal.Error(_("{} is not a directory").format(internal.check_dir))
         else:
             # Otherwise have lib50 create a local copy of slug
-            internal.check_dir = lib50.local(args.slug, "check50", offline=args.offline)
+            try:
+                internal.check_dir = lib50.local(SLUG, offline=args.offline)
+            except lib50.ConnectionError:
+                raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
+            except lib50.InvalidSlugError:
+                raise_invalid_slug(SLUG, offline=args.offline)
 
+        # Load config
         config = internal.load_config(internal.check_dir)
         # Compile local checks if necessary
         if isinstance(config["checks"], dict):
-            config["checks"] = compile_checks(config["checks"], prompt=args.dev)
-
+            config["checks"] = internal.compile_checks(config["checks"], prompt=args.dev)
 
         install_translations(config["translations"])
 
@@ -295,8 +322,9 @@ def main():
         # Have lib50 decide which files to include
         included = lib50.files(config.get("files"))[0]
 
-        # Redirect stdout and stdin
-        with open(os.devnull, "w") as devnull:
+        # Only open devnull conditionally
+        ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
+        with ctxmanager as devnull:
             if args.verbose:
                 stdout = sys.stdout
                 stderr = sys.stderr
@@ -308,18 +336,40 @@ def main():
                     contextlib.redirect_stdout(stdout), \
                     contextlib.redirect_stderr(stderr):
 
+                runner = CheckRunner(checks_file)
+
                 # Run checks
-                results = CheckRunner(checks_file).run(included, working_area)
+                if args.target:
+                    check_results = runner.run(args.target, included, working_area)
+                else:
+                    check_results = runner.run_all(included, working_area)
+
+                results = {
+                    "slug": SLUG,
+                    "results": check_results,
+                    "version": __version__
+                }
+
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        username, commit_hash = lib50.push("check50", args.slug)
-        results = await_results(f"https://cs50.me/check50/status/{username}/{commit_hash}")
+        commit_hash = lib50.push("check50", SLUG, commit_suffix="[skip submit]")[1]
+        results = await_results(f"https://check.cs50.io/{commit_hash}")
 
-    if args.output == "json":
-        print_json(results)
-    else:
-        print_ansi(results, log=args.log)
+    # Render output
+    file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
+    with file_manager as output_file:
+        for output in args.output:
+            if output == "json":
+                output_file.write(renderer.to_json(**results))
+                output_file.write("\n")
+            elif output == "ansi":
+                output_file.write(renderer.to_ansi(**results, log=args.log))
+                output_file.write("\n")
+            elif output == "html":
+                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
+                    html_file.write(renderer.to_html(**results))
+                termcolor.cprint(_("To see the results in your browser go to file://{}").format(html_file.name), "white", attrs=["bold"])
 
 
 if __name__ == "__main__":

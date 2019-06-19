@@ -16,7 +16,7 @@ import traceback
 import attr
 
 from . import internal
-from .api import log, Failure, _copy, _log, _data
+from ._api import log, Failure, _copy, _log, _data
 
 _check_names = []
 
@@ -41,6 +41,13 @@ class CheckResult:
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
+
+    @classmethod
+    def from_dict(cls, d):
+        """Create a CheckResult given a dict. Dict must contain at least the fields in the CheckResult.
+        Throws a KeyError if not."""
+        return cls(**{field.name: d[field.name] for field in attr.fields(cls)})
+
 
 
 class Timeout(Failure):
@@ -73,13 +80,15 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60):
+def check(dependency=None, timeout=60, hidden=False):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param hidden: true if cause and log should be hidden from student
+    :type hidden: bool
 
     When a check depends on another, the former will only run if the latter passes.
     Additionally, the dependent check will inherit the filesystem of its dependency.
@@ -135,25 +144,32 @@ def check(dependency=None, timeout=60):
                     state = check(*args)
             except Failure as e:
                 result.passed = False
-                result.cause = e.payload
+                result.cause = e.payload if not hidden else {}
             except BaseException as e:
                 result.passed = None
-                result.cause = {"rationale": _("check50 ran into an error while running checks!")}
-                log(repr(e))
-                for line in traceback.format_tb(e.__traceback__):
-                    log(line.rstrip())
-                log(_("Contact sysadmins@cs50.harvard.edu with the URL of this check!"))
+                result.cause = {"rationale": _("check50 ran into an error while running checks!"),
+                                "error": {
+                                    "type": type(e).__name__,
+                                    "value": str(e),
+                                    "traceback": traceback.format_tb(e.__traceback__),
+                                    "data" : e.payload if hasattr(e, "payload") else {}
+                                }}
+
+                # log(repr(e))
+                # for line in traceback.format_tb(e.__traceback__):
+                #     log(line.rstrip())
+                # log(_("Contact sysadmins@cs50.harvard.edu with the slug of this check!"))
             else:
                 result.passed = True
             finally:
-                result.log = _log
+                if not hidden:
+                    result.log = _log
                 result.data = _data
                 return result, state
         return wrapper
     return decorator
 
 
-# Probably shouldn't be a class
 class CheckRunner:
     def __init__(self, checks_path):
 
@@ -170,12 +186,13 @@ class CheckRunner:
         _check_names.clear()
 
         # Map each check to tuples containing the names and descriptions of the checks that depend on it
-        self.child_map = collections.defaultdict(set)
+        self.dependency_map = collections.defaultdict(set)
         for name, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency")):
             dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
-            self.child_map[dependency].add((name, check.__doc__))
+            self.dependency_map[dependency].add((name, check.__doc__))
 
-    def run(self, files, working_area):
+
+    def run_all(self, files, working_area):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
@@ -189,7 +206,7 @@ class CheckRunner:
 
             # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
-                           for name, _ in self.child_map[None])
+                           for name, _ in self.dependency_map[None])
             not_passed = []
 
             while not_done:
@@ -200,7 +217,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.passed:
                         # Dispatch dependent checks
-                        for child_name, _ in self.child_map[result.name]:
+                        for child_name, _ in self.dependency_map[result.name]:
                             not_done.add(executor.submit(
                                 run_check(child_name, self.checks_spec, checks_root, state)))
                     else:
@@ -209,14 +226,82 @@ class CheckRunner:
         for name in not_passed:
             self._skip_children(name, results)
 
-        return results.values()
+        return list(results.values())
+
+
+    def run(self, check_names, files, working_area):
+        """
+        Run just the targeted checks, and the checks they depends on.
+        Returns just the result of the targetted checks.
+        """
+        if len(set(check_names)) < len(check_names):
+            raise internal.Error(_("Duplicate checks targetted: {}".format(check_names)))
+
+        # Find the docs for every check in the dependency map
+        check_docs = {}
+        for dependents in self.dependency_map.values():
+            for dependent, doc in dependents:
+                check_docs[dependent] = doc
+
+        # For every targetted check, validate that it exists
+        for check_name in check_names:
+            if check_name not in check_docs:
+                raise internal.Error(_("Unknown check {}").format(check_name))
+
+        # Build an inverse dependency map, from a check to its dependency
+        inverse_dependency_map = self._create_inverse_dependency_map()
+
+        # Reconstruct a new dependency_map, consisting of the targetted checks and their dependencies
+        new_dependency_map = collections.defaultdict(set)
+        for check_name in check_names:
+            cur_check_name = check_name
+            while cur_check_name != None:
+                dependency_name = inverse_dependency_map[cur_check_name]
+                new_dependency_map[dependency_name].add((cur_check_name, check_docs[cur_check_name]))
+                cur_check_name = dependency_name
+
+        # Temporarily replace dependency_map and run
+        try:
+            old_dependency_map = self.dependency_map
+            self.dependency_map = new_dependency_map
+            results = self.run_all(files, working_area)
+        finally:
+            self.dependency_map = old_dependency_map
+
+        # Filter out all occurances of None in results (results of non targetted checks)
+        return [result for result in results if result != None]
+
+
+    def dependencies_of(self, check_names):
+        """Get the names of all direct and indirect dependencies of check_names."""
+        # Build an inverse dependency map, from a check to its dependency
+        inverse_dependency_map = self._create_inverse_dependency_map()
+
+        # Gather all dependencies from inverse_dependency_map
+        dependencies = set()
+        for check_name in check_names:
+            cur_check_name = inverse_dependency_map[check_name]
+            while cur_check_name != None:
+                dependencies.add(cur_check_name)
+                cur_check_name = inverse_dependency_map[cur_check_name]
+
+        return dependencies
+
+    def _create_inverse_dependency_map(self):
+        """Build an inverse dependency map, from a check to its dependency."""
+        inverse_dependency_map = {}
+        for check_name, dependents in self.dependency_map.items():
+            for dependent_name, _ in dependents:
+                inverse_dependency_map[dependent_name] = check_name
+        return inverse_dependency_map
+
 
     def _skip_children(self, check_name, results):
         """
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
-        for name, description in self.child_map[check_name]:
+        for name, description in self.dependency_map[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),
                                             passed=None,
@@ -240,4 +325,8 @@ class run_check:
     def __call__(self):
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
-        return getattr(mod, self.check_name)(self.checks_root, self.state)
+        internal.check_running = True
+        try:
+            return getattr(mod, self.check_name)(self.checks_root, self.state)
+        finally:
+            internal.check_running = False
