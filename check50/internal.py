@@ -19,7 +19,7 @@ run_dir = None
 #: Boolean that indicates if a check is currently running
 check_running = False
 
-#: ``lib50`` config loadr
+#: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
 CONFIG_LOADER.scope("files", "include", "exclude", "require")
 
