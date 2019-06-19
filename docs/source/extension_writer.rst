@@ -26,9 +26,9 @@ The challenge in writing this extension is that check50 itself is written in Pyt
 
 You can find example checks using check50_js and their solutions at:
 
-* **hello.js**: `checks <https://github.com/cs50/check50/tree/examples/js/hello>`_ `solution <https://github.com/cs50/check50/tree/examples/solutions/hello_js/hello.js>`_
-* **line.js**: `checks <https://github.com/cs50/check50/tree/examples/js/line>`_ `solution <https://github.com/cs50/check50/tree/examples/solutions/line_js/line.js>`_
-* **addition.js**: `checks <https://github.com/cs50/check50/tree/examples/js/addition>`_ `solution <https://github.com/cs50/check50/tree/examples/solutions/addition_js/addition.js>`_
+* **hello.js**: `checks <https://github.com/cs50/check50/tree/examples/js/hello>`__ `solution <https://github.com/cs50/check50/tree/examples/solutions/hello_js/hello.js>`__
+* **line.js**: `checks <https://github.com/cs50/check50/tree/examples/js/line>`__ `solution <https://github.com/cs50/check50/tree/examples/solutions/line_js/line.js>`__
+* **addition.js**: `checks <https://github.com/cs50/check50/tree/examples/js/addition>`__ `solution <https://github.com/cs50/check50/tree/examples/solutions/addition_js/addition.js>`__
 
 
 To try any of these examples for yourself, simply run:
