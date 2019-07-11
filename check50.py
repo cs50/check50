@@ -307,7 +307,7 @@ def import_checks(identifier):
     for dir in [checks_root, os.path.dirname(config.check_dir)]:
         requirements = os.path.join(dir, "requirements.txt")
         if os.path.exists(requirements):
-            args = ["install", "-r", requirements]
+            args = ["install", "--upgrade", "-r", requirements]
             # If we are not in a virtualenv, we need --user
             if not hasattr(sys, "real_prefix"):
                 args.append("--user")
