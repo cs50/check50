@@ -14,6 +14,7 @@ import re
 import requests
 import shutil
 import signal
+import site
 import subprocess
 import sys
 import tempfile
@@ -40,6 +41,12 @@ try:
     from shlex import quote
 except ImportError:
     from pipes import quote
+
+
+try:
+    from importlib import reload
+except AttributeError:
+    from imp import reload
 
 import config
 
@@ -313,6 +320,10 @@ def import_checks(identifier):
             except subprocess.CalledProcessError:
                 raise InternalError("failed to install dependencies in ({})".format(
                     requirements[len(config.args.checkdir) + 1:]))
+
+            # Refresh sys.path to look for newly installed dependencies
+            reload(site)
+
 
     try:
         # Import module from file path directly.
