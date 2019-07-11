@@ -45,7 +45,7 @@ except ImportError:
 
 try:
     from importlib import reload
-except AttributeError:
+except (ImportError, AttributeError):
     from imp import reload
 
 import config
