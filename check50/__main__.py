@@ -353,7 +353,7 @@ def main():
     else:
         # TODO: Remove this before we ship
         raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        commit_hash = lib50.push("check50", SLUG, commit_suffix="[skip submit]")[1]
+        commit_hash = lib50.push("check50", SLUG, commit_suffix="[submit=false]")[1]
         results = await_results(f"https://check.cs50.io/{commit_hash}")
 
     # Render output
