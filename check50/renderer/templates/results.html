@@ -91,10 +91,10 @@
                                       <div style="background-color:black; color:white;">
                                       <samp>
                                           {% autoescape false %}
-                                              {% if check.cause.actual is not string | e %}
+                                              {% if check.cause.actual is not string %}
                                                   {% set actual = check.cause.actual | join('\n') | e %}
                                               {% else %}
-                                                  {% set actual = check.cause.actual %}
+                                                  {% set actual = check.cause.actual | e %}
                                               {% endif %}
                                               {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
