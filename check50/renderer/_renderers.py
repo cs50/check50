@@ -27,13 +27,13 @@ class Encoder(json.JSONEncoder):
 
 def to_html(slug, results, version=__version__):
     with open(TEMPLATES / "results.html") as f:
-        match_content = f.read()
+        content = f.read()
 
-    match_template = jinja2.Template(
-        match_content, autoescape=jinja2.select_autoescape(enabled_extensions=("html",)))
-    match_html = match_template.render(slug=slug, checks=list(map(attr.asdict, results)), version=version)
+    template = jinja2.Template(
+        content, autoescape=jinja2.select_autoescape(enabled_extensions=("html",)))
+    html = template.render(slug=slug, checks=list(map(attr.asdict, results)), version=version)
 
-    return match_html
+    return html
 
 
 def to_json(slug, results, version=__version__):
