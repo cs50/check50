@@ -25,13 +25,15 @@
                           {# Reason why the check received its status #}
                           {% if check.cause %}
                               {% autoescape false %}
-                                  {{ check.cause.rationale | replace(" ", "&nbsp;") }}
+                                  {{ check.cause.rationale | e | replace(" ", "&nbsp;") }}
                               {% endautoescape %}
                               <br/>
-                              {% if check.cause.help %}
-                                  {{ check.cause.help | replace(" ", "&nbsp;") }}
-                                  <br/>
-                              {% endif %}
+                              {% autoescape false %}
+                                  {% if check.cause.help %}
+                                      {{ check.cause.help | e | replace(" ", "&nbsp;") }}
+                                      <br/>
+                                  {% endif %}
+                              {% endautoescape %}
                           {% endif %}
 
                           {# Log information #}
@@ -74,9 +76,9 @@
                                       <samp>
                                           {% autoescape false %}
                                               {% if check.cause.expected is not string %}
-                                                  {% set expected = check.cause.expected | join('\n') %}
+                                                  {% set expected = check.cause.expected | join('\n') | e %}
                                               {% else %}
-                                                  {% set expected = check.cause.expected %}
+                                                  {% set expected = check.cause.expected | e %}
                                               {% endif %}
                                               {{ expected | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
@@ -89,8 +91,8 @@
                                       <div style="background-color:black; color:white;">
                                       <samp>
                                           {% autoescape false %}
-                                              {% if check.cause.actual is not string %}
-                                                  {% set actual = check.cause.actual | join('\n') %}
+                                              {% if check.cause.actual is not string | e %}
+                                                  {% set actual = check.cause.actual | join('\n') | e %}
                                               {% else %}
                                                   {% set actual = check.cause.actual %}
                                               {% endif %}
