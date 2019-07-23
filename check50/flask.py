@@ -23,7 +23,7 @@ class app:
         check50.flask.app("application.py").get("/").status(200)
     """
 
-    def __init__(self, path, app_name="app"):
+    def __init__(self, path="application.py", app_name="app"):
 
         path = pathlib.Path(path).resolve()
 
