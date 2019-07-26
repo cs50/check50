@@ -114,14 +114,14 @@ def main():
                 if pings > 45:
                     print()
                     cprint("check50 is taking longer than normal!", "red", file=sys.stderr)
-                    cprint("See https://cs50.me/checks/{} for more detail.".format(commit_hash),
+                    cprint("See https://legacy.cs50.me/checks/{} for more detail.".format(commit_hash),
                            "red", file=sys.stderr)
                     sys.exit(1)
                 pings += 1
 
                 # Query for check results.
                 res = requests.post(
-                    "https://cs50.me/check50/status/{}/{}".format(username, commit_hash))
+                    "https://legacy.cs50.me/check50/status/{}/{}".format(username, commit_hash))
                 if res.status_code != 200:
                     continue
                 payload = res.json()
@@ -134,7 +134,7 @@ def main():
 
             # Print results from payload.
             print_results(payload["checks"], config.args.log)
-            print("See https://cs50.me/checks/{} for more detail.".format(commit_hash))
+            print("See https://legacy.cs50.me/checks/{} for more detail.".format(commit_hash))
             sys.exit(0)
 
     # Copy all files to temporary directory.
