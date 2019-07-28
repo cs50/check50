@@ -367,9 +367,13 @@ def main():
                 output_file.write(renderer.to_ansi(**results, log=args.log))
                 output_file.write("\n")
             elif output == "html":
-                with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
-                    html_file.write(renderer.to_html(**results))
-                termcolor.cprint(_("To see the results in your browser go to file://{}").format(html_file.name), "white", attrs=["bold"])
+                html = render.to_html(**results)
+                if os.environ.get("CS50_IDE_TYPE"):
+                    subprocess.check_call(["c9", "exec", "rendercheckresults", html])
+                else:
+                    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
+                        html_file.write(html)
+                    termcolor.cprint(_("To see the results in your browser go to file://{}").format(html_file.name), "white", attrs=["bold"])
 
 
 if __name__ == "__main__":
