@@ -1,31 +1,41 @@
 language: python
-python:
-- '2.7'
-- '3.4'
+python: 3.6
 branches:
-  except: "/^v\\d/"
-install: true
+  except: /^v\.\d\.\d\.\d/
+addons:
+  apt:
+    update: true
+    packages: valgrind
+before_install: pip install babel flask travis-sphinx
+install: pip install --upgrade .[develop]
 script:
-- pip install .
-- check50 --help
-jobs:
-  include:
-  - stage: deploy
-    python: '3.4'
-    install: true
-    script: true
-    deploy:
-    - provider: script
-      script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",
-        \"target_commitish\": \"$TRAVIS_COMMIT\", \"name\": \"v$(python setup.py --version)\"
-        }" --user bot50:$GITHUB_TOKEN https://api.github.com/repos/$TRAVIS_REPO_SLUG/releases'
-      on:
-        branch: master
-    - provider: pypi
-      user: "$PYPI_USERNAME"
-      password: "$PYPI_PASSWORD"
-      on:
-        branch: master
+  # - python setup.py compile_catalog
+  - python -m tests
+  - travis-sphinx build
+# TODO: remove branches flag when we actually deploy to master
+after_success: travis-sphinx deploy --branches master,develop
+before_deploy: |
+  version="v$(check50 --version | cut --delimiter ' ' --fields 2)"
+  if [ -z "$(git tag --list "$version")" ]; then \
+      git config --local user.name "bot50"; \
+      git config --local user.email "bot@cs50.harvard.edu"; \
+      git tag "$version"; \
+  fi
+deploy:
+- provider: releases
+  api_key: $GH_TOKEN
+  skip_cleanup: true
+  on:
+    branch: master
+- provider: pypi
+  user: "$PYPI_USERNAME"
+  password: "$PYPI_PASSWORD"
+  skip_cleanup: true
+  on:
+    branch: master
+- provider: script
+  script: 'curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data "{ \"request\": { \"branch\": \"master\" } }" "https://api.travis-ci.org/repo/cs50%2Fmanual50/requests"'
+  on: develop
 notifications:
   slack:
     secure: DHyiOOI74L9aIi2raGNpsGpyNC5STBci9HvL22l+ujl0h4rcT3fg50Gj9tTtvlKsJwe+gGMx8nXwZZRO/d6uuBlr5Sez3DcBaQbC5YRJQDAxorL4R8ay+2hGtU00dMzH4mtfJwiH9lISfXf+L5nXDqisckN6KtcwHh8hRrK6wjU35D035aIKoWvKcZYA5hhc9uE6D+LV+mVMr7AK9mUDUl3kpzbc9KChRgjyP893rpEKInVbQeZtpT96v0/yyM3ef1l+x9trw7dHZWy2OfXcP4VG6SFywCls8vt4fAeIm50mpHOr11R6QScRmjB562xVt3BU1fwKjSv57nZ/N7IiNAQ97WY8LAanHQQosfESahHbXYFQ0RpPVXfdwEhQetlUuh32w5uJNqZ0Nx/CjoMO4cToTeNsYCeCIIFNKjlFLfbfuJsGqWxb3g9EgtRAYhVQSok1fNPJNbfx3SfA5ZhCFv1t8HGZADXrN0wRPblygVSyG1ELUb3KWbdQ5XtE5S+Dr2r2YVcbrVgc6OQ60g6CowItzcz91K2DFbWyUQoSHMH6iLrqa3hOBRCKsnv4YBRwn0O5B4+KmfuJBz+xj1qmlUw7YAWMmu2PUoM/X9NS+NTzE85IyQY2/KTWeqK02ixyKPqj8+vqsC8mLEz9PHJjQcaBWaGIQUNTDNIKHcUtDVA=

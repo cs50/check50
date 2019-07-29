@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <title>This is check50.</title>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row">
+
+            <h1>check50</h1>
+            <h2>{{ slug }}</h2>
+            <hr>
+              {% for check in checks %}
+                  {% if check.passed == True %}
+                      <h3 style="color:green">:) {{ check.description }}</h3>
+                  {% elif check.passed == False %}
+                      <h3 style="color:red">:( {{ check.description }}</h3>
+                  {% else %}
+                      <h3 style="color:orange">:| {{ check.description }}</h3>
+                  {% endif %}
+
+                  {% if check.cause or check.log %}
+                      <div class="well well-sm">
+                          {# Reason why the check received its status #}
+                          {% if check.cause %}
+                              {% autoescape false %}
+                                  {{ check.cause.rationale | e | replace(" ", "&nbsp;") }}
+                              {% endautoescape %}
+                              <br/>
+                              {% autoescape false %}
+                                  {% if check.cause.help %}
+                                      {{ check.cause.help | e | replace(" ", "&nbsp;") }}
+                                      <br/>
+                                  {% endif %}
+                              {% endautoescape %}
+                          {% endif %}
+
+                          {# Log information #}
+                          {% if check.log %}
+                              <b>Log</b>
+                              <br/>
+                              {% for item in check.log %}
+                                  {{ item }}
+                                  <br/>
+                              {% endfor %}
+                          {% endif %}
+
+                          {% if check.cause and check.cause.error %}
+                              <div class="row">
+                                  <div class="col-md-12">
+                                      <br/>
+                                      <b>Error</b>
+                                      <div style="background-color:black; color:white;">
+                                          <samp>
+                                              {{check.cause.error.type}}: {{check.cause.error.value}}
+                                              <br/>
+                                              {% for line in check.cause.error.traceback%}
+                                                  &nbsp;&nbsp;&nbsp;&nbsp;{{line}}
+                                                  <br/>
+                                              {% endfor %}
+                                          </samp>
+                                      </div>
+                                 </div>
+                              </div>
+                          {% endif %}
+
+                          {# Mismatch if there was one #}
+                          {% if check.cause and "actual" in check.cause and "expected" in check.cause %}
+                              <br/>
+                              <div class="row">
+                                  <div class="col-md-6">
+                                      <b>Expected Output:</b>
+                                      <br/>
+                                      <div style="background-color:black; color:white;">
+                                      <samp>
+                                          {% autoescape false %}
+                                              {% if check.cause.expected is not string %}
+                                                  {% set expected = check.cause.expected | join('\n') | e %}
+                                              {% else %}
+                                                  {% set expected = check.cause.expected | e %}
+                                              {% endif %}
+                                              {{ expected | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                          {% endautoescape %}
+                                      </samp>
+                                      </div>
+                                  </div>
+                                  <div class="col-md-6">
+                                      <b>Actual Output:</b>
+                                      <br/>
+                                      <div style="background-color:black; color:white;">
+                                      <samp>
+                                          {% autoescape false %}
+                                              {% if check.cause.actual is not string %}
+                                                  {% set actual = check.cause.actual | join('\n') | e %}
+                                              {% else %}
+                                                  {% set actual = check.cause.actual | e %}
+                                              {% endif %}
+                                              {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                          {% endautoescape %}
+                                      </samp>
+                                      </div>
+                                  </div>
+                              </div>
+                          {% endif %}
+
+                      </div>
+                  {% endif %}
+              {% endfor %}
+
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,3 @@
+recursive-include check50/locale *
+graft check50/renderer/static
+graft check50/renderer/templates
