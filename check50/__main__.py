@@ -292,14 +292,13 @@ def main():
     excepthook.output_file = args.output_file
 
     if args.local:
-        # If developing, assume slug is a path to check_dir
-        if args.dev:
-            print("Checking...")
-            internal.check_dir = Path(SLUG).expanduser().resolve()
-            if not internal.check_dir.is_dir():
-                raise internal.Error(_("{} is not a directory").format(internal.check_dir))
-        else:
-            with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
+        with lib50.ProgressBar("Checking") if not args.verbose and "ansi" in args.output else nullcontext():
+            # If developing, assume slug is a path to check_dir
+            if args.dev:
+                internal.check_dir = Path(SLUG).expanduser().resolve()
+                if not internal.check_dir.is_dir():
+                    raise internal.Error(_("{} is not a directory").format(internal.check_dir))
+            else:
                 # Otherwise have lib50 create a local copy of slug
                 try:
                     internal.check_dir = lib50.local(SLUG, offline=args.offline)
