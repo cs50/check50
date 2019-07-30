@@ -292,63 +292,64 @@ def main():
     excepthook.output_file = args.output_file
 
     if args.local:
-        # If developing, assume slug is a path to check_dir
-        if args.dev:
-            internal.check_dir = Path(SLUG).expanduser().resolve()
-            if not internal.check_dir.is_dir():
-                raise internal.Error(_("{} is not a directory").format(internal.check_dir))
-        else:
-            # Otherwise have lib50 create a local copy of slug
-            try:
-                internal.check_dir = lib50.local(SLUG, offline=args.offline)
-            except lib50.ConnectionError:
-                raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
-            except lib50.InvalidSlugError:
-                raise_invalid_slug(SLUG, offline=args.offline)
-
-        # Load config
-        config = internal.load_config(internal.check_dir)
-        # Compile local checks if necessary
-        if isinstance(config["checks"], dict):
-            config["checks"] = internal.compile_checks(config["checks"], prompt=args.dev)
-
-        install_translations(config["translations"])
-
-        if not args.offline:
-            install_dependencies(config["dependencies"], verbose=args.verbose)
-
-        checks_file = (internal.check_dir / config["checks"]).resolve()
-
-        # Have lib50 decide which files to include
-        included = lib50.files(config.get("files"))[0]
-
-        # Only open devnull conditionally
-        ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
-        with ctxmanager as devnull:
-            if args.verbose:
-                stdout = sys.stdout
-                stderr = sys.stderr
+        with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
+            # If developing, assume slug is a path to check_dir
+            if args.dev:
+                internal.check_dir = Path(SLUG).expanduser().resolve()
+                if not internal.check_dir.is_dir():
+                    raise internal.Error(_("{} is not a directory").format(internal.check_dir))
             else:
-                stdout = stderr = devnull
+                # Otherwise have lib50 create a local copy of slug
+                try:
+                    internal.check_dir = lib50.local(SLUG, offline=args.offline)
+                except lib50.ConnectionError:
+                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
+                except lib50.InvalidSlugError:
+                    raise_invalid_slug(SLUG, offline=args.offline)
 
-            # Create a working_area (temp dir) with all included student files named -
-            with lib50.working_area(included, name='-') as working_area, \
-                    contextlib.redirect_stdout(stdout), \
-                    contextlib.redirect_stderr(stderr):
+            # Load config
+            config = internal.load_config(internal.check_dir)
+            # Compile local checks if necessary
+            if isinstance(config["checks"], dict):
+                config["checks"] = internal.compile_checks(config["checks"], prompt=args.dev)
 
-                runner = CheckRunner(checks_file)
+            install_translations(config["translations"])
 
-                # Run checks
-                if args.target:
-                    check_results = runner.run(args.target, included, working_area)
+            if not args.offline:
+                install_dependencies(config["dependencies"], verbose=args.verbose)
+
+            checks_file = (internal.check_dir / config["checks"]).resolve()
+
+            # Have lib50 decide which files to include
+            included = lib50.files(config.get("files"))[0]
+
+            # Only open devnull conditionally
+            ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
+            with ctxmanager as devnull:
+                if args.verbose:
+                    stdout = sys.stdout
+                    stderr = sys.stderr
                 else:
-                    check_results = runner.run_all(included, working_area)
+                    stdout = stderr = devnull
 
-                results = {
-                    "slug": SLUG,
-                    "results": check_results,
-                    "version": __version__
-                }
+                # Create a working_area (temp dir) with all included student files named -
+                with lib50.working_area(included, name='-') as working_area, \
+                        contextlib.redirect_stdout(stdout), \
+                        contextlib.redirect_stderr(stderr):
+
+                    runner = CheckRunner(checks_file)
+
+                    # Run checks
+                    if args.target:
+                        check_results = runner.run(args.target, included, working_area)
+                    else:
+                        check_results = runner.run_all(included, working_area)
+
+                    results = {
+                        "slug": SLUG,
+                        "results": check_results,
+                        "version": __version__
+                    }
 
     else:
         # TODO: Remove this before we ship
