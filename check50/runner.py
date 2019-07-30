@@ -202,7 +202,7 @@ class CheckRunner:
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
         results = {name: None for name in self.check_names}
         checks_root = working_area.parent
-        with futures.ProcessPoolExecutor() as executor:
+        with futures.ProcessPoolExecutor(max_workers=os.environ.get("CHECK50_WORKERS")) as executor:
 
             # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
