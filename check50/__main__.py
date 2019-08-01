@@ -157,34 +157,32 @@ def compile_checks(checks, prompt=False):
 
 
 
-def await_results(url, pings=45, sleep=2):
+def await_results(url, params={}, pings=45, sleep=2):
     """
     Ping {url} until it returns a results payload, timing out after
     {pings} pings and waiting {sleep} seconds between pings.
     """
 
-    print("Checking...", end="", flush=True)
-    for _ in range(pings):
+    for _i in range(pings):
         # Query for check results.
-        res = requests.post(url, params={"format": "json"})
-        if res.status_code == 200:
-            print()
+        res = requests.get(url, params=params)
+        payload = res.json()
+        if res.status_code == 200 and len(payload) and payload[0]["check50"] != None and payload[0]["check50"]:
+            results = payload[0]
             break
-        print(".", end="", flush=True)
         time.sleep(sleep)
     else:
         # Terminate if no response
-        print()
         raise internal.Error(
-            _("check50 is taking longer than normal!\nSee {} for more detail.").format(url))
+            _("Timed out waiting for check results! Please email sysadmins@cs50.harvard.edu."))
 
-    payload= res.json()
+
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
-    return {
-        "slug": payload["slug"],
-        "results": list(map(CheckResult.from_dict, payload["results"])),
-        "version": payload["version"]
+    return results["tag_hash"], {
+        "slug": results["check50"]["slug"],
+        "results": list(map(CheckResult.from_dict, results["check50"]["results"])),
+        "version": results["check50"]["version"]
     }
 
 
@@ -233,9 +231,10 @@ def main():
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local)"))
+    parser.add_argument("--remote", action="store_true", help=_("run checks remotely"))
     parser.add_argument("-l", "--local",
                         action="store_true",
-                        help=_("run checks locally instead of uploading to cs50 (enabled by default in beta version)"))
+                        help=_("run checks locally instead of uploading to cs50 (enabled by default in beta version)"), default=True)
     parser.add_argument("--log",
                         action="store_true",
                         help=_("display more detailed information about check results"))
@@ -266,8 +265,8 @@ def main():
     global SLUG
     SLUG = args.slug
 
-    # TODO: remove this when submit.cs50.io API is stabilized
-    args.local = True
+    if args.remote:
+        args.local = args.offline = args.dev = False
 
     if args.dev:
         args.offline = True
@@ -291,7 +290,11 @@ def main():
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
-    if args.local:
+    if args.remote:
+        commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, commit_suffix="[check50=true]")[1]
+        with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
+            tag_hash, results = await_results("https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": SLUG})
+    else:
         with lib50.ProgressBar("Checking") if not args.verbose and "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
@@ -351,11 +354,6 @@ def main():
                         "version": __version__
                     }
 
-    else:
-        # TODO: Remove this before we ship
-        raise NotImplementedError("cannot run check50 remotely, until version 3.0.0 is shipped ")
-        commit_hash = lib50.push("check50", SLUG, commit_suffix="[submit=false]")[1]
-        results = await_results(f"https://check.cs50.io/{commit_hash}")
 
     # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
@@ -368,13 +366,18 @@ def main():
                 output_file.write(renderer.to_ansi(**results, log=args.log))
                 output_file.write("\n")
             elif output == "html":
-                html = renderer.to_html(**results)
-                if os.environ.get("CS50_IDE_TYPE"):
-                    subprocess.check_call(["c9", "exec", "rendercheckresults", html])
+                if args.remote:
+                    url = f"https://submit.cs50.io/check50/{tag_hash}"
                 else:
-                    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
-                        html_file.write(html)
-                    termcolor.cprint(_("To see the results in your browser go to file://{}").format(html_file.name), "white", attrs=["bold"])
+                    html = renderer.to_html(**results)
+                    if os.environ.get("CS50_IDE_TYPE"):
+                        subprocess.check_call(["c9", "exec", "rendercheckresults", html])
+                    else:
+                        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
+                            html_file.write(html)
+                        url = f"file://{html_file.name}"
+                termcolor.cprint(_("To see the results in your browser go to {}").format(url), "white", attrs=["bold"])
+
 
 
 if __name__ == "__main__":
