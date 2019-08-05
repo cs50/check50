@@ -233,7 +233,7 @@ def main():
     parser.add_argument("--remote", action="store_true", help=_("run checks remotely"))
     parser.add_argument("-l", "--local",
                         action="store_true",
-                        help=_("run checks locally instead of uploading to cs50 (enabled by default in beta version)"), default=True)
+                        help=_("run checks locally instead of uploading to cs50 (enabled by default)"), default=True)
     parser.add_argument("--log",
                         action="store_true",
                         help=_("display more detailed information about check results"))
