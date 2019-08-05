@@ -176,7 +176,6 @@ def await_results(url, params={}, pings=45, sleep=2):
         raise internal.Error(
             _("Timed out waiting for check results! Please email sysadmins@cs50.harvard.edu."))
 
-
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
     return results["tag_hash"], {
@@ -277,7 +276,7 @@ def main():
 
     if args.verbose:
         # Show lib50 commands being run in verbose mode
-        logging.basicConfig(level="INFO")
+        logging.basicConfig(level=os.environ.get("CHECK50_LOGLEVEL", "INFO"))
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
