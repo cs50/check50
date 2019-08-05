@@ -157,7 +157,7 @@ def compile_checks(checks, prompt=False):
 
 
 
-def await_results(url, params={}, pings=45, sleep=2):
+def await_results(url, params={}, pings=90, sleep=2):
     """
     Ping {url} until it returns a results payload, timing out after
     {pings} pings and waiting {sleep} seconds between pings.
