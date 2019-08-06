@@ -30,6 +30,12 @@ lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 SLUG = None
 
 
+class RemoteCheckError(internal.Error):
+    def __init__(self, remote_json):
+        super().__init__("check50 ran into an error while running checks! Please contact sysadmins@cs50.harvard.edu!")
+        self.payload = {"remote_json": remote_json}
+
+
 @contextlib.contextmanager
 def nullcontext(entry_result=None):
     """This is just contextlib.nullcontext but that function is only available in 3.7+."""
@@ -41,9 +47,8 @@ def excepthook(cls, exc, tb):
     outputs = excepthook.outputs
 
     for output in excepthook.outputs:
+        outputs.remove(output)
         if output == "json":
-            outputs.remove("json")
-
             ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
             with ctxmanager as output_file:
                 json.dump({
@@ -59,11 +64,6 @@ def excepthook(cls, exc, tb):
                 output_file.write("\n")
 
         elif output == "ansi" or output == "html":
-            if output == "ansi":
-                outputs.remove("ansi")
-            else:
-                outputs.remove("html")
-
             if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
                 termcolor.cprint(str(exc), "red", file=sys.stderr)
             elif issubclass(cls, FileNotFoundError):
@@ -78,6 +78,8 @@ def excepthook(cls, exc, tb):
 
             if excepthook.verbose:
                 traceback.print_exception(cls, exc, tb)
+                if hasattr(exc, "payload"):
+                    print("Exception payload:", exc.payload)
 
     sys.exit(1)
 
@@ -157,7 +159,7 @@ def compile_checks(checks, prompt=False):
 
 
 
-def await_results(url, params={}, pings=90, sleep=2):
+def await_results(commit_hash, slug, pings=45, sleep=2):
     """
     Ping {url} until it returns a results payload, timing out after
     {pings} pings and waiting {sleep} seconds between pings.
@@ -165,7 +167,7 @@ def await_results(url, params={}, pings=90, sleep=2):
 
     for _i in range(pings):
         # Query for check results.
-        res = requests.get(url, params=params)
+        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": slug})
         payload = res.json()
         if res.status_code == 200 and len(payload) and payload[0]["check50"] != None and payload[0]["check50"]:
             results = payload[0]
@@ -174,7 +176,12 @@ def await_results(url, params={}, pings=90, sleep=2):
     else:
         # Terminate if no response
         raise internal.Error(
-            _("Timed out waiting for check results! Please email sysadmins@cs50.harvard.edu."))
+            _("check50 is taking longer than normal!\n"
+              "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
+
+    if "error" in results["check50"]:
+        raise RemoteCheckError(results["check50"])
+
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -230,10 +237,10 @@ def main():
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local)"))
-    parser.add_argument("--remote", action="store_true", help=_("run checks remotely"))
+    parser.add_argument("--remote", action="store_true", help=_("run checks remotely (default)"), default=True)
     parser.add_argument("-l", "--local",
                         action="store_true",
-                        help=_("run checks locally instead of uploading to cs50 (enabled by default)"), default=True)
+                        help=_("run checks locally instead of uploading to cs50"))
     parser.add_argument("--log",
                         action="store_true",
                         help=_("display more detailed information about check results"))
@@ -292,7 +299,7 @@ def main():
     if args.remote:
         commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, commit_suffix="[check50=true]")[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
-            tag_hash, results = await_results("https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": SLUG})
+            tag_hash, results = await_results(commit_hash, SLUG)
     else:
         with lib50.ProgressBar("Checking") if not args.verbose and "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
