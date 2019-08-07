@@ -244,7 +244,6 @@ def main():
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local)"))
-    parser.add_argument("--remote", action="store_true", help=_("run checks remotely (default)"), default=True)
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
@@ -292,9 +291,6 @@ def main():
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
-    if args.local:
-        args.remote = False
-
     # Filter out any duplicates from args.output
     seen_output = set()
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
@@ -304,7 +300,7 @@ def main():
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
-    if args.remote:
+    if not args.local:
         commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, commit_suffix="[check50=true]")[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, SLUG)
@@ -380,7 +376,7 @@ def main():
                 output_file.write(renderer.to_ansi(**results, log=args.log))
                 output_file.write("\n")
             elif output == "html":
-                if args.remote:
+                if not args.local:
                     url = f"https://submit.cs50.io/check50/{tag_hash}"
                 else:
                     html = renderer.to_html(**results)
