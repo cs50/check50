@@ -278,8 +278,6 @@ def main():
     global SLUG
     SLUG = args.slug
 
-    if args.remote:
-        args.local = args.offline = args.dev = False
 
     if args.dev:
         args.offline = True
@@ -293,6 +291,9 @@ def main():
         logging.basicConfig(level=os.environ.get("CHECK50_LOGLEVEL", "INFO"))
         lib50.ProgressBar.DISABLED = True
         args.log = True
+
+    if args.local:
+        args.remote = False
 
     # Filter out any duplicates from args.output
     seen_output = set()
