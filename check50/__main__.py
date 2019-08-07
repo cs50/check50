@@ -167,10 +167,9 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
 
     for _i in range(pings):
         # Query for check results.
-        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": slug})
-        payload = res.json()
-        if res.status_code == 200 and len(payload) and payload[0]["check50"] != None and payload[0]["check50"]:
-            results = payload[0]
+        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash})
+        results = res.json()
+        if res.status_code == 200 and results["received_at"] is not None:
             break
         time.sleep(sleep)
     else:
@@ -178,6 +177,10 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
         raise internal.Error(
             _("check50 is taking longer than normal!\n"
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
+
+
+    if not results["check50"]:
+        raise RemoteCheckError(results)
 
     if "error" in results["check50"]:
         raise RemoteCheckError(results["check50"])
