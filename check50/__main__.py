@@ -167,8 +167,12 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
 
     for _i in range(pings):
         # Query for check results.
-        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash})
+        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": slug})
         results = res.json()
+
+        if res.status_code not in [404, 200]:
+            raise RemoteCheckError(results)
+
         if res.status_code == 200 and results["received_at"] is not None:
             break
         time.sleep(sleep)
