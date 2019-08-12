@@ -16,7 +16,8 @@ In addition to all the functionality check50 exposes, we expose an extra api for
 
 Example: a JavaScript extension
 *******************************
-Out of the box check50 does not ship with any JavaScript specific functionality. You can use check50's generic api and run a :code:`.js` file through an interpreter such as :code:`node`: :code:`check50.run('node <student_file.js>')`. But we realize most JavaScript classes are not about writing command-line scripts, and we do need a way to call functions. This is why we wrote a small javascript extension for check50 dubbed check50_js at https://github.com/cs50/check50_js.
+Out of the box check50 does not ship with any JavaScript specific functionality. You can use check50's generic api and run a :code:`.js` file through an interpreter such as :code:`node`: :code:`check50.run('node <student_file.js>')`. But we realize most JavaScript classes are not about writing command-line scripts, and we do need a way to call functions. This is why we wrote a small javascript extension for check50 dubbed check50_js at
+https://github.com/cs50/check50/tree/sample-extension.
 
 
 *******************************
