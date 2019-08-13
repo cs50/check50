@@ -189,6 +189,14 @@ class run:
                 raise Failure(_("expected prompt for input, found none"))
             except UnicodeDecodeError:
                 raise Failure(_("output not valid ASCII text"))
+
+            # Consume everything on the output buffer
+            try:
+                while True:
+                    self.process.expect(".+", timeout=0.1)
+            except (TIMEOUT, EOF):
+                pass
+
         try:
             if line == EOF:
                 self.process.sendeof()
