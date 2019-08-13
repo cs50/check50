@@ -192,7 +192,7 @@ class run:
 
             # Consume everything on the output buffer
             try:
-                while True:
+                for _i in range(int(timeout * 10)):
                     self.process.expect(".+", timeout=0.1)
             except (TIMEOUT, EOF):
                 pass
