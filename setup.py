@@ -1,4 +1,7 @@
-from setuptools import find_packages, setup
+if __import__("os").name == "nt":
+    raise RuntimeError("check50 does not support Windows directly. Instead, you should install the Windows Subsystem for Linux (https://docs.microsoft.com/en-us/windows/wsl/install-win10) and then install check50 within that.")
+
+from setuptools import setup
 
 setup(
     author="CS50",
