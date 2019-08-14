@@ -11,7 +11,7 @@
             <h1>check50</h1>
             <h2>{{ slug }}</h2>
             <hr>
-              {% for check in checks %}
+              {% for check in results %}
                   {% if check.passed == True %}
                       <h3 style="color:green">:) {{ check.description }}</h3>
                   {% elif check.passed == False %}

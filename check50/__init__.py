@@ -40,6 +40,7 @@ from ._api import (
     include,
     run,
     log, _log,
+    hidden,
     Failure, Mismatch
 )
 

@@ -1,4 +1,5 @@
 import hashlib
+import functools
 import os
 import shlex
 import shutil
@@ -189,6 +190,14 @@ class run:
                 raise Failure(_("expected prompt for input, found none"))
             except UnicodeDecodeError:
                 raise Failure(_("output not valid ASCII text"))
+
+            # Consume everything on the output buffer
+            try:
+                for _i in range(int(timeout * 10)):
+                    self.process.expect(".+", timeout=0.1)
+            except (TIMEOUT, EOF):
+                pass
+
         try:
             if line == EOF:
                 self.process.sendeof()
@@ -395,6 +404,36 @@ class Mismatch(Failure):
     def __init__(self, expected, actual, help=None):
         super().__init__(rationale=_("expected \"{}\", not \"{}\"").format(_raw(expected), _raw(actual)), help=help)
         self.payload.update({"expected": expected, "actual": actual})
+
+
+def hidden(failure_rationale):
+    """
+    Decorator that marks a check as a 'hidden' check. This will suppress the log
+    accumulated throughout the check and will catch any :class:`check50.Failure`s thrown
+    during the check, and reraising a new :class:`check50.Failure` with the given ``failure_rationale``.
+
+    :param failure_rationale: the rationale that will be displayed to the student if the check fails
+    :type failure_rationale: str
+
+    Exaple usage::
+
+        @check50.check()
+        @check50.hidden("Your program isn't returning the expected result. Try running it on some sample inputs.")
+        def hidden_check():
+            check50.run("./foo").stdin("bar").stdout("baz").exit()
+
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except Failure:
+                raise Failure(failure_rationale)
+            finally:
+                _log.clear()
+        return wrapper
+    return decorator
 
 
 def _raw(s):

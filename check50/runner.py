@@ -80,15 +80,13 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60, hidden=False):
+def check(dependency=None, timeout=60):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
-    :param hidden: true if cause and log should be hidden from student
-    :type hidden: bool
 
     When a check depends on another, the former will only run if the latter passes.
     Additionally, the dependent check will inherit the filesystem of its dependency.
@@ -144,7 +142,7 @@ def check(dependency=None, timeout=60, hidden=False):
                     state = check(*args)
             except Failure as e:
                 result.passed = False
-                result.cause = e.payload if not hidden else {}
+                result.cause = e.payload
             except BaseException as e:
                 result.passed = None
                 result.cause = {"rationale": _("check50 ran into an error while running checks!"),
@@ -154,16 +152,10 @@ def check(dependency=None, timeout=60, hidden=False):
                                     "traceback": traceback.format_tb(e.__traceback__),
                                     "data" : e.payload if hasattr(e, "payload") else {}
                                 }}
-
-                # log(repr(e))
-                # for line in traceback.format_tb(e.__traceback__):
-                #     log(line.rstrip())
-                # log(_("Contact sysadmins@cs50.harvard.edu with the slug of this check!"))
             else:
                 result.passed = True
             finally:
-                if not hidden:
-                    result.log = _log
+                result.log = _log
                 result.data = _data
                 return result, state
         return wrapper

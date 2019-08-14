@@ -1,7 +1,7 @@
 language: python
 python: 3.6
 branches:
-  except: /^v\.\d\.\d\.\d/
+  except: /^v\d+\.\d+\.\d+/
 addons:
   apt:
     update: true
