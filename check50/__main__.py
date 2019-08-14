@@ -23,7 +23,7 @@ import requests
 import termcolor
 
 from . import internal, renderer, __version__
-from .runner import CheckRunner, CheckResult
+from .runner import CheckRunner
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
@@ -195,7 +195,7 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
     # (otherwise we may not be able to parse results)
     return results["tag_hash"], {
         "slug": results["check50"]["slug"],
-        "results": list(map(CheckResult.from_dict, results["check50"]["results"])),
+        "results": results["check50"]["results"],
         "version": results["check50"]["version"]
     }
 
@@ -361,7 +361,7 @@ def main():
 
                     results = {
                         "slug": SLUG,
-                        "results": check_results,
+                        "results": [attr.asdict(result) for result in check_results],
                         "version": __version__
                     }
 
