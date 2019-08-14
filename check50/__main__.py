@@ -382,7 +382,7 @@ def main():
                 else:
                     html = renderer.to_html(**results)
                     if os.environ.get("CS50_IDE_TYPE"):
-                        subprocess.check_call(["c9", "exec", "rendercheckresults", html])
+                        subprocess.check_call(["c9", "exec", "renderresults", "check50" html])
                     else:
                         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
                             html_file.write(html)
