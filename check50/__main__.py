@@ -168,7 +168,7 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
 
     for _i in range(pings):
         # Query for check results.
-        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": slug})
+        res = requests.get(f"https://submit.cs50.io/api/results/check50", params={"commit_hash": commit_hash, "slug": slug})
         results = res.json()
 
         if res.status_code not in [404, 200]:
