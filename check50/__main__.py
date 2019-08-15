@@ -168,7 +168,7 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
 
     for _i in range(pings):
         # Query for check results.
-        res = requests.get(f"https://submit.cs50.io/api/results/check50", params={"commit_hash": commit_hash, "slug": slug})
+        res = requests.get(f"https://submit.cs50.io/api/results/check50?check50", params={"commit_hash": commit_hash, "slug": slug})
         results = res.json()
 
         if res.status_code not in [404, 200]:
@@ -302,7 +302,7 @@ def main():
     excepthook.output_file = args.output_file
 
     if not args.local:
-        commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, commit_suffix="[check50=true]")[1]
+        commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, SLUG)
     else:
