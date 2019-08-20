@@ -79,7 +79,7 @@ def excepthook(cls, exc, tb):
             if excepthook.verbose:
                 traceback.print_exception(cls, exc, tb)
                 if hasattr(exc, "payload"):
-                    print("Exception payload:", exc.payload)
+                    print("Exception payload:", json.dumps(exc.payload), sep="\n")
 
     sys.exit(1)
 
@@ -366,7 +366,6 @@ def main():
                     }
 
 
-    breakpoint()
     # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:
