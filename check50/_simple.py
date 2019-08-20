@@ -22,16 +22,16 @@ def _run(arg):
 
 def _stdin(arg):
     if isinstance(arg, list):
-        arg = r"\n".join(arg)
+        arg = r"\n".join(str(a) for a in arg)
 
-    arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
+    arg = str(arg).replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
     return f'.stdin("{arg}", prompt=False)'
 
 
 def _stdout(arg):
     if isinstance(arg, list):
-        arg = r"\n".join(arg)
-    arg = arg.replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
+        arg = r"\n".join(str(a) for a in arg)
+    arg = str(arg).replace("\n", r"\n").replace("\t", r"\t").replace('"', '\"')
     return f'.stdout("{arg}", regex=False)'
 
 

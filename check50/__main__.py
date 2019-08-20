@@ -79,7 +79,7 @@ def excepthook(cls, exc, tb):
             if excepthook.verbose:
                 traceback.print_exception(cls, exc, tb)
                 if hasattr(exc, "payload"):
-                    print("Exception payload:", exc.payload)
+                    print("Exception payload:", json.dumps(exc.payload), sep="\n")
 
     sys.exit(1)
 

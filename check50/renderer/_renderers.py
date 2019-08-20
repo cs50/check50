@@ -1,13 +1,9 @@
 import json
 import pathlib
 
-import attr
 import jinja2
 import pkg_resources
-from pexpect.exceptions import EOF
 import termcolor
-
-from ..runner import CheckResult
 
 TEMPLATES = pathlib.Path(pkg_resources.resource_filename("check50.renderer", "templates"))
 
