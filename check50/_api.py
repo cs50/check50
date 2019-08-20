@@ -263,7 +263,7 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Failure(_("did not find \"{}\"").format(_raw(str_output)))
+            raise Failure(_("did not find {}").format(_raw(str_output)))
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
         except Exception:
@@ -402,7 +402,14 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=_("expected \"{}\", not \"{}\"").format(_raw(expected), _raw(actual)), help=help)
+        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
+
+        if expected == EOF:
+            expected = "EOF"
+
+        if actual == EOF:
+            actual = "EOF"
+
         self.payload.update({"expected": expected, "actual": actual})
 
 
@@ -445,8 +452,7 @@ def _raw(s):
     if s == EOF:
         return "EOF"
 
-    s = repr(s)  # Get raw representation of string
-    s = s[1:-1]  # Strip away quotation marks
+    s = f'"{repr(s)[1:-1]}"'
     if len(s) > 15:
         s = s[:15] + "..."  # Truncate if too long
     return s
