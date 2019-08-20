@@ -366,6 +366,7 @@ def main():
                     }
 
 
+    breakpoint()
     # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:

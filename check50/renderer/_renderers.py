@@ -12,6 +12,18 @@ from ..runner import CheckResult
 TEMPLATES = pathlib.Path(pkg_resources.resource_filename("check50.renderer", "templates"))
 
 
+class Encoder(json.JSONEncoder):
+    """Custom class for JSON encoding."""
+
+    def default(self, o):
+        if o == EOF:
+            return "EOF"
+        elif isinstance(o, CheckResult):
+            return attr.asdict(o)
+        else:
+            return o.__dict__
+
+
 def to_html(slug, results, version):
     with open(TEMPLATES / "results.html") as f:
         content = f.read()
