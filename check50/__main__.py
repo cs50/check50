@@ -377,7 +377,7 @@ def main():
                 output_file.write(renderer.to_ansi(**results, log=args.log))
                 output_file.write("\n")
             elif output == "html":
-                if os.environ.get("CS50_IDE_TYPE"):
+                if os.environ.get("CS50_IDE_TYPE") and args.local:
                     html = renderer.to_html(**results)
                     subprocess.check_call(["c9", "exec", "renderresults", "check50", html])
                 else:
