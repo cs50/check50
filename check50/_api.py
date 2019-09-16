@@ -454,7 +454,7 @@ def _raw(s):
 
     s = f'"{repr(s)[1:-1]}"'
     if len(s) > 15:
-        s = s[:15] + "..."  # Truncate if too long
+        s = s[:15] + "...\""  # Truncate if too long
     return s
 
 
