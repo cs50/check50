@@ -377,18 +377,19 @@ def main():
                 output_file.write(renderer.to_ansi(**results, log=args.log))
                 output_file.write("\n")
             elif output == "html":
-                if not args.local:
-                    url = f"https://submit.cs50.io/check50/{tag_hash}"
-                else:
+                if os.environ.get("CS50_IDE_TYPE") and args.local:
                     html = renderer.to_html(**results)
-                    if os.environ.get("CS50_IDE_TYPE"):
-                        subprocess.check_call(["c9", "exec", "renderresults", "check50", html])
-                    else:
+                    subprocess.check_call(["c9", "exec", "renderresults", "check50", html])
+                else:
+                    if args.local:
+                        html = renderer.to_html(**results)
                         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
                             html_file.write(html)
                         url = f"file://{html_file.name}"
-                termcolor.cprint(_("To see the results in your browser go to {}").format(url), "white", attrs=["bold"])
+                    else:
+                        url = f"https://submit.cs50.io/check50/{tag_hash}"
 
+                    termcolor.cprint(_("To see the results in your browser go to {}").format(url), "white", attrs=["bold"])
 
 
 if __name__ == "__main__":

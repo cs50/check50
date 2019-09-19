@@ -37,7 +37,7 @@ class CheckResult:
         """Create a check_result given a check function, automatically recording the name,
         the dependency, and the (translated) description.
         """
-        return cls(name=check.__name__, description=_(check.__doc__),
+        return cls(name=check.__name__, description=_(check.__doc__ if check.__doc__ else check.__name__.replace("_", " ")),
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
