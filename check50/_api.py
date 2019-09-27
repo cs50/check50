@@ -163,12 +163,15 @@ class run:
         command = "bash -c {}".format(shlex.quote(command))
         self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
 
-    def stdin(self, line, prompt=True, timeout=3):
+    def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """
         Send line to stdin, optionally expect a prompt.
 
         :param line: line to be send to stdin
         :type line: str
+        :param str_line: what will be displayed as the delivered input, a human \
+                           readable form of ``line``
+        :type str_line: str
         :param prompt: boolean indicating whether a prompt is expected, if True absorbs \
                        all of stdout before inserting line into stdin and raises \
                        :class:`check50.Failure` if stdout is empty
@@ -178,10 +181,13 @@ class run:
         :raises check50.Failure: if ``prompt`` is set to True and no prompt is given
 
         """
+        if str_line is None:
+            str_line = line
+
         if line == EOF:
             log("sending EOF...")
         else:
-            log(_("sending input {}...").format(line))
+            log(_("sending input {}...").format(str_line))
 
         if prompt:
             try:
@@ -263,7 +269,7 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Failure(_("did not find {}").format(_raw(str_output)))
+            raise Failure(_("did not find {} within {} seconds").format(_raw(str_output), timeout))
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
         except Exception:
