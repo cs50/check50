@@ -212,7 +212,7 @@ class LogoutAction(argparse.Action):
         except lib50.Error:
             raise internal.Error(_("failed to logout"))
         else:
-            termcolor.termcolor.cprint(_("logged out successfully"), "green")
+            termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
 
 
