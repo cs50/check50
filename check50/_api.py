@@ -452,7 +452,7 @@ def _raw(s):
     if s == EOF:
         return "EOF"
 
-    s = f'"{repr(s)[1:-1]}"'
+    s = f'"{repr(str(s))[1:-1]}"'
     if len(s) > 15:
         s = s[:15] + "...\""  # Truncate if too long
     return s
