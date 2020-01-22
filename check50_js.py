@@ -18,7 +18,7 @@ def interface(file=None):
 	Interface with a JavaScript interpreter (node).
 	If file is passed, evaluate the contents of file within the interpreter.
 	"""
-	inter = make_bond("javascript")
+	inter = make_bond("JavaScript")
 
 	if file:
 	    with open(file) as f:
