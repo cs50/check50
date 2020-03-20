@@ -286,7 +286,7 @@ def main():
 
     if args.dev:
         args.offline = True
-        args.verbose = True
+        args.verbose = "info"
 
     if args.offline:
         args.local = True
@@ -307,7 +307,7 @@ def main():
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
 
     # Set excepthook
-    excepthook.verbose = args.verbose
+    excepthook.verbose = args.verbose != "none"
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
@@ -316,7 +316,7 @@ def main():
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, SLUG)
     else:
-        with lib50.ProgressBar("Checking") if not args.verbose and "ansi" in args.output else nullcontext():
+        with lib50.ProgressBar("Checking") if args.verbose != "none" and "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
                 internal.check_dir = Path(SLUG).expanduser().resolve()
@@ -340,7 +340,7 @@ def main():
             install_translations(config["translations"])
 
             if not args.offline:
-                install_dependencies(config["dependencies"], verbose=args.verbose)
+                install_dependencies(config["dependencies"], verbose=args.verbose != "none")
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
 
@@ -348,9 +348,9 @@ def main():
             included = lib50.files(config.get("files"))[0]
 
             # Only open devnull conditionally
-            ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
+            ctxmanager = open(os.devnull, "w") if args.verbose != "none" else nullcontext()
             with ctxmanager as devnull:
-                if args.verbose:
+                if args.verbose != "none":
                     stdout = sys.stdout
                     stderr = sys.stderr
                 else:
