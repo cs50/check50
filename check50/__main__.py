@@ -240,7 +240,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline and --verbose).\n"
+                        help=_("run check50 in development mode (implies --offline and --verbose info).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -266,8 +266,14 @@ def main():
                         metavar="FILE",
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
-                        action="store_true",
-                        help=_("display the full tracebacks of any errors (also implies --log)"))
+                        action="store",
+                        nargs="?",
+                        default="none",
+                        const="info",
+                        choices=["info", "debug"],
+                        help=_("sets the verbosity level and implies --log."
+                               " \"info\" displays the full tracebacks of errors and shows all commands run."
+                               " \"debug\" adds the output of all command run."))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -278,7 +284,6 @@ def main():
     global SLUG
     SLUG = args.slug
 
-
     if args.dev:
         args.offline = True
         args.verbose = True
@@ -286,9 +291,14 @@ def main():
     if args.offline:
         args.local = True
 
-    if args.verbose:
-        # Show lib50 commands being run in verbose mode
-        logging.basicConfig(level=os.environ.get("CHECK50_LOGLEVEL", "INFO"))
+    if args.verbose == "info":
+        # Show lib50 commands being run
+        logging.basicConfig(level=logging.INFO)
+        lib50.ProgressBar.DISABLED = True
+        args.log = True
+    elif args.verbose == "debug":
+        # Show lib50 commands being run and their output
+        logging.basicConfig(level=logging.DEBUG)
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
