@@ -350,7 +350,7 @@ def main():
             # Only open devnull conditionally
             ctxmanager = open(os.devnull, "w") if args.verbose != "none" else nullcontext()
             with ctxmanager as devnull:
-                if args.verbose != "none":
+                if args.verbose == "none":
                     stdout = sys.stdout
                     stderr = sys.stderr
                 else:

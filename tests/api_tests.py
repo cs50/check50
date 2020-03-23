@@ -149,12 +149,14 @@ class TestProcessStdout(Base):
         self.process.stdout("foo\n")
         self.process.stdout("bar")
         self.process.stdout("\n")
+        self.assertTrue(self.process.process.isalive())
 
     def test_out_regex(self):
         self.write("print('foo')")
         self.runpy()
         self.process.stdout(".o.")
         self.process.stdout("\n")
+        self.assertTrue(self.process.process.isalive())
 
     def test_out_no_regex(self):
         self.write("print('foo')")
