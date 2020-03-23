@@ -263,7 +263,7 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
-            raise Failure(_("did not find {}").format(_raw(str_output)))
+            raise Missing(str_output, self.process.before)
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
         except Exception:
@@ -377,6 +377,31 @@ class Failure(Exception):
 
     def __str__(self):
         return self.payload["rationale"]
+
+
+class Missing(Failure):
+    """
+    Exception signifying check failure due to an item missing from a collection.
+    This is typically a specific substring in a longer string, for instance the contents of stdout.
+
+    :param item: the expected item / substring
+    :param collection: the collection / string
+    :param help: optional help message to be displayed
+    :type help: str
+
+    Example usage::
+
+        actual = check50.run("./fibonacci 5").stdout()
+
+        if "5" not in actual and "3" in actual:
+            help = "Be sure to start the sequence at 1"
+            raise check50.Missing("5", actual, help=help)
+
+    """
+
+    def __init__(self, missing_item, collection, help=None):
+        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
 
 
 class Mismatch(Failure):
