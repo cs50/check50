@@ -293,12 +293,16 @@ def main():
 
     if args.verbose == "info":
         # Show lib50 commands being run
-        logging.basicConfig(level=logging.INFO)
+        lib50_logger = logging.getLogger("lib50")
+        lib50_logger.setLevel(logging.INFO)
+        lib50_logger.addHandler(logging.StreamHandler(sys.stdout))
         lib50.ProgressBar.DISABLED = True
         args.log = True
     elif args.verbose == "debug":
         # Show lib50 commands being run and their output
-        logging.basicConfig(level=logging.DEBUG)
+        lib50_logger = logging.getLogger("lib50")
+        lib50_logger.setLevel(logging.DEBUG)
+        lib50_logger.addHandler(logging.StreamHandler(sys.stdout))
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
