@@ -351,14 +351,7 @@ def main():
                         contextlib.redirect_stdout(stdout), \
                         contextlib.redirect_stderr(stderr):
 
-                    runner = CheckRunner(checks_file)
-
-                    # Run checks
-                    if args.target:
-                        check_results = runner.run(args.target, included, working_area)
-                    else:
-                        check_results = runner.run_all(included, working_area)
-
+                    check_results = CheckRunner(checks_file).run(included, working_area, args.target)
                     results = {
                         "slug": SLUG,
                         "results": [attr.asdict(result) for result in check_results],
