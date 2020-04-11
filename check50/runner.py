@@ -275,7 +275,7 @@ class CheckRunner:
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
-        for name, description in self.dependency_map[check_name]:
+        for name, description in self.dependency_graph[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),
                                             passed=None,
