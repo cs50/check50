@@ -336,7 +336,7 @@ def main():
 
             install_translations(config["translations"])
 
-            if args.no_install_dependencies:
+            if not args.no_install_dependencies:
                 install_dependencies(config["dependencies"], verbose=args.verbose)
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
