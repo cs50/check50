@@ -289,8 +289,8 @@ def main():
         args.verbose = True
 
     if args.offline:
-        arg.no_install_dependencies = True
-        arg.no_download_checks = True
+        args.no_install_dependencies = True
+        args.no_download_checks = True
         args.local = True
 
     if args.verbose:
