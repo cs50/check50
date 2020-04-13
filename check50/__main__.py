@@ -244,7 +244,7 @@ def main():
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
-                        help=_("run checks completely offline (implies --local)"))
+                        help=_("run checks completely offline (implies --local, --no-download-checks and --no-install-dependencies)"))
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
@@ -268,6 +268,12 @@ def main():
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help=_("display the full tracebacks of any errors (also implies --log)"))
+    parser.add_argument("--no-download-checks",
+                        action="store_true",
+                        help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
+    parser.add_argument("--no-install-dependencies",
+                        action="store_true",
+                        help=_("do not install dependencies (only works with --local)"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -278,12 +284,13 @@ def main():
     global SLUG
     SLUG = args.slug
 
-
     if args.dev:
         args.offline = True
         args.verbose = True
 
     if args.offline:
+        arg.no_install_dependencies = True
+        arg.no_download_checks = True
         args.local = True
 
     if args.verbose:
@@ -315,11 +322,11 @@ def main():
             else:
                 # Otherwise have lib50 create a local copy of slug
                 try:
-                    internal.check_dir = lib50.local(SLUG, offline=args.offline)
+                    internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
                 except lib50.ConnectionError:
                     raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(SLUG, offline=args.offline)
+                    raise_invalid_slug(SLUG, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -329,7 +336,7 @@ def main():
 
             install_translations(config["translations"])
 
-            if not args.offline:
+            if args.no_install_dependencies:
                 install_dependencies(config["dependencies"], verbose=args.verbose)
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
