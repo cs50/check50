@@ -252,7 +252,7 @@ class CheckRunner:
         deps = set()
         for target in targets:
             if target not in inverse_graph:
-                raise internal.Error(_("Unknown check: {}").format(e.args[0]))
+                raise internal.Error(_("Unknown check: {}").format(target))
             curr_check = target
             while curr_check is not None and curr_check not in deps:
                 deps.add(curr_check)
