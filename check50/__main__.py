@@ -244,7 +244,7 @@ def main():
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
-                        help=_("run checks completely offline (implies --local)"))
+                        help=_("run checks completely offline (implies --local, --no-download-checks and --no-install-dependencies)"))
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
@@ -268,6 +268,12 @@ def main():
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help=_("display the full tracebacks of any errors (also implies --log)"))
+    parser.add_argument("--no-download-checks",
+                        action="store_true",
+                        help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
+    parser.add_argument("--no-install-dependencies",
+                        action="store_true",
+                        help=_("do not install dependencies (only works with --local)"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -278,12 +284,13 @@ def main():
     global SLUG
     SLUG = args.slug
 
-
     if args.dev:
         args.offline = True
         args.verbose = True
 
     if args.offline:
+        args.no_install_dependencies = True
+        args.no_download_checks = True
         args.local = True
 
     if args.verbose:
@@ -291,6 +298,16 @@ def main():
         logging.basicConfig(level=os.environ.get("CHECK50_LOGLEVEL", "INFO"))
         lib50.ProgressBar.DISABLED = True
         args.log = True
+
+    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
+    if (args.no_download_checks or args.no_install_dependencies) and not args.local:
+        if args.no_download_checks and args.no_install_dependencies:
+            msg = _("--no-downloads-checks and --no-install-dependencies have")
+        elif args.no_download_checks:
+            msg = _("--no-downloads-checks has")
+        else:
+            msg = _("--no-install-dependencies has")
+        termcolor.cprint(_("Warning: {} no effect without --local").format(msg), "yellow", attrs=["bold"])
 
     # Filter out any duplicates from args.output
     seen_output = set()
@@ -315,11 +332,11 @@ def main():
             else:
                 # Otherwise have lib50 create a local copy of slug
                 try:
-                    internal.check_dir = lib50.local(SLUG, offline=args.offline)
+                    internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
                 except lib50.ConnectionError:
                     raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(SLUG, offline=args.offline)
+                    raise_invalid_slug(SLUG, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -329,7 +346,7 @@ def main():
 
             install_translations(config["translations"])
 
-            if not args.offline:
+            if not args.no_install_dependencies:
                 install_dependencies(config["dependencies"], verbose=args.verbose)
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
