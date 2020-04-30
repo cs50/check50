@@ -159,6 +159,31 @@ def compile_checks(checks, prompt=False):
     return "__init__.py"
 
 
+def setup_logging(level):
+    """
+    Sets up logging for lib50.
+    level 'info' logs all git commands run to stderr
+    level 'debug' logs all git commands and their output to stderr
+    """
+    # No verbosity level set, don't log anything
+    if not level:
+        return
+
+    # Set verbosity level on the lib50 logger
+    lib50_logger = logging.getLogger("lib50")
+    if level == "debug":
+        lib50_logger.setLevel(logging.DEBUG)
+    elif level == "info":
+        lib50_logger.setLevel(logging.INFO)
+    else:
+        raise ValueError(f'Unknown logging level: "{level}"')
+
+    # Direct all logs to sys.stderr
+    lib50_logger.addHandler(logging.StreamHandler(sys.stderr))
+
+    # Don't animate the progressbar
+    lib50.ProgressBar.DISABLED = True
+
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
     """
@@ -183,13 +208,11 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
             _("check50 is taking longer than normal!\n"
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
 
-
     if not results["check50"]:
         raise RemoteCheckError(results)
 
     if "error" in results["check50"]:
         raise RemoteCheckError(results["check50"])
-
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -240,7 +263,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline and --verbose).\n"
+                        help=_("run check50 in development mode (implies --offline and --verbose info).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -266,8 +289,14 @@ def main():
                         metavar="FILE",
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
-                        action="store_true",
-                        help=_("display the full tracebacks of any errors (also implies --log)"))
+                        action="store",
+                        nargs="?",
+                        default="",
+                        const="info",
+                        choices=["info", "debug"],
+                        help=_("sets the verbosity level and implies --log."
+                               ' "info" displays the full tracebacks of errors and shows all commands run.'
+                               ' "debug" adds the output of all command run.'))
     parser.add_argument("--no-download-checks",
                         action="store_true",
                         help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
@@ -284,20 +313,24 @@ def main():
     global SLUG
     SLUG = args.slug
 
+    # dev implies offline and verbose "info" if not overwritten
     if args.dev:
         args.offline = True
-        args.verbose = True
+        if not args.verbose:
+            args.verbose = "info"
 
+    # offline implies local
     if args.offline:
         args.no_install_dependencies = True
         args.no_download_checks = True
         args.local = True
 
+    # Setting any verbosity level implies logs from checks
     if args.verbose:
-        # Show lib50 commands being run in verbose mode
-        logging.basicConfig(level=os.environ.get("CHECK50_LOGLEVEL", "INFO"))
-        lib50.ProgressBar.DISABLED = True
         args.log = True
+
+    # Setup logging for lib50 depending on verbosity level
+    setup_logging(args.verbose)
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
     if (args.no_download_checks or args.no_install_dependencies) and not args.local:
@@ -314,23 +347,25 @@ def main():
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
 
     # Set excepthook
-    excepthook.verbose = args.verbose
+    excepthook.verbose = bool(args.verbose)
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
+    # If remote, push files to GitHub and await results
     if not args.local:
         commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, SLUG)
+    # Otherwise run checks locally
     else:
-        with lib50.ProgressBar("Checking") if not args.verbose and "ansi" in args.output else nullcontext():
+        with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
                 internal.check_dir = Path(SLUG).expanduser().resolve()
                 if not internal.check_dir.is_dir():
                     raise internal.Error(_("{} is not a directory").format(internal.check_dir))
+            # Otherwise have lib50 create a local copy of slug
             else:
-                # Otherwise have lib50 create a local copy of slug
                 try:
                     internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
                 except lib50.ConnectionError:
@@ -340,6 +375,7 @@ def main():
 
             # Load config
             config = internal.load_config(internal.check_dir)
+
             # Compile local checks if necessary
             if isinstance(config["checks"], dict):
                 config["checks"] = internal.compile_checks(config["checks"], prompt=args.dev)
@@ -354,16 +390,15 @@ def main():
             # Have lib50 decide which files to include
             included = lib50.files(config.get("files"))[0]
 
-            # Only open devnull conditionally
-            ctxmanager = open(os.devnull, "w") if not args.verbose else nullcontext()
-            with ctxmanager as devnull:
+            with open(os.devnull, "w") if args.verbose else nullcontext() as devnull:
+                # Redirect stdout to devnull if some verbosity level is set
                 if args.verbose:
+                    stdout = stderr = devnull
+                else:
                     stdout = sys.stdout
                     stderr = sys.stderr
-                else:
-                    stdout = stderr = devnull
 
-                # Create a working_area (temp dir) with all included student files named -
+                # Create a working_area (temp dir) named - with all included student files
                 with lib50.working_area(included, name='-') as working_area, \
                         contextlib.redirect_stdout(stdout), \
                         contextlib.redirect_stderr(stderr):
