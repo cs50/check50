@@ -267,7 +267,7 @@ def main():
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
-                        help=_("run checks completely offline (implies --local)"))
+                        help=_("run checks completely offline (implies --local, --no-download-checks and --no-install-dependencies)"))
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
@@ -297,6 +297,12 @@ def main():
                         help=_("sets the verbosity level and implies --log."
                                ' "info" displays the full tracebacks of errors and shows all commands run.'
                                ' "debug" adds the output of all command run.'))
+    parser.add_argument("--no-download-checks",
+                        action="store_true",
+                        help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
+    parser.add_argument("--no-install-dependencies",
+                        action="store_true",
+                        help=_("do not install dependencies (only works with --local)"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -315,6 +321,8 @@ def main():
 
     # offline implies local
     if args.offline:
+        args.no_install_dependencies = True
+        args.no_download_checks = True
         args.local = True
 
     # Setting any verbosity level implies logs from checks
@@ -323,6 +331,16 @@ def main():
 
     # Setup logging for lib50 depending on verbosity level
     setup_logging(args.verbose)
+
+    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
+    if (args.no_download_checks or args.no_install_dependencies) and not args.local:
+        if args.no_download_checks and args.no_install_dependencies:
+            msg = _("--no-downloads-checks and --no-install-dependencies have")
+        elif args.no_download_checks:
+            msg = _("--no-downloads-checks has")
+        else:
+            msg = _("--no-install-dependencies has")
+        termcolor.cprint(_("Warning: {} no effect without --local").format(msg), "yellow", attrs=["bold"])
 
     # Filter out any duplicates from args.output
     seen_output = set()
@@ -349,11 +367,11 @@ def main():
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
-                    internal.check_dir = lib50.local(SLUG, offline=args.offline)
+                    internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
                 except lib50.ConnectionError:
                     raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(SLUG, offline=args.offline)
+                    raise_invalid_slug(SLUG, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -364,8 +382,8 @@ def main():
 
             install_translations(config["translations"])
 
-            if not args.offline:
-                install_dependencies(config["dependencies"], verbose=bool(args.verbose))
+            if not args.no_install_dependencies:
+                install_dependencies(config["dependencies"], verbose=args.verbose)
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
 
@@ -385,14 +403,7 @@ def main():
                         contextlib.redirect_stdout(stdout), \
                         contextlib.redirect_stderr(stderr):
 
-                    runner = CheckRunner(checks_file)
-
-                    # Run checks
-                    if args.target:
-                        check_results = runner.run(args.target, included, working_area)
-                    else:
-                        check_results = runner.run_all(included, working_area)
-
+                    check_results = CheckRunner(checks_file).run(included, working_area, args.target)
                     results = {
                         "slug": SLUG,
                         "results": [attr.asdict(result) for result in check_results],
