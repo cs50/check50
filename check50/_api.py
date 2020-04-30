@@ -274,7 +274,7 @@ class run:
         except TIMEOUT:
             if show_timeout:
                 raise Missing(str_output, self.process.before,
-                              help=_("check50 waited {} seconds for the output of your program").format(timeout))
+                              help=_("check50 waited {} seconds for the output of the program").format(timeout))
             raise Missing(str_output, self.process.before)
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
