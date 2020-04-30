@@ -299,6 +299,16 @@ def main():
         lib50.ProgressBar.DISABLED = True
         args.log = True
 
+    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
+    if (args.no_download_checks or args.no_install_dependencies) and not args.local:
+        if args.no_download_checks and args.no_install_dependencies:
+            msg = _("--no-downloads-checks and --no-install-dependencies have")
+        elif args.no_download_checks:
+            msg = _("--no-downloads-checks has")
+        else:
+            msg = _("--no-install-dependencies has")
+        termcolor.cprint(_("Warning: {} no effect without --local").format(msg), "yellow", attrs=["bold"])
+
     # Filter out any duplicates from args.output
     seen_output = set()
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
