@@ -181,7 +181,7 @@ class CheckRunner:
         self.dependency_graph = collections.defaultdict(set)
         for name, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency")):
             dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
-            self.dependency_graph[dependency].add((name, check.__doc__))
+            self.dependency_graph[dependency].add(name)
 
 
     def run(self, files, working_area, targets=None):
@@ -206,7 +206,7 @@ class CheckRunner:
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
-                           for name, _ in graph[None])
+                           for name in graph[None])
             not_passed = []
 
             while not_done:
@@ -217,7 +217,7 @@ class CheckRunner:
                     results[result.name] = result
                     if result.passed:
                         # Dispatch dependent checks
-                        for child_name, _ in graph[result.name]:
+                        for child_name in graph[result.name]:
                             not_done.add(executor.submit(
                                 run_check(child_name, self.checks_spec, checks_root, state)))
                     else:
@@ -252,7 +252,7 @@ class CheckRunner:
         deps = set()
         for target in targets:
             if target not in inverse_graph:
-                raise internal.Error(_("Unknown check: {}").format(target))
+                raise internal.Error(_("Unknown check: {}").format(e.args[0]))
             curr_check = target
             while curr_check is not None and curr_check not in deps:
                 deps.add(curr_check)
@@ -275,7 +275,7 @@ class CheckRunner:
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
-        for name, description in self.dependency_graph[check_name]:
+        for name, description in self.dependency_[check_name]:
             if results[name] is None:
                 results[name] = CheckResult(name=name, description=_(description),
                                             passed=None,
