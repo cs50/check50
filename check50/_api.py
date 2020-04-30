@@ -273,8 +273,9 @@ class run:
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
             if show_timeout:
-                raise Failure(_("did not find {} within {} seconds").format(_raw(str_output), timeout))
-            raise Failure(_("did not find {}").format(_raw(str_output)))
+                raise Missing(str_output, self.process.before,
+                              help=_("check50 waited {} seconds for the output of your program").format(timeout))
+            raise Missing(str_output, self.process.before)
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
         except Exception:
@@ -390,6 +391,31 @@ class Failure(Exception):
         return self.payload["rationale"]
 
 
+class Missing(Failure):
+    """
+    Exception signifying check failure due to an item missing from a collection.
+    This is typically a specific substring in a longer string, for instance the contents of stdout.
+
+    :param item: the expected item / substring
+    :param collection: the collection / string
+    :param help: optional help message to be displayed
+    :type help: str
+
+    Example usage::
+
+        actual = check50.run("./fibonacci 5").stdout()
+
+        if "5" not in actual and "3" in actual:
+            help = "Be sure to start the sequence at 1"
+            raise check50.Missing("5", actual, help=help)
+
+    """
+
+    def __init__(self, missing_item, collection, help=None):
+        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
+
+
 class Mismatch(Failure):
     """
     Exception signifying check failure due to a mismatch in expected and actual outputs.
@@ -463,7 +489,7 @@ def _raw(s):
     if s == EOF:
         return "EOF"
 
-    s = f'"{repr(s)[1:-1]}"'
+    s = f'"{repr(str(s))[1:-1]}"'
     if len(s) > 15:
         s = s[:15] + "...\""  # Truncate if too long
     return s

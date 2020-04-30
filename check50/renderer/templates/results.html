@@ -24,6 +24,8 @@
                       <div class="well well-sm">
                           {# Reason why the check received its status #}
                           {% if check.cause %}
+                          <p>
+                              <b>Cause</b><br/>
                               {% autoescape false %}
                                   {{ check.cause.rationale | e | replace(" ", "&nbsp;") }}
                               {% endautoescape %}
@@ -34,16 +36,20 @@
                                       <br/>
                                   {% endif %}
                               {% endautoescape %}
+                          </p>
                           {% endif %}
 
                           {# Log information #}
                           {% if check.log %}
-                              <b>Log</b>
-                              <br/>
-                              {% for item in check.log %}
-                                  {{ item }}
-                                  <br/>
-                              {% endfor %}
+                              <samp>
+                                  <b>Log</b><br/>
+                                  <div style="border:2px solid; padding:2px;">
+                                      {% for item in check.log %}
+                                          {{ item }}
+                                          <br/>
+                                      {% endfor %}
+                                  </div>
+                              </samp>
                           {% endif %}
 
                           {% if check.cause and check.cause.error %}
@@ -97,6 +103,38 @@
                                                   {% set actual = check.cause.actual | e %}
                                               {% endif %}
                                               {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                          {% endautoescape %}
+                                      </samp>
+                                      </div>
+                                  </div>
+                              </div>
+                          {% endif %}
+
+                          {# Missing if there was one #}
+                          {% if check.cause and "missing_item" in check.cause and "collection" in check.cause %}
+                              <br/>
+
+                              <div class="row">
+                                  <div class="col-md-6">
+                                      <b>Could not find the following in the output:</b>
+                                      <br/>
+                                      <div style="background-color:black; color:#90ee90;">
+                                      <samp>
+                                          {% autoescape false %}
+                                              {% set item = check.cause.missing_item | e %}
+                                              {{ item | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                          {% endautoescape %}
+                                      </samp>
+                                      </div>
+                                  </div>
+                                  <div class="col-md-6">
+                                      <b>Actual Output:</b>
+                                      <br/>
+                                      <div style="background-color:black; color:white;">
+                                      <samp>
+                                          {% autoescape false %}
+                                              {% set collection = check.cause.collection | e %}
+                                              {{ collection | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
                                       </samp>
                                       </div>
