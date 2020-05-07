@@ -164,7 +164,6 @@ def check(dependency=None, timeout=60):
 
 class CheckRunner:
     def __init__(self, checks_path):
-
         # TODO: Naming the module "checks" is arbitray. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
 
@@ -177,11 +176,17 @@ class CheckRunner:
         self.check_names = _check_names.copy()
         _check_names.clear()
 
-        # Map each check to tuples containing the names and descriptions of the checks that depend on it
+        # Grab all checks from the module
+        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
+
+        # Map each check to tuples containing the names of the checks that depend on it
         self.dependency_graph = collections.defaultdict(set)
-        for name, check in inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency")):
-            dependency = check._check_dependency.__name__ if check._check_dependency is not None else None
+        for name, check in checks:
+            dependency = None if check._check_dependency is None else check._check_dependency.__name__
             self.dependency_graph[dependency].add(name)
+
+        # Map each check name to its description
+        self.check_descriptions = {name: check.__doc__ for name, check in checks}
 
 
     def run(self, files, working_area, targets=None):
@@ -190,7 +195,6 @@ class CheckRunner:
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
-
         graph = self.build_subgraph(targets) if targets else self.dependency_graph
 
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
@@ -237,17 +241,18 @@ class CheckRunner:
         checks = self.dependencies_of(targets)
         subgraph = collections.defaultdict(set)
         for dep, children in self.dependency_graph.items():
-            # If dependency is not in checks, none of its children will be, may as well skip.
+            # If dep is not a dependency of any target,
+            # none of its children will be either, may as well skip.
             if dep is not None and dep not in checks:
                 continue
             for child in children:
-                if child[0] in checks:
+                if child in checks:
                     subgraph[dep].add(child)
         return subgraph
 
 
-
     def dependencies_of(self, targets):
+        """Get all unique dependencies of the targetted checks (tartgets)."""
         inverse_graph = self._create_inverse_dependency_graph()
         deps = set()
         for target in targets:
@@ -260,12 +265,11 @@ class CheckRunner:
         return deps
 
 
-
     def _create_inverse_dependency_graph(self):
         """Build an inverse dependency map, from a check to its dependency."""
         inverse_dependency_graph = {}
         for check_name, dependents in self.dependency_graph.items():
-            for dependent_name, _ in dependents:
+            for dependent_name in dependents:
                 inverse_dependency_graph[dependent_name] = check_name
         return inverse_dependency_graph
 
@@ -275,9 +279,9 @@ class CheckRunner:
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
-        for name, description in self.dependency_graph[check_name]:
+        for name in self.dependency_graph[check_name]:
             if results[name] is None:
-                results[name] = CheckResult(name=name, description=_(description),
+                results[name] = CheckResult(name=name, description=self.check_descriptions[name],
                                             passed=None,
                                             dependency=check_name,
                                             cause={"rationale": _("can't check until a frown turns upside down")})
