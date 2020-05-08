@@ -326,7 +326,7 @@ def main():
     setup_logging(args.verbose)
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
-    if args.local:
+    if not args.local:
         useless_args = []
         if args.no_download_checks:
             useless_args.append("--no-downloads-checks")
