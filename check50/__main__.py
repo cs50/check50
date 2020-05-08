@@ -169,7 +169,7 @@ def setup_logging(level):
     if not level:
         return
 
-    lib50_logger = logging.getLogger("lib50")    
+    lib50_logger = logging.getLogger("lib50")
 
     # Set verbosity level on the lib50 logger
     lib50_logger.setLevel(getattr(logging, level.upper()))
@@ -327,13 +327,13 @@ def main():
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
     if (args.no_download_checks or args.no_install_dependencies) and not args.local:
-        if args.no_download_checks and args.no_install_dependencies:
-            msg = _("--no-downloads-checks and --no-install-dependencies have")
-        elif args.no_download_checks:
-            msg = _("--no-downloads-checks has")
-        else:
-            msg = _("--no-install-dependencies has")
-        termcolor.cprint(_("Warning: {} no effect without --local").format(msg), "yellow", attrs=["bold"])
+        useless_args = []
+        if args.no_download_checks:
+            useless_args.append("--no-downloads-checks")
+        if args.no_install_dependencies:
+            useless_args.append("--no-install-dependencies")
+        termcolor.cprint(_("Warning: you should always use --local when using: {}".format(", ".join(useless_args))),
+            "yellow", attrs=["bold"])
 
     # Filter out any duplicates from args.output
     seen_output = set()
