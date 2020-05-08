@@ -169,14 +169,10 @@ def setup_logging(level):
     if not level:
         return
 
+    lib50_logger = logging.getLogger("lib50")    
+
     # Set verbosity level on the lib50 logger
-    lib50_logger = logging.getLogger("lib50")
-    if level == "debug":
-        lib50_logger.setLevel(logging.DEBUG)
-    elif level == "info":
-        lib50_logger.setLevel(logging.INFO)
-    else:
-        raise ValueError(f'Unknown logging level: "{level}"')
+    lib50_logger.setLevel(getattr(logging, level.upper()))
 
     # Direct all logs to sys.stderr
     lib50_logger.addHandler(logging.StreamHandler(sys.stderr))
@@ -293,10 +289,11 @@ def main():
                         nargs="?",
                         default="",
                         const="info",
-                        choices=["info", "debug"],
-                        help=_("sets the verbosity level and implies --log."
-                               ' "info" displays the full tracebacks of errors and shows all commands run.'
-                               ' "debug" adds the output of all command run.'))
+                        choices=[attr for attr in dir(logging) if attr.isupper() and isinstance(getattr(logging, attr), int)],
+                        type=str.upper,
+                        help=_("sets the verbosity level."
+                               ' "INFO" displays the full tracebacks of errors and shows all commands run.'
+                               ' "DEBUG" adds the output of all command run.'))
     parser.add_argument("--no-download-checks",
                         action="store_true",
                         help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
@@ -324,10 +321,6 @@ def main():
         args.no_install_dependencies = True
         args.no_download_checks = True
         args.local = True
-
-    # Setting any verbosity level implies logs from checks
-    if args.verbose:
-        args.log = True
 
     # Setup logging for lib50 depending on verbosity level
     setup_logging(args.verbose)
