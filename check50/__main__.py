@@ -326,14 +326,16 @@ def main():
     setup_logging(args.verbose)
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
-    if (args.no_download_checks or args.no_install_dependencies) and not args.local:
+    if args.local:
         useless_args = []
         if args.no_download_checks:
             useless_args.append("--no-downloads-checks")
         if args.no_install_dependencies:
             useless_args.append("--no-install-dependencies")
-        termcolor.cprint(_("Warning: you should always use --local when using: {}".format(", ".join(useless_args))),
-            "yellow", attrs=["bold"])
+
+        if useless_args:
+            termcolor.cprint(_("Warning: you should always use --local when using: {}".format(", ".join(useless_args))),
+                "yellow", attrs=["bold"])
 
     # Filter out any duplicates from args.output
     seen_output = set()
