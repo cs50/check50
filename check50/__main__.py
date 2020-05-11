@@ -267,9 +267,6 @@ def main():
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
-    parser.add_argument("--log",
-                        action="store_true",
-                        help=_("display more detailed information about check results"))
     parser.add_argument("-o", "--output",
                         action="store",
                         nargs="+",
@@ -289,7 +286,7 @@ def main():
                         nargs="?",
                         default="",
                         const="info",
-                        choices=[attr for attr in dir(logging) if attr.isupper() and isinstance(getattr(logging, attr), int)],
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         type=str.upper,
                         help=_("sets the verbosity level."
                                ' "INFO" displays the full tracebacks of errors and shows all commands run.'
@@ -414,7 +411,7 @@ def main():
                 output_file.write(renderer.to_json(**results))
                 output_file.write("\n")
             elif output == "ansi":
-                output_file.write(renderer.to_ansi(**results, log=args.log))
+                output_file.write(renderer.to_ansi(**results, log=False))
                 output_file.write("\n")
             elif output == "html":
                 if os.environ.get("CS50_IDE_TYPE") and args.local:
