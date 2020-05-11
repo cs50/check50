@@ -259,7 +259,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline and --verbose info).\n"
+                        help=_("run check50 in development mode (implies --offline, --verbose, and --log-level INFO).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -282,14 +282,16 @@ def main():
                         metavar="FILE",
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
+                        action="store_true",
+                        help=_("shows the full traceback of any errors"))
+    parser.add_argument("--log-level",
                         action="store",
-                        nargs="?",
+                        nargs=1,
                         default="",
-                        const="info",
                         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         type=str.upper,
-                        help=_("sets the verbosity level."
-                               ' "INFO" displays the full tracebacks of errors and shows all commands run.'
+                        help=_("sets the log level."
+                               ' "INFO" shows all commands run.'
                                ' "DEBUG" adds the output of all command run.'))
     parser.add_argument("--no-download-checks",
                         action="store_true",
@@ -307,11 +309,12 @@ def main():
     global SLUG
     SLUG = args.slug
 
-    # dev implies offline and verbose "info" if not overwritten
+    # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
-        if not args.verbose:
-            args.verbose = "info"
+        args.verbose = True
+        if not args.log_level:
+            args.log_level = "INFO"
 
     # offline implies local
     if args.offline:
@@ -319,8 +322,8 @@ def main():
         args.no_download_checks = True
         args.local = True
 
-    # Setup logging for lib50 depending on verbosity level
-    setup_logging(args.verbose)
+    # Setup logging for lib50
+    setup_logging(args.log_level if args.log_level else "CRITICAL")
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
     if not args.local:
@@ -339,7 +342,7 @@ def main():
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
 
     # Set excepthook
-    excepthook.verbose = bool(args.verbose)
+    excepthook.verbose = args.verbose
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
 
@@ -382,9 +385,10 @@ def main():
             # Have lib50 decide which files to include
             included = lib50.files(config.get("files"))[0]
 
-            with open(os.devnull, "w") if args.verbose else nullcontext() as devnull:
-                # Redirect stdout to devnull if some verbosity level is set
-                if args.verbose:
+            # Redirect stdout to devnull if verbose or log level is set
+            should_redirect_devnull = args.verbose or args.log_level
+            with open(os.devnull, "w") if should_redirect_devnull else nullcontext() as devnull:
+                if should_redirect_devnull:
                     stdout = stderr = devnull
                 else:
                     stdout = sys.stdout
