@@ -42,8 +42,8 @@ class ColoredFormatter(logging.Formatter):
     COLORS = {
         "ERROR": "red",
         "WARNING": "yellow",
-        "DEBUG": "cyan",
-        "INFO": "magenta",
+        "INFO": "cyan",
+        "DEBUG": "magenta",
     }
 
     def __init__(self, fmt, use_color=True):
@@ -320,9 +320,11 @@ def validate_args(args):
 
     args.output = seen_output
 
-    if args.ansi_log and "ansi" not in seen_output:
+    if "ansi" in args.output:
+        if args.log_level >= LogLevel.INFO:
+            args.ansi_log = True
+    elif args.ansi_log:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
-
 
 
 def main():
@@ -359,7 +361,7 @@ def main():
     parser.add_argument("--log-level",
                         action="store",
                         default="WARNING",
-                        choices=list(LogLevel.__members__),
+                        choices=list(LogLevel.__members__.values()),
                         type=lambda l: LogLevel.__members__[l.upper()],
                         help=_("sets the log level."
                                ' "WARNING" displays usage warnings'

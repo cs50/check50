@@ -142,7 +142,7 @@ class app:
             self.response = getattr(self._client, method.lower())(route, data=data, **kwargs)
         except BaseException as e:  # Catch all exceptions thrown by app
             log(_("exception raised in application: {}: {}").format(type(e).__name__, e))
-            raise Failure(_("application raised an exception (see the web UI for more details)"))
+            raise Failure(_("application raised an exception (see the log for more details)"))
         return self
 
     def _search_page(self, output, str_output, content, match_fn, **kwargs):
