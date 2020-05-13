@@ -280,19 +280,23 @@ def raise_invalid_slug(slug, offline=False):
 def validate_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
-    args.log_level = LogLevel.__members__[args.log_level.upper()]
+    # Default log_level
+    default_level = "WARNING"
 
     # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
         args.verbose = True
-        args.log_level = min(args.log_level, LogLevel.INFO)
+        defualt_level = "INFO"
 
     # offline implies local
     if args.offline:
         args.no_install_dependencies = True
         args.no_download_checks = True
         args.local = True
+
+
+    args.log_level = LogLevel.__members__[args.log_level.upper() or default_level]
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -359,11 +363,11 @@ def main():
                         help=_("shows the full traceback of any errors"))
     parser.add_argument("--log-level",
                         action="store",
-                        default="WARNING",
                         choices=list(LogLevel.__members__),
+                        default="",
                         type=str.upper,
                         help=_("sets the log level."
-                               ' "WARNING" displays usage warnings'
+                               ' "WARNING" (default) displays usage warnings'
                                ' "INFO" shows all commands run.'
                                ' "DEBUG" adds the output of all command run.'))
     parser.add_argument("--ansi-log",
