@@ -201,7 +201,7 @@ def setup_logging(level):
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
 
-    # Don't animate the progressbar
+    # Don't animate the progressbar if loglevel is info or debug
     lib50.ProgressBar.DISABLED = level < LogLevel.WARNING
 
 
@@ -280,14 +280,12 @@ def raise_invalid_slug(slug, offline=False):
 def validate_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
-    # Default log_level
-    default_level = "WARNING"
-
     # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
         args.verbose = True
-        defualt_level = "INFO"
+        if "ansi" in args.output:
+            args.ansi_output = True
 
     # offline implies local
     if args.offline:
@@ -296,7 +294,7 @@ def validate_args(args):
         args.local = True
 
 
-    args.log_level = LogLevel.__members__[args.log_level.upper() or default_level]
+    args.log_level = LogLevel.__members__[args.log_level.upper()]
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -364,7 +362,7 @@ def main():
     parser.add_argument("--log-level",
                         action="store",
                         choices=list(LogLevel.__members__),
-                        default="",
+                        default="WARNING",
                         type=str.upper,
                         help=_("sets the log level."
                                ' "WARNING" (default) displays usage warnings'
