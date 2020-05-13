@@ -32,10 +32,10 @@ lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
 
 class LogLevel(enum.IntEnum):
-    ERROR = enum.auto()
-    WARNING = enum.auto()
-    INFO = enum.auto()
-    DEBUG = enum.auto()
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
 
 
 class ColoredFormatter(logging.Formatter):
@@ -196,14 +196,13 @@ def setup_logging(level):
         logger.setLevel(getattr(logging, level.name))
 
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s"))
-        
+        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s", use_color=sys.stderr.isatty()))
+
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
 
     # Don't animate the progressbar
-    if level > LogLevel.WARNING:
-        lib50.ProgressBar.DISABLED = True
+    lib50.ProgressBar.DISABLED = level < LogLevel.WARNING
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -281,20 +280,19 @@ def raise_invalid_slug(slug, offline=False):
 def validate_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
+    args.log_level = LogLevel.__members__[args.log_level.upper()]
+
     # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
         args.verbose = True
-        args.log_level = max(args.log_level, LogLevel.INFO)
+        args.log_level = min(args.log_level, LogLevel.INFO)
 
     # offline implies local
     if args.offline:
         args.no_install_dependencies = True
         args.no_download_checks = True
         args.local = True
-
-    if not args.log_level:
-        args.log_level = LogLevel.WARNING
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -321,7 +319,7 @@ def validate_args(args):
     args.output = seen_output
 
     if "ansi" in args.output:
-        if args.log_level >= LogLevel.INFO:
+        if args.log_level <= LogLevel.INFO:
             args.ansi_log = True
     elif args.ansi_log:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
@@ -346,6 +344,7 @@ def main():
                         nargs="+",
                         default=["ansi", "html"],
                         choices=["ansi", "json", "html"],
+                        type=str.lower,
                         help=_("format of check results"))
     parser.add_argument("--target",
                         action="store",
@@ -361,8 +360,8 @@ def main():
     parser.add_argument("--log-level",
                         action="store",
                         default="WARNING",
-                        choices=list(LogLevel.__members__.values()),
-                        type=lambda l: LogLevel.__members__[l.upper()],
+                        choices=list(LogLevel.__members__),
+                        type=str.upper,
                         help=_("sets the log level."
                                ' "WARNING" displays usage warnings'
                                ' "INFO" shows all commands run.'
