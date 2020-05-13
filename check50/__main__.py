@@ -286,7 +286,6 @@ def main():
                         help=_("shows the full traceback of any errors"))
     parser.add_argument("--log-level",
                         action="store",
-                        nargs=1,
                         default="",
                         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         type=str.upper,
@@ -323,7 +322,7 @@ def main():
         args.local = True
 
     # Setup logging for lib50
-    setup_logging(args.log_level if args.log_level else "CRITICAL")
+    setup_logging(args.log_level)
 
     # Warning in case of running remotely with no_download_checks or no_install_dependencies set
     if not args.local:
