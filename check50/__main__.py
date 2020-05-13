@@ -161,24 +161,36 @@ def compile_checks(checks, prompt=False):
 
 def setup_logging(level):
     """
-    Sets up logging for lib50.
+    Sets up logging for check50 and lib50.
     level 'info' logs all git commands run to stderr
     level 'debug' logs all git commands and their output to stderr
     """
-    # No verbosity level set, don't log anything
+    # Setup default check50 logger
+    logger = logging.getLogger('check50')
+    logger.addHandler(logging.StreamHandler(sys.stderr))
+    logger.setLevel("WARNING")
+
+    # If no custom logger level set, stop
     if not level:
         return
 
+    level = level.upper()
+
+    # Overwrite check50 logger default
+    logger.setLevel(level)
+
+    # Setup lib50 logger
     lib50_logger = logging.getLogger("lib50")
 
     # Set verbosity level on the lib50 logger
-    lib50_logger.setLevel(getattr(logging, level.upper()))
+    lib50_logger.setLevel(level)
 
     # Direct all logs to sys.stderr
     lib50_logger.addHandler(logging.StreamHandler(sys.stderr))
 
-    # Don't animate the progressbar
-    lib50.ProgressBar.DISABLED = True
+    # Don't animate the progressbar in case lib50 logs git commands
+    if getattr(logging, level) <= logging.INFO:
+        lib50.ProgressBar.DISABLED = True
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -333,8 +345,8 @@ def main():
             useless_args.append("--no-install-dependencies")
 
         if useless_args:
-            termcolor.cprint(_("Warning: you should always use --local when using: {}".format(", ".join(useless_args))),
-                "yellow", attrs=["bold"])
+            warning_msg = "Warning: you should always use --local when using: {}".format(", ".join(useless_args))
+            logging.getLogger("check50").warning(termcolor.colored(warning_msg, "yellow", attrs=["bold"]))
 
     # Filter out any duplicates from args.output
     seen_output = set()
