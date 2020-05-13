@@ -186,7 +186,7 @@ def compile_checks(checks, prompt=False):
 
 def setup_logging(level):
     """
-    Sets up logging for lib50.
+    Sets up logging for check50 and lib50.
     level 'info' logs all git commands run to stderr
     level 'debug' logs all git commands and their output to stderr
     """
@@ -197,7 +197,7 @@ def setup_logging(level):
 
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s"))
-
+        
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
 
@@ -383,7 +383,6 @@ def main():
 
     # Validate arguments and apply defaults
     validate_args(args)
-
 
     # Set excepthook
     excepthook.verbose = args.verbose
