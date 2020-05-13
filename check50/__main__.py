@@ -345,7 +345,7 @@ def main():
             useless_args.append("--no-install-dependencies")
 
         if useless_args:
-            warning_msg = "Warning: you should always use --local when using: {}".format(", ".join(useless_args))
+            warning_msg = _("Warning: you should always use --local when using: {}").format(", ".join(useless_args))
             logging.getLogger("check50").warning(termcolor.colored(warning_msg, "yellow", attrs=["bold"]))
 
     # Filter out any duplicates from args.output
