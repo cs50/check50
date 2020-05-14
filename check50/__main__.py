@@ -8,6 +8,7 @@ import itertools
 import json
 import logging
 import os
+import pprint
 import site
 from pathlib import Path
 import shutil
@@ -49,8 +50,11 @@ class ColoredFormatter(logging.Formatter):
     def __init__(self, fmt, use_color=True):
         logging.Formatter.__init__(self, fmt=fmt)
         self.use_color = use_color
+        self.pretty_printer = pprint.PrettyPrinter(indent=1, compact=True)
 
     def format(self, record):
+        if not isinstance(record.msg, str):
+            record.msg = self.pretty_printer.pformat(record.msg)
         msg = super().format(record)
         return msg if not self.use_color else termcolor.colored(msg, getattr(record, "color", self.COLORS.get(record.levelname)))
 
@@ -358,7 +362,7 @@ def main():
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
-                        help=_("shows the full traceback of any errors"))
+                        help=_("shows the full traceback of any errors and shows print statements written in checks"))
     parser.add_argument("--log-level",
                         action="store",
                         choices=list(LogLevel.__members__),
@@ -432,14 +436,13 @@ def main():
             # Have lib50 decide which files to include
             included = lib50.files(config.get("files"))[0]
 
-            # Redirect stdout to devnull if verbose or log level is set
-            should_redirect_devnull = args.verbose or args.log_level
-            with open(os.devnull, "w") if should_redirect_devnull else nullcontext() as devnull:
-                if should_redirect_devnull:
-                    stdout = stderr = devnull
-                else:
+            # Redirect stdout/stderr to devnull if not verbose
+            with nullcontext() if args.verbose else open(os.devnull, "w") as devnull:
+                if args.verbose:
                     stdout = sys.stdout
                     stderr = sys.stderr
+                else:
+                    stdout = stderr = devnull
 
                 # Create a working_area (temp dir) named - with all included student files
                 with lib50.working_area(included, name='-') as working_area, \
@@ -453,7 +456,7 @@ def main():
                         "version": __version__
                     }
 
-
+    # Log results in debug
     LOGGER.debug(results)
 
     # Render output
