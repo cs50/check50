@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import enum
 import gettext
 import importlib
 import inspect
@@ -25,9 +26,33 @@ import termcolor
 from . import internal, renderer, __version__
 from .runner import CheckRunner
 
+LOGGER = logging.getLogger("check50")
+
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
-SLUG = None
+
+class LogLevel(enum.IntEnum):
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+
+
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        "ERROR": "red",
+        "WARNING": "yellow",
+        "INFO": "cyan",
+        "DEBUG": "magenta",
+    }
+
+    def __init__(self, fmt, use_color=True):
+        logging.Formatter.__init__(self, fmt=fmt)
+        self.use_color = use_color
+
+    def format(self, record):
+        msg = super().format(record)
+        return msg if not self.use_color else termcolor.colored(msg, getattr(record, "color", self.COLORS.get(record.levelname)))
 
 
 class RemoteCheckError(internal.Error):
@@ -52,7 +77,7 @@ def excepthook(cls, exc, tb):
             ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
             with ctxmanager as output_file:
                 json.dump({
-                    "slug": SLUG,
+                    "slug": excepthook.slug,
                     "error": {
                         "type": cls.__name__,
                         "value": str(exc),
@@ -165,32 +190,19 @@ def setup_logging(level):
     level 'info' logs all git commands run to stderr
     level 'debug' logs all git commands and their output to stderr
     """
-    # Setup default check50 logger
-    logger = logging.getLogger('check50')
-    logger.addHandler(logging.StreamHandler(sys.stderr))
-    logger.setLevel("WARNING")
 
-    # If no custom logger level set, stop
-    if not level:
-        return
+    for logger in (logging.getLogger("lib50"), LOGGER):
+        # Set verbosity level on the lib50 logger
+        logger.setLevel(getattr(logging, level.name))
 
-    level = level.upper()
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s", use_color=sys.stderr.isatty()))
 
-    # Overwrite check50 logger default
-    logger.setLevel(level)
+        # Direct all logs to sys.stderr
+        logger.addHandler(handler)
 
-    # Setup lib50 logger
-    lib50_logger = logging.getLogger("lib50")
-
-    # Set verbosity level on the lib50 logger
-    lib50_logger.setLevel(level)
-
-    # Direct all logs to sys.stderr
-    lib50_logger.addHandler(logging.StreamHandler(sys.stderr))
-
-    # Don't animate the progressbar in case lib50 logs git commands
-    if getattr(logging, level) <= logging.INFO:
-        lib50.ProgressBar.DISABLED = True
+    # Don't animate the progressbar if loglevel is info or debug
+    lib50.ProgressBar.DISABLED = level < LogLevel.WARNING
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -265,6 +277,56 @@ def raise_invalid_slug(slug, offline=False):
     raise internal.Error(msg)
 
 
+def validate_args(args):
+    """Validate arguments and apply defaults that are dependent on other arguments"""
+
+    # dev implies offline, verbose, and log level "INFO" if not overwritten
+    if args.dev:
+        args.offline = True
+        args.verbose = True
+        if "ansi" in args.output:
+            args.ansi_output = True
+
+    # offline implies local
+    if args.offline:
+        args.no_install_dependencies = True
+        args.no_download_checks = True
+        args.local = True
+
+
+    args.log_level = LogLevel.__members__[args.log_level.upper()]
+
+    # Setup logging for lib50
+    setup_logging(args.log_level)
+
+    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
+    if not args.local:
+        useless_args = []
+        if args.no_download_checks:
+            useless_args.append("--no-downloads-checks")
+        if args.no_install_dependencies:
+            useless_args.append("--no-install-dependencies")
+
+        if useless_args:
+            LOGGER.warning(_("You should always use --local when using: {}").format(", ".join(useless_args)))
+
+    # Filter out any duplicates from args.output
+    seen_output = []
+    for output in args.output:
+        if output in seen_output:
+            LOGGER.warning(_("Duplicate output format specified: {}").format(output))
+        else:
+            seen_output.append(output)
+
+    args.output = seen_output
+
+    if "ansi" in args.output:
+        if args.log_level <= LogLevel.INFO:
+            args.ansi_log = True
+    elif args.ansi_log:
+        LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
+
+
 def main():
     parser = argparse.ArgumentParser(prog="check50")
 
@@ -284,6 +346,7 @@ def main():
                         nargs="+",
                         default=["ansi", "html"],
                         choices=["ansi", "json", "html"],
+                        type=str.lower,
                         help=_("format of check results"))
     parser.add_argument("--target",
                         action="store",
@@ -298,12 +361,16 @@ def main():
                         help=_("shows the full traceback of any errors"))
     parser.add_argument("--log-level",
                         action="store",
-                        default="",
-                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        choices=list(LogLevel.__members__),
+                        default="WARNING",
                         type=str.upper,
                         help=_("sets the log level."
+                               ' "WARNING" (default) displays usage warnings'
                                ' "INFO" shows all commands run.'
                                ' "DEBUG" adds the output of all command run.'))
+    parser.add_argument("--ansi-log",
+                        action="store_true",
+                        help=_("display log in ansi output mode"))
     parser.add_argument("--no-download-checks",
                         action="store_true",
                         help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
@@ -317,67 +384,36 @@ def main():
 
     args = parser.parse_args()
 
-    global SLUG
-    SLUG = args.slug
-
-    # dev implies offline, verbose, and log level "INFO" if not overwritten
-    if args.dev:
-        args.offline = True
-        args.verbose = True
-        if not args.log_level:
-            args.log_level = "INFO"
-
-    # offline implies local
-    if args.offline:
-        args.no_install_dependencies = True
-        args.no_download_checks = True
-        args.local = True
-
-    # Setup logging for lib50
-    setup_logging(args.log_level)
-
-    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
-    if not args.local:
-        useless_args = []
-        if args.no_download_checks:
-            useless_args.append("--no-downloads-checks")
-        if args.no_install_dependencies:
-            useless_args.append("--no-install-dependencies")
-
-        if useless_args:
-            warning_msg = _("Warning: you should always use --local when using: {}").format(", ".join(useless_args))
-            logging.getLogger("check50").warning(termcolor.colored(warning_msg, "yellow", attrs=["bold"]))
-
-    # Filter out any duplicates from args.output
-    seen_output = set()
-    args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
+    # Validate arguments and apply defaults
+    validate_args(args)
 
     # Set excepthook
     excepthook.verbose = args.verbose
     excepthook.outputs = args.output
     excepthook.output_file = args.output_file
+    excepthook.slug = args.slug
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, data={"check50": True})[1]
+        commit_hash = lib50.push("check50", args.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
-            tag_hash, results = await_results(commit_hash, SLUG)
+            tag_hash, results = await_results(commit_hash, args.slug)
     # Otherwise run checks locally
     else:
         with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
-                internal.check_dir = Path(SLUG).expanduser().resolve()
+                internal.check_dir = Path(args.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
                     raise internal.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
-                    internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
+                    internal.check_dir = lib50.local(args.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
+                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format())
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(SLUG, offline=args.no_download_checks)
+                    raise_invalid_slug(args.slug, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -412,11 +448,13 @@ def main():
 
                     check_results = CheckRunner(checks_file).run(included, working_area, args.target)
                     results = {
-                        "slug": SLUG,
+                        "slug": args.slug,
                         "results": [attr.asdict(result) for result in check_results],
                         "version": __version__
                     }
 
+
+    LOGGER.debug(results)
 
     # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
@@ -426,7 +464,7 @@ def main():
                 output_file.write(renderer.to_json(**results))
                 output_file.write("\n")
             elif output == "ansi":
-                output_file.write(renderer.to_ansi(**results, log=False))
+                output_file.write(renderer.to_ansi(**results, _log=args.ansi_log))
                 output_file.write("\n")
             elif output == "html":
                 if os.environ.get("CS50_IDE_TYPE") and args.local:

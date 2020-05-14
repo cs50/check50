@@ -65,4 +65,4 @@ def compile(file):
         for line in e.msg.splitlines():
             log(line)
 
-        raise Failure(_("{} raised while compiling {} (see the web UI for more details)").format(e.exc_type_name, file))
+        raise Failure(_("{} raised while compiling {} (see the log for more details)").format(e.exc_type_name, file))

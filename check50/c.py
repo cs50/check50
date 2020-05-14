@@ -130,4 +130,4 @@ def _check_valgrind(xml_file):
 
     # Only raise exception if we encountered errors.
     if reported:
-        raise Failure(_("valgrind tests failed; see the web UI for more information."))
+        raise Failure(_("valgrind tests failed; see log for more information."))
