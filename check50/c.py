@@ -60,7 +60,7 @@ def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
     # Strip out ANSI codes
     stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout())
 
-    # Log the last 50 lines of output in case compilation fails
+    # Log the last max_log_lines lines of output in case compilation fails
     if process.exitcode != 0:
         for line in stdout.splitlines()[-max_log_lines:]:
             log(line)
