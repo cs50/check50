@@ -14,7 +14,7 @@ CC = "clang"
 CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 
-def compile(*files, exe_name=None, cc=CC, **cflags):
+def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
     """
     Compile C source files.
 
@@ -62,7 +62,7 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
 
     # Log the last 50 lines of output in case compilation fails
     if process.exitcode != 0:
-        for line in stdout.splitlines()[-50:]:
+        for line in stdout.splitlines()[-max_log_lines:]:
             log(line)
         raise Failure("code failed to compile")
 
