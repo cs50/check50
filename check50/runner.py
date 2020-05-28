@@ -155,7 +155,7 @@ def check(dependency=None, timeout=60):
             else:
                 result.passed = True
             finally:
-                result.log = _log
+                result.log = _log if len(_log) <= 1 else ["..."] + _log[-100:]
                 result.data = _data
                 return result, state
         return wrapper
