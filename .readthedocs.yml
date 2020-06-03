@@ -1,0 +1,19 @@
+version: 2
+
+sphinx:
+  builder: html
+  configuration: docs/source/conf.py
+  fail_on_warning: false
+
+formats:
+  - pdf
+
+python:
+   version: 3.6
+   install:
+      - method: pip
+        path: .
+        extra_requirements:
+           - develop
+      - method: setuptools
+        path: .
