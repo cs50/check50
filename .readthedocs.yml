@@ -1,19 +1,15 @@
-version: 2
-
-sphinx:
-  builder: html
-  configuration: docs/source/conf.py
-  fail_on_warning: false
-
-formats:
-  - pdf
+build:
+  image: latest
 
 python:
-   version: 3.6
-   install:
-      - method: pip
-        path: .
-        extra_requirements:
-           - develop
-      - method: setuptools
-        path: .
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - develop
+
+sphinx:
+  builder: dirhtml
+
+version: 2
