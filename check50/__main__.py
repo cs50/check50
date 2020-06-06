@@ -119,7 +119,7 @@ def install_dependencies(dependencies, verbose=False):
             for dependency in dependencies:
                 f.write(f"{dependency}\n")
 
-        pip = ["python3", "-m", "pip", "install", "-r", req_file]
+        pip = [sys.executable or "python3", "-m", "pip", "install", "-r", req_file]
         # Unless we are in a virtualenv, we need --user
         if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
             pip.append("--user")
