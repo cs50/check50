@@ -28,6 +28,12 @@ class Base(unittest.TestCase):
         self.working_directory.cleanup()
 
 class TestCompile(Base):
+    def test_compile_incorrect(self):
+        open("blank.c", "w").close()
+
+        with self.assertRaises(check50.Failure):
+            check50.c.compile("blank.c")
+
     def test_compile_hello_world(self):
         with open("hello.c", "w") as f:
             src =   '#include <stdio.h>\n'\
