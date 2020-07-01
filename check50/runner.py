@@ -303,6 +303,7 @@ class run_check:
 
         # Carry over relevant module variables to the check process
         self.check_dir = internal.check_dir
+        self.slug = internal.slug
         self.excepthook_outputs = internal.excepthook.outputs
         self.excepthook_output_file = internal.excepthook.output_file
         self.excepthook_verbose = internal.excepthook.verbose
@@ -310,6 +311,7 @@ class run_check:
     def __call__(self):
         # Init module variables in check process
         internal.check_dir = self.check_dir
+        internal.slug = self.slug
         internal.excepthook.outputs = self.excepthook_outputs
         internal.excepthook.output_file = self.excepthook_output_file
         internal.excepthook.verbose = self.excepthook_verbose

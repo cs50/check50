@@ -2,13 +2,15 @@
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
 
-import importlib
 from pathlib import Path
+import importlib
+import json
 import sys
+import traceback
 
 import lib50
 
-from . import _simple
+from . import _simple, __version__
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -18,6 +20,9 @@ run_dir = None
 
 #: Boolean that indicates if a check is currently running
 check_running = False
+
+#: The user specified slug used to indentifies the set of checks
+slug = None
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
@@ -111,7 +116,7 @@ def excepthook(cls, exc, tb):
             ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
             with ctxmanager as output_file:
                 json.dump({
-                    "slug": SLUG,
+                    "slug": slug,
                     "error": {
                         "type": cls.__name__,
                         "value": str(exc),

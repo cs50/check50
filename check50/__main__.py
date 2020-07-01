@@ -4,7 +4,6 @@ import gettext
 import importlib
 import inspect
 import itertools
-import json
 import logging
 import os
 import site
@@ -14,7 +13,6 @@ import signal
 import subprocess
 import sys
 import tempfile
-import traceback
 import time
 
 import attr
@@ -26,9 +24,6 @@ from . import internal, renderer, __version__
 from .runner import CheckRunner
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
-
-SLUG = None
-
 
 class RemoteCheckError(internal.Error):
     def __init__(self, remote_json):
@@ -265,8 +260,7 @@ def main():
 
     args = parser.parse_args()
 
-    global SLUG
-    SLUG = args.slug
+    internal.slug = args.slug
 
     # dev implies offline and verbose "info" if not overwritten
     if args.dev:
@@ -306,25 +300,25 @@ def main():
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        commit_hash = lib50.push("check50", SLUG, internal.CONFIG_LOADER, data={"check50": True})[1]
+        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
-            tag_hash, results = await_results(commit_hash, SLUG)
+            tag_hash, results = await_results(commit_hash, internal.slug)
     # Otherwise run checks locally
     else:
         with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
-                internal.check_dir = Path(SLUG).expanduser().resolve()
+                internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
                     raise internal.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
-                    internal.check_dir = lib50.local(SLUG, offline=args.no_download_checks)
+                    internal.check_dir = lib50.local(internal.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(SLUG))
+                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(SLUG, offline=args.no_download_checks)
+                    raise_invalid_slug(internal.slug, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -358,7 +352,7 @@ def main():
 
                     check_results = CheckRunner(checks_file).run(included, working_area, args.target)
                     results = {
-                        "slug": SLUG,
+                        "slug": internal.slug,
                         "results": [attr.asdict(result) for result in check_results],
                         "version": __version__
                     }
