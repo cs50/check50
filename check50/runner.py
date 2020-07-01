@@ -301,7 +301,19 @@ class run_check:
         self.checks_root = checks_root
         self.state = state
 
+        # Carry over relevant module variables to the check process
+        self.check_dir = internal.check_dir
+        self.excepthook_outputs = internal.excepthook.outputs
+        self.excepthook_output_file = internal.excepthook.output_file
+        self.excepthook_verbose = internal.excepthook.verbose
+
     def __call__(self):
+        # Init module variables in check process
+        internal.check_dir = self.check_dir
+        internal.excepthook.outputs = self.excepthook_outputs
+        internal.excepthook.output_file = self.excepthook_output_file
+        internal.excepthook.verbose = self.excepthook_verbose
+
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
         internal.check_running = True
