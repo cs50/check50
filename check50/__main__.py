@@ -42,48 +42,6 @@ def nullcontext(entry_result=None):
     yield entry_result
 
 
-def excepthook(cls, exc, tb):
-    # All channels to output to
-    outputs = excepthook.outputs
-
-    for output in excepthook.outputs:
-        outputs.remove(output)
-        if output == "json":
-            ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
-            with ctxmanager as output_file:
-                json.dump({
-                    "slug": SLUG,
-                    "error": {
-                        "type": cls.__name__,
-                        "value": str(exc),
-                        "traceback": traceback.format_tb(exc.__traceback__),
-                        "data" : exc.payload if hasattr(exc, "payload") else {}
-                    },
-                    "version": __version__
-                }, output_file, indent=4)
-                output_file.write("\n")
-
-        elif output == "ansi" or output == "html":
-            if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
-                termcolor.cprint(str(exc), "red", file=sys.stderr)
-            elif issubclass(cls, FileNotFoundError):
-                termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-            elif issubclass(cls, KeyboardInterrupt):
-                termcolor.cprint(f"check cancelled", "red")
-            elif not issubclass(cls, Exception):
-                # Class is some other BaseException, better just let it go
-                return
-            else:
-                termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
-
-            if excepthook.verbose:
-                traceback.print_exception(cls, exc, tb)
-                if hasattr(exc, "payload"):
-                    print("Exception payload:", json.dumps(exc.payload), sep="\n")
-
-    sys.exit(1)
-
-
 def yes_no_prompt(prompt):
     """
     Raise a prompt, returns True if yes is entered, False if no is entered.
@@ -100,10 +58,10 @@ def yes_no_prompt(prompt):
 
 
 # Assume we should print tracebacks until we get command line arguments
-excepthook.verbose = True
-excepthook.output = "ansi"
-excepthook.output_file = None
-sys.excepthook = excepthook
+internal.excepthook.verbose = True
+internal.excepthook.outputs = ("ansi",)
+internal.excepthook.output_file = None
+sys.excepthook = internal.excepthook
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -342,9 +300,9 @@ def main():
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
 
     # Set excepthook
-    excepthook.verbose = bool(args.verbose)
-    excepthook.outputs = args.output
-    excepthook.output_file = args.output_file
+    internal.excepthook.verbose = bool(args.verbose)
+    internal.excepthook.outputs = args.output
+    internal.excepthook.output_file = args.output_file
 
     # If remote, push files to GitHub and await results
     if not args.local:
