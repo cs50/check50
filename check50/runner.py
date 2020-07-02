@@ -291,7 +291,7 @@ class CheckRunner:
 
 class run_check:
     """
-    Check job that runs in the a child process.
+    Check job that runs in a seperate process.
     This is only a class to get around the fact that `pickle` can't serialize closures.
     This class is essentially a function that reimports the check module and runs the check.
     """
