@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import signal
+import sys
 import tempfile
 import traceback
 
@@ -300,21 +301,29 @@ class run_check:
         self.spec = spec
         self.checks_root = checks_root
         self.state = state
+        self.attribute_names = (
+            "internal.check_dir",
+            "internal.slug",
+            "internal.excepthook.outputs",
+            "internal.excepthook.output_file",
+            "internal.excepthook.verbose"
+        )
+        self.attribute_values = tuple(eval(name) for name in self.attribute_names)
 
-        # Carry over relevant module variables to the check process
-        self.check_dir = internal.check_dir
-        self.slug = internal.slug
-        self.excepthook_outputs = internal.excepthook.outputs
-        self.excepthook_output_file = internal.excepthook.output_file
-        self.excepthook_verbose = internal.excepthook.verbose
+    @staticmethod
+    def _set_attribute(name, value):
+        """Get an attribute from a name in global scope and set its value."""
+        parts = name.split(".")
+
+        obj = sys.modules[__name__]
+        for part in parts[:-1]:
+            obj = getattr(obj, part)
+
+        setattr(obj, parts[-1], value)
 
     def __call__(self):
-        # Init module variables in check process
-        internal.check_dir = self.check_dir
-        internal.slug = self.slug
-        internal.excepthook.outputs = self.excepthook_outputs
-        internal.excepthook.output_file = self.excepthook_output_file
-        internal.excepthook.verbose = self.excepthook_verbose
+        for name, val in zip(self.attribute_names, self.attribute_values):
+            self._set_attribute(name, val)
 
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
