@@ -128,7 +128,7 @@ def excepthook(cls, exc, tb):
                 output_file.write("\n")
 
         elif output == "ansi" or output == "html":
-            if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
+            if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
                 termcolor.cprint(str(exc), "red", file=sys.stderr)
             elif issubclass(cls, FileNotFoundError):
                 termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
