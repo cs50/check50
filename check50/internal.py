@@ -6,6 +6,7 @@ from pathlib import Path
 import importlib
 import json
 import sys
+import termcolor
 import traceback
 
 import lib50
