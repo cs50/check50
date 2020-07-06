@@ -387,7 +387,7 @@ def main():
 
             with open(os.devnull, "w") if args.verbose else nullcontext() as devnull:
                 # Redirect stdout to devnull if some verbosity level is set
-                if args.verbose:
+                if not args.verbose:
                     stdout = stderr = devnull
                 else:
                     stdout = sys.stdout
@@ -398,7 +398,7 @@ def main():
                         contextlib.redirect_stdout(stdout), \
                         contextlib.redirect_stderr(stderr):
 
-                    check_results = CheckRunner(checks_file).run(included, working_area, args.target)
+                    check_results = CheckRunner(checks_file, working_area.parent).run(included, args.target)
                     results = {
                         "slug": SLUG,
                         "results": [attr.asdict(result) for result in check_results],

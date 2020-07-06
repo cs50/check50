@@ -123,7 +123,7 @@ def check(dependency=None, timeout=60):
         check._check_dependency = dependency
 
         @functools.wraps(check)
-        def wrapper(checks_root, dependency_state):
+        def wrapper(run_root_dir, dependency_state):
             # Result template
             result = CheckResult.from_check(check)
             # Any shared (returned) state
@@ -131,8 +131,8 @@ def check(dependency=None, timeout=60):
 
             try:
                 # Setup check environment, copying disk state from dependency
-                internal.run_dir = checks_root / check.__name__
-                src_dir = checks_root / (dependency.__name__ if dependency else "-")
+                internal.run_dir = run_root_dir / check.__name__
+                src_dir = run_root_dir / (dependency.__name__ if dependency else "-")
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
@@ -163,7 +163,10 @@ def check(dependency=None, timeout=60):
 
 
 class CheckRunner:
-    def __init__(self, checks_path):
+    def __init__(self, checks_path, run_root_dir=Path(".")):
+        internal.run_root_dir = run_root_dir
+        os.chdir(internal.run_root_dir)
+
         # TODO: Naming the module "checks" is arbitray. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
 
@@ -189,7 +192,7 @@ class CheckRunner:
         self.check_descriptions = {name: check.__doc__ for name, check in checks}
 
 
-    def run(self, files, working_area, targets=None):
+    def run(self, files, targets=None):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
@@ -200,7 +203,6 @@ class CheckRunner:
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
         results = {name: None for name in self.check_names}
-        checks_root = working_area.parent
 
         try:
             max_workers = int(os.environ.get("CHECK50_WORKERS"))
@@ -209,7 +211,7 @@ class CheckRunner:
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_spec, checks_root))
+            not_done = set(executor.submit(run_check(name, self.checks_spec, internal.run_root_dir))
                            for name in graph[None])
             not_passed = []
 
@@ -223,7 +225,7 @@ class CheckRunner:
                         # Dispatch dependent checks
                         for child_name in graph[result.name]:
                             not_done.add(executor.submit(
-                                run_check(child_name, self.checks_spec, checks_root, state)))
+                                run_check(child_name, self.checks_spec, internal.run_root_dir, state)))
                     else:
                         not_passed.append(result.name)
 
@@ -294,17 +296,18 @@ class run_check:
     This class is essentially a function that reimports the check module and runs the check.
     """
 
-    def __init__(self, check_name, spec, checks_root, state=None):
+    def __init__(self, check_name, spec, run_root_dir, state=None):
         self.check_name = check_name
         self.spec = spec
-        self.checks_root = checks_root
+        self.run_root_dir = run_root_dir
         self.state = state
 
     def __call__(self):
+        internal.run_root_dir = self.run_root_dir
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
         internal.check_running = True
         try:
-            return getattr(mod, self.check_name)(self.checks_root, self.state)
+            return getattr(mod, self.check_name)(self.run_root_dir, self.state)
         finally:
             internal.check_running = False

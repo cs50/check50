@@ -13,8 +13,11 @@ from . import _simple
 #: Directory containing the check and its associated files
 check_dir = None
 
-#: Temporary directory in which check is being run
+#: Temporary directory in which the current check is being run
 run_dir = None
+
+#: Temporary directory that is the root (parent) of all run_dir(s)
+run_root_dir = None
 
 #: Boolean that indicates if a check is currently running
 check_running = False
