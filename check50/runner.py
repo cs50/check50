@@ -296,19 +296,22 @@ class run_check:
     This class is essentially a function that reimports the check module and runs the check.
     """
 
+    # All attributes shared between check50's main process and each checks' process
+    # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    CROSS_PROCESS_ATTRIBUTES = (
+        "internal.check_dir",
+        "internal.slug",
+        "internal.excepthook.outputs",
+        "internal.excepthook.output_file",
+        "internal.excepthook.verbose"
+    )
+
     def __init__(self, check_name, spec, checks_root, state=None):
         self.check_name = check_name
         self.spec = spec
         self.checks_root = checks_root
         self.state = state
-        self.attribute_names = (
-            "internal.check_dir",
-            "internal.slug",
-            "internal.excepthook.outputs",
-            "internal.excepthook.output_file",
-            "internal.excepthook.verbose"
-        )
-        self.attribute_values = tuple(eval(name) for name in self.attribute_names)
+        self.attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
 
     @staticmethod
     def _set_attribute(name, value):
@@ -322,7 +325,7 @@ class run_check:
         setattr(obj, parts[-1], value)
 
     def __call__(self):
-        for name, val in zip(self.attribute_names, self.attribute_values):
+        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
             self._set_attribute(name, val)
 
         mod = importlib.util.module_from_spec(self.spec)
