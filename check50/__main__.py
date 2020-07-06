@@ -383,7 +383,7 @@ def main():
             checks_file = (internal.check_dir / config["checks"]).resolve()
 
             # Have lib50 decide which files to include
-            included = lib50.files(config.get("files"))[0]
+            included_files = lib50.files(config.get("files"))[0]
 
             with open(os.devnull, "w") if args.verbose else nullcontext() as devnull:
                 # Redirect stdout to devnull if some verbosity level is set
@@ -394,16 +394,17 @@ def main():
                     stderr = sys.stderr
 
                 # Create a working_area (temp dir) named - with all included student files
-                with lib50.working_area(included, name='-') as working_area, \
-                        contextlib.redirect_stdout(stdout), \
-                        contextlib.redirect_stderr(stderr):
+                with contextlib.redirect_stdout(stdout), \
+                     contextlib.redirect_stderr(stderr):
 
-                    check_results = CheckRunner(checks_file, working_area.parent).run(included, args.target)
-                    results = {
-                        "slug": SLUG,
-                        "results": [attr.asdict(result) for result in check_results],
-                        "version": __version__
-                    }
+                    with CheckRunner(checks_file, included_files) as check_runner:
+                        check_results = check_runner.run(args.target)
+
+                        results = {
+                            "slug": SLUG,
+                            "results": [attr.asdict(result) for result in check_results],
+                            "version": __version__
+                        }
 
 
     # Render output

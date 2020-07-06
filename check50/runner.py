@@ -14,6 +14,7 @@ import tempfile
 import traceback
 
 import attr
+import lib50
 
 from . import internal
 from ._api import log, Failure, _copy, _log, _data
@@ -163,36 +164,11 @@ def check(dependency=None, timeout=60):
 
 
 class CheckRunner:
-    def __init__(self, checks_path, run_root_dir=Path(".")):
-        internal.run_root_dir = run_root_dir
-        os.chdir(internal.run_root_dir)
+    def __init__(self, checks_path, included_files):
+        self.checks_path = checks_path
+        self.included_files = included_files
 
-        # TODO: Naming the module "checks" is arbitray. Better name?
-        self.checks_spec = importlib.util.spec_from_file_location("checks", checks_path)
-
-        # Clear check_names, import module, then save check_names. Not thread safe.
-        # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
-        # but there are a lot of subtleties with using `inspect` or similar here
-        _check_names.clear()
-        check_module = importlib.util.module_from_spec(self.checks_spec)
-        self.checks_spec.loader.exec_module(check_module)
-        self.check_names = _check_names.copy()
-        _check_names.clear()
-
-        # Grab all checks from the module
-        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
-
-        # Map each check to tuples containing the names of the checks that depend on it
-        self.dependency_graph = collections.defaultdict(set)
-        for name, check in checks:
-            dependency = None if check._check_dependency is None else check._check_dependency.__name__
-            self.dependency_graph[dependency].add(name)
-
-        # Map each check name to its description
-        self.check_descriptions = {name: check.__doc__ for name, check in checks}
-
-
-    def run(self, files, targets=None):
+    def run(self, targets=None):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
@@ -288,6 +264,50 @@ class CheckRunner:
                                             dependency=check_name,
                                             cause={"rationale": _("can't check until a frown turns upside down")})
                 self._skip_children(name, results)
+
+
+    def __enter__(self):
+        # Set up a temp dir for the checks
+        self._working_area_manager = lib50.working_area(self.included_files, name='-')
+        internal.run_root_dir = self._working_area_manager.__enter__().parent
+
+        # Change current working dir to the temp dir
+        self._cd_manager = lib50.cd(internal.run_root_dir)
+        self._cd_manager.__enter__()
+
+        # TODO: Naming the module "checks" is arbitray. Better name?
+        self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
+
+        # Clear check_names, import module, then save check_names. Not thread safe.
+        # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
+        # but there are a lot of subtleties with using `inspect` or similar here
+        _check_names.clear()
+        check_module = importlib.util.module_from_spec(self.checks_spec)
+        self.checks_spec.loader.exec_module(check_module)
+        self.check_names = _check_names.copy()
+        _check_names.clear()
+
+        # Grab all checks from the module
+        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
+
+        # Map each check to tuples containing the names of the checks that depend on it
+        self.dependency_graph = collections.defaultdict(set)
+        for name, check in checks:
+            dependency = None if check._check_dependency is None else check._check_dependency.__name__
+            self.dependency_graph[dependency].add(name)
+
+        # Map each check name to its description
+        self.check_descriptions = {name: check.__doc__ for name, check in checks}
+
+        return self
+
+
+    def __exit__(self, type, value, tb):
+        # Destroy the temporary directory for the checks
+        self._working_area_manager.__exit__(type, value, tb)
+
+        # cd back to the directory check50 was called from
+        self._cd_manager.__exit__(type, value, tb)
 
 
 class run_check:
