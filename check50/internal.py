@@ -19,8 +19,12 @@ run_dir = None
 #: Temporary directory that is the root (parent) of all run_dir(s)
 run_root_dir = None
 
+#: Directory check50 was run from
+student_dir = None
+
 #: Boolean that indicates if a check is currently running
 check_running = False
+
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")

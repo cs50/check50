@@ -187,7 +187,7 @@ class CheckRunner:
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_spec, internal.run_root_dir))
+            not_done = set(executor.submit(run_check(name, self.checks_spec))
                            for name in graph[None])
             not_passed = []
 
@@ -201,7 +201,7 @@ class CheckRunner:
                         # Dispatch dependent checks
                         for child_name in graph[result.name]:
                             not_done.add(executor.submit(
-                                run_check(child_name, self.checks_spec, internal.run_root_dir, state)))
+                                run_check(child_name, self.checks_spec, state)))
                     else:
                         not_passed.append(result.name)
 
@@ -267,6 +267,9 @@ class CheckRunner:
 
 
     def __enter__(self):
+        # Remember the student's directory
+        internal.student_dir = Path.cwd()
+
         # Set up a temp dir for the checks
         self._working_area_manager = lib50.working_area(self.included_files, name='-')
         internal.run_root_dir = self._working_area_manager.__enter__().parent
@@ -316,14 +319,13 @@ class run_check:
     This class is essentially a function that reimports the check module and runs the check.
     """
 
-    def __init__(self, check_name, spec, run_root_dir, state=None):
+    def __init__(self, check_name, spec, state=None):
         self.check_name = check_name
         self.spec = spec
-        self.run_root_dir = run_root_dir
+        self.run_root_dir = internal.run_root_dir
         self.state = state
 
     def __call__(self):
-        internal.run_root_dir = self.run_root_dir
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
         internal.check_running = True
