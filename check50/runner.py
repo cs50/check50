@@ -301,9 +301,9 @@ class run_check:
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
-        "internal.excepthook.outputs",
-        "internal.excepthook.output_file",
-        "internal.excepthook.verbose"
+        "internal._excepthook.outputs",
+        "internal._excepthook.output_file",
+        "internal._excepthook.verbose"
     )
 
     def __init__(self, check_name, spec, checks_root, state=None):

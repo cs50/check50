@@ -53,10 +53,10 @@ def yes_no_prompt(prompt):
 
 
 # Assume we should print tracebacks until we get command line arguments
-internal.excepthook.verbose = True
-internal.excepthook.outputs = ("ansi",)
-internal.excepthook.output_file = None
-sys.excepthook = internal.excepthook
+internal._excepthook.verbose = True
+internal._excepthook.outputs = ("ansi",)
+internal._excepthook.output_file = None
+sys.excepthook = internal._excepthook
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -294,9 +294,9 @@ def main():
     args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
 
     # Set excepthook
-    internal.excepthook.verbose = bool(args.verbose)
-    internal.excepthook.outputs = args.output
-    internal.excepthook.output_file = args.output_file
+    internal._excepthook.verbose = bool(args.verbose)
+    internal._excepthook.outputs = args.output
+    internal._excepthook.output_file = args.output_file
 
     # If remote, push files to GitHub and await results
     if not args.local:
