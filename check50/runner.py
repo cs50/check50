@@ -322,7 +322,6 @@ class run_check:
     def __init__(self, check_name, spec, state=None):
         self.check_name = check_name
         self.spec = spec
-        self.run_root_dir = internal.run_root_dir
         self.state = state
 
     def __call__(self):
@@ -330,6 +329,6 @@ class run_check:
         self.spec.loader.exec_module(mod)
         internal.check_running = True
         try:
-            return getattr(mod, self.check_name)(self.run_root_dir, self.state)
+            return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
         finally:
             internal.check_running = False
