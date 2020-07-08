@@ -80,13 +80,15 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60):
+def check(dependency=None, timeout=60, max_log_lines=100):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param max_log_lines: maximum number of lines that can appear in the log
+    :type max_log_lines: int
 
     When a check depends on another, the former will only run if the latter passes.
     Additionally, the dependent check will inherit the filesystem of its dependency.
@@ -155,7 +157,7 @@ def check(dependency=None, timeout=60):
             else:
                 result.passed = True
             finally:
-                result.log = _log
+                result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, state
         return wrapper
