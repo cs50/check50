@@ -48,7 +48,7 @@ class ColoredFormatter(logging.Formatter):
     }
 
     def __init__(self, fmt, use_color=True):
-        logging.Formatter.__init__(self, fmt=fmt)
+        super().__init__(fmt=fmt)
         self.use_color = use_color
         self.pretty_printer = pprint.PrettyPrinter(indent=1, compact=True)
 
@@ -72,43 +72,56 @@ def nullcontext(entry_result=None):
 
 
 def excepthook(cls, exc, tb):
-    # All channels to output to
-    outputs = excepthook.outputs
+    # If an error happened remotely, grab its traceback and message
+    if issubclass(cls, RemoteCheckError) and "error" in exc.payload["remote_json"]:
+        formatted_traceback = exc.payload["remote_json"]["error"]["traceback"]
+        show_traceback = exc.payload["remote_json"]["error"]["actions"]["show_traceback"]
+        message = exc.payload["remote_json"]["error"]["actions"]["message"]
+    # Otherwise, create the traceback and message from this error
+    else:
+        formatted_traceback = traceback.format_exception(cls, exc, tb)
+        show_traceback = False
 
-    for output in excepthook.outputs:
-        outputs.remove(output)
-        if output == "json":
-            ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
-            with ctxmanager as output_file:
-                json.dump({
-                    "slug": excepthook.slug,
-                    "error": {
-                        "type": cls.__name__,
-                        "value": str(exc),
-                        "traceback": traceback.format_tb(exc.__traceback__),
-                        "data" : exc.payload if hasattr(exc, "payload") else {}
+        if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
+            message = str(exc)
+        elif issubclass(cls, FileNotFoundError):
+            message = _("{} not found").format(exc.filename)
+        elif issubclass(cls, KeyboardInterrupt):
+            message = _("check cancelled")
+        elif not issubclass(cls, Exception):
+            # Class is some other BaseException, better just let it go
+            return
+        else:
+            show_traceback = True
+            message = _("Sorry, something is wrong! check50 ran into an error.\n" \
+                        "Please let CS50 know by emailing the error above to sysadmins@cs50.harvard.edu.")
+
+    # Output exception as json
+    if "json" in excepthook.outputs:
+        ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
+        with ctxmanager as output_file:
+            json.dump({
+                "slug": excepthook.slug,
+                "error": {
+                    "type": cls.__name__,
+                    "value": str(exc),
+                    "traceback": formatted_traceback,
+                    "actions": {
+                        "show_traceback": show_traceback,
+                        "message": message
                     },
-                    "version": __version__
-                }, output_file, indent=4)
-                output_file.write("\n")
+                    "data" : exc.payload if hasattr(exc, "payload") else {}
+                },
+                "version": __version__
+            }, output_file, indent=4)
+            output_file.write("\n")
 
-        elif output == "ansi" or output == "html":
-            if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
-                termcolor.cprint(str(exc), "red", file=sys.stderr)
-            elif issubclass(cls, FileNotFoundError):
-                termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
-            elif issubclass(cls, KeyboardInterrupt):
-                termcolor.cprint(f"check cancelled", "red")
-            elif not issubclass(cls, Exception):
-                # Class is some other BaseException, better just let it go
-                return
-            else:
-                termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
-
-            if excepthook.verbose:
-                traceback.print_exception(cls, exc, tb)
-                if hasattr(exc, "payload"):
-                    print("Exception payload:", json.dumps(exc.payload), sep="\n")
+    # Output exception to stderr
+    if "ansi" in excepthook.outputs or "html" in excepthook.outputs:
+        if show_traceback:
+            for line in formatted_traceback:
+                termcolor.cprint(line, end="", file=sys.stderr)
+        termcolor.cprint(message, "red", file=sys.stderr)
 
     sys.exit(1)
 
@@ -281,15 +294,15 @@ def raise_invalid_slug(slug, offline=False):
     raise internal.Error(msg)
 
 
-def validate_args(args):
+def process_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
-    # dev implies offline, verbose, and log level "INFO" if not overwritten
+    # dev implies offline, verbose and ansi_log
     if args.dev:
         args.offline = True
         args.verbose = True
         if "ansi" in args.output:
-            args.ansi_output = True
+            args.ansi_log = True
 
     # offline implies local
     if args.offline:
@@ -297,8 +310,7 @@ def validate_args(args):
         args.no_download_checks = True
         args.local = True
 
-
-    args.log_level = LogLevel.__members__[args.log_level.upper()]
+    args.log_level = LogLevel[args.log_level.upper()]
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -365,13 +377,13 @@ def main():
                         help=_("shows the full traceback of any errors and shows print statements written in checks"))
     parser.add_argument("--log-level",
                         action="store",
-                        choices=list(LogLevel.__members__),
+                        choices=[level.name.lower() for level in LogLevel],
                         default="WARNING",
-                        type=str.upper,
+                        type=str.lower,
                         help=_("sets the log level."
-                               ' "WARNING" (default) displays usage warnings'
-                               ' "INFO" shows all commands run.'
-                               ' "DEBUG" adds the output of all command run.'))
+                               ' "warning" (default) displays usage warnings'
+                               ' "info" shows all commands run.'
+                               ' "debug" adds the output of all command run.'))
     parser.add_argument("--ansi-log",
                         action="store_true",
                         help=_("display log in ansi output mode"))
@@ -389,7 +401,7 @@ def main():
     args = parser.parse_args()
 
     # Validate arguments and apply defaults
-    validate_args(args)
+    process_args(args)
 
     # Set excepthook
     excepthook.verbose = args.verbose
