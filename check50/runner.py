@@ -316,13 +316,7 @@ class CheckRunner:
         self._cd_manager.__exit__(type, value, tb)
 
 
-class run_check:
-    """
-    Check job that runs in a separate process.
-    This is only a class to get around the fact that `pickle` can't serialize closures.
-    This class is essentially a function that reimports the check module and runs the check.
-    """
-
+class CheckJob:
     # All attributes shared between check50's main process and each checks' process
     # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     CROSS_PROCESS_ATTRIBUTES = (
@@ -333,11 +327,8 @@ class run_check:
         "internal._excepthook.verbose"
     )
 
-    def __init__(self, check_name, spec, state=None):
-        self.check_name = check_name
-        self.spec = spec
-        self.state = state
-        self.attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
+    def __init__(self):
+        self._attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
 
     @staticmethod
     def _set_attribute(name, value):
@@ -351,9 +342,24 @@ class run_check:
         setattr(obj, parts[-1], value)
 
     def __call__(self):
-        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
+        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
             self._set_attribute(name, val)
 
+
+class run_check(CheckJob):
+    """
+    Check job that runs in a separate process.
+    This is only a class to get around the fact that `pickle` can't serialize closures.
+    This class is essentially a function that reimports the check module and runs the check.
+    """
+    def __init__(self, check_name, spec, state=None):
+        super().__init__()
+        self.check_name = check_name
+        self.spec = spec
+        self.state = state
+
+    def __call__(self):
+        super().__call__()
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
         internal.check_running = True
