@@ -6,11 +6,11 @@
    :maxdepth: 3
    :caption: Contents:
 
-   check50_user
-   api
-   json_specification
-   check_writer
-   extension_writer
+   check50_user.rst
+   api.rst
+   json_specification.rst
+   check_writer.rst
+   extension_writer.rst
 
 .. Indices and tables
 .. ==================

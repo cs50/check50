@@ -19,7 +19,7 @@ setup(
     },
     install_requires=["attrs>=18", "bs4>=0", "pexpect>=4.6", "lib50>=2,<4", "pyyaml>=3.10", "requests>=2.19", "termcolor>=1.1", "jinja2>=2.10"],
     extras_require = {
-        "develop": ["sphinx", "sphinx_rtd_theme"]
+        "develop": ["sphinx", "sphinx-autobuild", "sphinx_rtd_theme"]
     },
     keywords=["check", "check50"],
     name="check50",
@@ -29,6 +29,6 @@ setup(
         "console_scripts": ["check50=check50.__main__:main"]
     },
     url="https://github.com/cs50/check50",
-    version="3.1.1",
+    version="3.1.2",
     include_package_data=True
 )

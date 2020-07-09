@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import shutil
 import signal
+import sys
 import tempfile
 import traceback
 
@@ -80,13 +81,15 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60):
+def check(dependency=None, timeout=60, max_log_lines=100):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param max_log_lines: maximum number of lines that can appear in the log
+    :type max_log_lines: int
 
     When a check depends on another, the former will only run if the latter passes.
     Additionally, the dependent check will inherit the filesystem of its dependency.
@@ -155,7 +158,7 @@ def check(dependency=None, timeout=60):
             else:
                 result.passed = True
             finally:
-                result.log = _log
+                result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, state
         return wrapper
@@ -290,17 +293,42 @@ class CheckRunner:
 
 class run_check:
     """
-    Hack to get around the fact that `pickle` can't serialize closures.
+    Check job that runs in a separate process.
+    This is only a class to get around the fact that `pickle` can't serialize closures.
     This class is essentially a function that reimports the check module and runs the check.
     """
+
+    # All attributes shared between check50's main process and each checks' process
+    # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    CROSS_PROCESS_ATTRIBUTES = (
+        "internal.check_dir",
+        "internal.slug",
+        "internal._excepthook.outputs",
+        "internal._excepthook.output_file"
+    )
 
     def __init__(self, check_name, spec, checks_root, state=None):
         self.check_name = check_name
         self.spec = spec
         self.checks_root = checks_root
         self.state = state
+        self.attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
+
+    @staticmethod
+    def _set_attribute(name, value):
+        """Get an attribute from a name in global scope and set its value."""
+        parts = name.split(".")
+
+        obj = sys.modules[__name__]
+        for part in parts[:-1]:
+            obj = getattr(obj, part)
+
+        setattr(obj, parts[-1], value)
 
     def __call__(self):
+        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
+            self._set_attribute(name, val)
+
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
         internal.check_running = True

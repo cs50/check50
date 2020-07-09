@@ -5,10 +5,8 @@ import gettext
 import importlib
 import inspect
 import itertools
-import json
 import logging
 import os
-import pprint
 import site
 from pathlib import Path
 import shutil
@@ -16,7 +14,6 @@ import signal
 import subprocess
 import sys
 import tempfile
-import traceback
 import time
 
 import attr
@@ -33,97 +30,33 @@ lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
 
 class LogLevel(enum.IntEnum):
-    DEBUG = logging.DEBUG
-    INFO = logging.INFO
-    WARNING = logging.WARNING
-    ERROR = logging.ERROR
+    ERROR = enum.auto()
+    WARNING = enum.auto()
+    INFO = enum.auto()
+    DEBUG = enum.auto()
 
 
 class ColoredFormatter(logging.Formatter):
     COLORS = {
         "ERROR": "red",
         "WARNING": "yellow",
-        "INFO": "cyan",
-        "DEBUG": "magenta",
+        "DEBUG": "cyan",
+        "INFO": "magenta",
     }
 
     def __init__(self, fmt, use_color=True):
-        super().__init__(fmt=fmt)
+        logging.Formatter.__init__(self, fmt=fmt)
         self.use_color = use_color
-        self.pretty_printer = pprint.PrettyPrinter(indent=1, compact=True)
 
     def format(self, record):
-        if not isinstance(record.msg, str):
-            record.msg = self.pretty_printer.pformat(record.msg)
         msg = super().format(record)
         return msg if not self.use_color else termcolor.colored(msg, getattr(record, "color", self.COLORS.get(record.levelname)))
-
-
-class RemoteCheckError(internal.Error):
-    def __init__(self, remote_json):
-        super().__init__("check50 ran into an error while running checks! Please contact sysadmins@cs50.harvard.edu!")
-        self.payload = {"remote_json": remote_json}
 
 
 @contextlib.contextmanager
 def nullcontext(entry_result=None):
     """This is just contextlib.nullcontext but that function is only available in 3.7+."""
     yield entry_result
-
-
-def excepthook(cls, exc, tb):
-    # If an error happened remotely, grab its traceback and message
-    if issubclass(cls, RemoteCheckError) and "error" in exc.payload["remote_json"]:
-        formatted_traceback = exc.payload["remote_json"]["error"]["traceback"]
-        show_traceback = exc.payload["remote_json"]["error"]["actions"]["show_traceback"]
-        message = exc.payload["remote_json"]["error"]["actions"]["message"]
-    # Otherwise, create the traceback and message from this error
-    else:
-        formatted_traceback = traceback.format_exception(cls, exc, tb)
-        show_traceback = False
-
-        if (issubclass(cls, internal.Error) or issubclass(cls, lib50.Error)) and exc.args:
-            message = str(exc)
-        elif issubclass(cls, FileNotFoundError):
-            message = _("{} not found").format(exc.filename)
-        elif issubclass(cls, KeyboardInterrupt):
-            message = _("check cancelled")
-        elif not issubclass(cls, Exception):
-            # Class is some other BaseException, better just let it go
-            return
-        else:
-            show_traceback = True
-            message = _("Sorry, something is wrong! check50 ran into an error.\n" \
-                        "Please let CS50 know by emailing the error above to sysadmins@cs50.harvard.edu.")
-
-    # Output exception as json
-    if "json" in excepthook.outputs:
-        ctxmanager = open(excepthook.output_file, "w") if excepthook.output_file else nullcontext(sys.stdout)
-        with ctxmanager as output_file:
-            json.dump({
-                "slug": excepthook.slug,
-                "error": {
-                    "type": cls.__name__,
-                    "value": str(exc),
-                    "traceback": formatted_traceback,
-                    "actions": {
-                        "show_traceback": show_traceback,
-                        "message": message
-                    },
-                    "data" : exc.payload if hasattr(exc, "payload") else {}
-                },
-                "version": __version__
-            }, output_file, indent=4)
-            output_file.write("\n")
-
-    # Output exception to stderr
-    if "ansi" in excepthook.outputs or "html" in excepthook.outputs:
-        if show_traceback:
-            for line in formatted_traceback:
-                termcolor.cprint(line, end="", file=sys.stderr)
-        termcolor.cprint(message, "red", file=sys.stderr)
-
-    sys.exit(1)
 
 
 def yes_no_prompt(prompt):
@@ -142,9 +75,9 @@ def yes_no_prompt(prompt):
 
 
 # Assume we should print tracebacks until we get command line arguments
-excepthook.output = "ansi"
-excepthook.output_file = None
-sys.excepthook = excepthook
+internal._excepthook.outputs = ("ansi",)
+internal._excepthook.output_file = None
+sys.excepthook = internal._excepthook
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -160,7 +93,7 @@ def install_dependencies(dependencies, verbose=False):
             for dependency in dependencies:
                 f.write(f"{dependency}\n")
 
-        pip = ["python3", "-m", "pip", "install", "-r", req_file]
+        pip = [sys.executable or "python3", "-m", "pip", "install", "-r", req_file]
         # Unless we are in a virtualenv, we need --user
         if sys.base_prefix == sys.prefix and not hasattr(sys, "real_prefix"):
             pip.append("--user")
@@ -202,7 +135,7 @@ def compile_checks(checks, prompt=False):
 
 def setup_logging(level):
     """
-    Sets up logging for check50 and lib50.
+    Sets up logging for lib50.
     level 'info' logs all git commands run to stderr
     level 'debug' logs all git commands and their output to stderr
     """
@@ -212,13 +145,14 @@ def setup_logging(level):
         logger.setLevel(getattr(logging, level.name))
 
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s", use_color=sys.stderr.isatty()))
+        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s"))
 
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
 
-    # Don't animate the progressbar if loglevel is info or debug
-    lib50.ProgressBar.DISABLED = level < LogLevel.WARNING
+    # Don't animate the progressbar
+    if level > LogLevel.WARNING:
+        lib50.ProgressBar.DISABLED = True
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -233,7 +167,7 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
         results = res.json()
 
         if res.status_code not in [404, 200]:
-            raise RemoteCheckError(results)
+            raise internal.RemoteCheckError(results)
 
         if res.status_code == 200 and results["received_at"] is not None:
             break
@@ -245,10 +179,10 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
 
     if not results["check50"]:
-        raise RemoteCheckError(results)
+        raise internal.RemoteCheckError(results)
 
     if "error" in results["check50"]:
-        raise RemoteCheckError(results["check50"])
+        raise internal.RemoteCheckError(results["check50"])
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -293,15 +227,14 @@ def raise_invalid_slug(slug, offline=False):
     raise internal.Error(msg)
 
 
-def process_args(args):
+def validate_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
-    # dev implies offline, verbose and ansi_log
+    # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
         args.verbose = True
-        if "ansi" in args.output:
-            args.ansi_log = True
+        args.log_level = max(args.log_level, LogLevel.INFO)
 
     # offline implies local
     if args.offline:
@@ -309,7 +242,8 @@ def process_args(args):
         args.no_download_checks = True
         args.local = True
 
-    args.log_level = LogLevel[args.log_level.upper()]
+    if not args.log_level:
+        args.log_level = LogLevel.WARNING
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -335,11 +269,9 @@ def process_args(args):
 
     args.output = seen_output
 
-    if "ansi" in args.output:
-        if args.log_level <= LogLevel.INFO:
-            args.ansi_log = True
-    elif args.ansi_log:
+    if args.ansi_log and "ansi" not in seen_output:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
+
 
 
 def main():
@@ -348,7 +280,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline, --verbose, and --ansi-log).\n"
+                        help=_("run check50 in development mode (implies --offline, --verbose, and --log-level INFO).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -361,7 +293,6 @@ def main():
                         nargs="+",
                         default=["ansi", "html"],
                         choices=["ansi", "json", "html"],
-                        type=str.lower,
                         help=_("format of check results"))
     parser.add_argument("--target",
                         action="store",
@@ -373,16 +304,16 @@ def main():
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
-                        help=_("shows any installed dependencies and shows print statements written in checks"))
+                        help=_("shows the full traceback of any errors"))
     parser.add_argument("--log-level",
                         action="store",
-                        choices=[level.name.lower() for level in LogLevel],
                         default="WARNING",
-                        type=str.lower,
+                        choices=list(LogLevel.__members__),
+                        type=lambda l: LogLevel.__members__[l.upper()],
                         help=_("sets the log level."
-                               ' "warning" (default) displays usage warnings'
-                               ' "info" shows all commands run.'
-                               ' "debug" adds the output of all command run.'))
+                               ' "WARNING" displays usage warnings'
+                               ' "INFO" shows all commands run.'
+                               ' "DEBUG" adds the output of all command run.'))
     parser.add_argument("--ansi-log",
                         action="store_true",
                         help=_("display log in ansi output mode"))
@@ -399,35 +330,37 @@ def main():
 
     args = parser.parse_args()
 
+    internal.slug = args.slug
+
     # Validate arguments and apply defaults
-    process_args(args)
+    validate_args(args)
 
     # Set excepthook
-    excepthook.outputs = args.output
-    excepthook.output_file = args.output_file
-    excepthook.slug = args.slug
+    internal._excepthook.outputs = args.output
+    internal._excepthook.output_file = args.output_file
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        commit_hash = lib50.push("check50", args.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
+        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
-            tag_hash, results = await_results(commit_hash, args.slug)
+            tag_hash, results = await_results(commit_hash, internal.slug)
+
     # Otherwise run checks locally
     else:
         with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
-                internal.check_dir = Path(args.slug).expanduser().resolve()
+                internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
                     raise internal.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
-                    internal.check_dir = lib50.local(args.slug, offline=args.no_download_checks)
+                    internal.check_dir = lib50.local(internal.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format())
+                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
                 except lib50.InvalidSlugError:
-                    raise_invalid_slug(args.slug, offline=args.no_download_checks)
+                    raise_invalid_slug(internal.slug, offline=args.no_download_checks)
 
             # Load config
             config = internal.load_config(internal.check_dir)
@@ -446,13 +379,14 @@ def main():
             # Have lib50 decide which files to include
             included = lib50.files(config.get("files"))[0]
 
-            # Redirect stdout/stderr to devnull if not verbose
-            with nullcontext() if args.verbose else open(os.devnull, "w") as devnull:
-                if args.verbose:
+            # Redirect stdout to devnull if verbose or log level is set
+            should_redirect_devnull = args.verbose or args.log_level
+            with open(os.devnull, "w") if should_redirect_devnull else nullcontext() as devnull:
+                if should_redirect_devnull:
+                    stdout = stderr = devnull
+                else:
                     stdout = sys.stdout
                     stderr = sys.stderr
-                else:
-                    stdout = stderr = devnull
 
                 # Create a working_area (temp dir) named - with all included student files
                 with lib50.working_area(included, name='-') as working_area, \
@@ -461,12 +395,12 @@ def main():
 
                     check_results = CheckRunner(checks_file).run(included, working_area, args.target)
                     results = {
-                        "slug": args.slug,
+                        "slug": internal.slug,
                         "results": [attr.asdict(result) for result in check_results],
                         "version": __version__
                     }
 
-    # Log results in debug
+
     LOGGER.debug(results)
 
     # Render output
