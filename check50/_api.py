@@ -401,6 +401,10 @@ class Missing(Failure):
 
     def __init__(self, missing_item, collection, help=None):
         super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+
+        if missing_item == EOF:
+            missing_item = "EOF"
+
         self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
 
 
