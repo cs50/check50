@@ -45,7 +45,7 @@ class ColoredFormatter(logging.Formatter):
     }
 
     def __init__(self, fmt, use_color=True):
-        logging.Formatter.__init__(self, fmt=fmt)
+        super().__init__(fmt=fmt)
         self.use_color = use_color
 
     def format(self, record):
@@ -142,7 +142,7 @@ def setup_logging(level):
 
     for logger in (logging.getLogger("lib50"), LOGGER):
         # Set verbosity level on the lib50 logger
-        logger.setLevel(getattr(logging, level.name))
+        logger.setLevel(level.upper())
 
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s"))
@@ -150,9 +150,8 @@ def setup_logging(level):
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
 
-    # Don't animate the progressbar
-    if level > LogLevel.WARNING:
-        lib50.ProgressBar.DISABLED = True
+    # Don't animate the progressbar if LogLevel is either info or debug
+    lib50.ProgressBar.DISABLED = logger.level < LogLevel.WARNING
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -227,14 +226,15 @@ def raise_invalid_slug(slug, offline=False):
     raise internal.Error(msg)
 
 
-def validate_args(args):
+def process_args(args):
     """Validate arguments and apply defaults that are dependent on other arguments"""
 
     # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
         args.verbose = True
-        args.log_level = max(args.log_level, LogLevel.INFO)
+        if "ansi" in args.output:
+            args.ansi_log = True
 
     # offline implies local
     if args.offline:
@@ -307,13 +307,13 @@ def main():
                         help=_("shows the full traceback of any errors"))
     parser.add_argument("--log-level",
                         action="store",
-                        default="WARNING",
-                        choices=list(LogLevel.__members__),
-                        type=lambda l: LogLevel.__members__[l.upper()],
+                        default="warning",
+                        choices=[level.name.lower() for level in LogLevel],
+                        type=str.lower,
                         help=_("sets the log level."
-                               ' "WARNING" displays usage warnings'
-                               ' "INFO" shows all commands run.'
-                               ' "DEBUG" adds the output of all command run.'))
+                               ' "warning" displays usage warnings'
+                               ' "info" shows all commands run.'
+                               ' "debug" adds the output of all command run.'))
     parser.add_argument("--ansi-log",
                         action="store_true",
                         help=_("display log in ansi output mode"))
@@ -333,7 +333,7 @@ def main():
     internal.slug = args.slug
 
     # Validate arguments and apply defaults
-    validate_args(args)
+    process_args(args)
 
     # Set excepthook
     internal._excepthook.outputs = args.output
