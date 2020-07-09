@@ -39,7 +39,8 @@ class CheckResult:
         """Create a check_result given a check function, automatically recording the name,
         the dependency, and the (translated) description.
         """
-        return cls(name=check.__name__, description=_(check.__doc__ if check.__doc__ else check.__name__.replace("_", " ")),
+        return cls(name=check.__name__,
+                   description=_(check.__doc__ if check.__doc__ else check.__name__.replace("_", " ")),
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
@@ -51,6 +52,12 @@ class CheckResult:
         return cls(**{field.name: d[field.name] for field in attr.fields(cls)})
 
 
+@attr.s(slots=True)
+class DiscoveryResult:
+    # check_names = attr.ib()
+    # check_descriptions = attr.ib()
+    # check_dependencies = attr.ib()
+    checks = attr.ib()
 
 class Timeout(Failure):
     def __init__(self, seconds):
@@ -171,12 +178,16 @@ class CheckRunner:
         self.checks_path = checks_path
         self.included_files = included_files
 
+
     def run(self, targets=None):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
+        # Discover all checks in the module
+        self.discover()
+
         graph = self.build_subgraph(targets) if targets else self.dependency_graph
 
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
@@ -190,7 +201,7 @@ class CheckRunner:
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_spec))
+            not_done = set(executor.submit(run_check(name, self.checks_path))
                            for name in graph[None])
             not_passed = []
 
@@ -204,7 +215,7 @@ class CheckRunner:
                         # Dispatch dependent checks
                         for child_name in graph[result.name]:
                             not_done.add(executor.submit(
-                                run_check(child_name, self.checks_spec, state)))
+                                run_check(child_name, self.checks_path, state)))
                     else:
                         not_passed.append(result.name)
 
@@ -213,6 +224,23 @@ class CheckRunner:
 
         # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
         return list(filter(None, results.values()))
+
+
+    def discover(self):
+        # self.check_descriptions = {name: check.__doc__ for name, check in checks}
+        with futures.ProcessPoolExecutor(max_workers=1) as executor:
+            discovery_job = executor.submit(discover_checks(self.checks_path))
+            discovered = discovery_job.result()
+
+        self.check_names = [check["name"] for check in discovered.checks]
+
+        # # Map each check name to its description
+        self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
+
+        # Map each check to tuples containing the names of the checks that depend on it
+        self.dependency_graph = collections.defaultdict(set)
+        for check in discovered.checks:
+            self.dependency_graph[check["dependency"]].add(check["name"])
 
 
     def build_subgraph(self, targets):
@@ -281,30 +309,6 @@ class CheckRunner:
         self._cd_manager = lib50.cd(internal.run_root_dir)
         self._cd_manager.__enter__()
 
-        # TODO: Naming the module "checks" is arbitray. Better name?
-        self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
-
-        # Clear check_names, import module, then save check_names. Not thread safe.
-        # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
-        # but there are a lot of subtleties with using `inspect` or similar here
-        _check_names.clear()
-        check_module = importlib.util.module_from_spec(self.checks_spec)
-        self.checks_spec.loader.exec_module(check_module)
-        self.check_names = _check_names.copy()
-        _check_names.clear()
-
-        # Grab all checks from the module
-        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
-
-        # Map each check to tuples containing the names of the checks that depend on it
-        self.dependency_graph = collections.defaultdict(set)
-        for name, check in checks:
-            dependency = None if check._check_dependency is None else check._check_dependency.__name__
-            self.dependency_graph[dependency].add(name)
-
-        # Map each check name to its description
-        self.check_descriptions = {name: check.__doc__ for name, check in checks}
-
         return self
 
 
@@ -327,7 +331,9 @@ class CheckJob:
         "internal._excepthook.verbose"
     )
 
-    def __init__(self):
+    def __init__(self, checks_path):
+        self.checks_path = checks_path
+        self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
         self._attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
 
     @staticmethod
@@ -346,22 +352,51 @@ class CheckJob:
             self._set_attribute(name, val)
 
 
+class discover_checks(CheckJob):
+    def __call__(self):
+        super().__call__()
+
+        # # Clear check_names, import module, then save check_names. Not thread safe.
+        # # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
+        # # but there are a lot of subtleties with using `inspect` or similar here
+        _check_names.clear()
+        check_module = importlib.util.module_from_spec(self.checks_spec)
+        self.checks_spec.loader.exec_module(check_module)
+        check_names = _check_names.copy()
+        _check_names.clear()
+
+        # Grab all checks from the module
+        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
+        checks = {name: check for name, check in checks}
+
+        # Sort checks by their order in the module
+        discovered_checks = []
+        for name in check_names:
+            check = checks[name]
+            discovered_checks.append({
+                "name": name,
+                "dependency": None if check._check_dependency is None else check._check_dependency.__name__,
+                "description": check.__doc__
+            })
+
+        return DiscoveryResult(checks=discovered_checks)
+
+
 class run_check(CheckJob):
     """
     Check job that runs in a separate process.
     This is only a class to get around the fact that `pickle` can't serialize closures.
     This class is essentially a function that reimports the check module and runs the check.
     """
-    def __init__(self, check_name, spec, state=None):
-        super().__init__()
+    def __init__(self, check_name, checks_path, state=None):
+        super().__init__(checks_path)
         self.check_name = check_name
-        self.spec = spec
         self.state = state
 
     def __call__(self):
         super().__call__()
-        mod = importlib.util.module_from_spec(self.spec)
-        self.spec.loader.exec_module(mod)
+        mod = importlib.util.module_from_spec(self.checks_spec)
+        self.checks_spec.loader.exec_module(mod)
         internal.check_running = True
         try:
             return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
