@@ -2,13 +2,16 @@
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
 
-import importlib
 from pathlib import Path
+import importlib
+import json
 import sys
+import termcolor
+import traceback
 
 import lib50
 
-from . import _simple
+from . import _simple, __version__
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -25,6 +28,8 @@ student_dir = None
 #: Boolean that indicates if a check is currently running
 check_running = False
 
+#: The user specified slug used to indentifies the set of checks
+slug = None
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
@@ -184,6 +189,61 @@ def import_file(name, path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _excepthook(cls, exc, tb):
+    """
+    check50's excepthook with configurable error output.
+
+    :ivar _excepthook.verbose: show the full tracebook iff set to True
+    :vartype _excepthook.verbose: bool
+    :ivar _excepthook.outputs: in which format errors should be returned (can be multiple)
+    :vartype _excepthook.outputs: tuple of strings, any of "json", "ansi", "html"
+    :ivar _excepthook.output_file: file to which the output should be redirected
+    :vartype _excepthook.output_file: str or pathlib.Path
+
+    See also: https://docs.python.org/3/library/sys.html#sys.excepthook
+    """
+
+    # All channels to output to
+    outputs = _excepthook.outputs
+
+    for output in _excepthook.outputs:
+        outputs.remove(output)
+        if output == "json":
+            ctxmanager = open(_excepthook.output_file, "w") if _excepthook.output_file else nullcontext(sys.stdout)
+            with ctxmanager as output_file:
+                json.dump({
+                    "slug": slug,
+                    "error": {
+                        "type": cls.__name__,
+                        "value": str(exc),
+                        "traceback": traceback.format_tb(exc.__traceback__),
+                        "data" : exc.payload if hasattr(exc, "payload") else {}
+                    },
+                    "version": __version__
+                }, output_file, indent=4)
+                output_file.write("\n")
+
+        elif output == "ansi" or output == "html":
+            if (issubclass(cls, Error) or issubclass(cls, lib50.Error)) and exc.args:
+                termcolor.cprint(str(exc), "red", file=sys.stderr)
+            elif issubclass(cls, FileNotFoundError):
+                termcolor.cprint(_("{} not found").format(exc.filename), "red", file=sys.stderr)
+            elif issubclass(cls, KeyboardInterrupt):
+                termcolor.cprint(f"check cancelled", "red")
+            elif not issubclass(cls, Exception):
+                # Class is some other BaseException, better just let it go
+                return
+            else:
+                termcolor.cprint(_("Sorry, something's wrong! Let sysadmins@cs50.harvard.edu know!"), "red", file=sys.stderr)
+
+            if _excepthook.verbose:
+                traceback.print_exception(cls, exc, tb)
+                if hasattr(exc, "payload"):
+                    print("Exception payload:", json.dumps(exc.payload), sep="\n")
+
+    sys.exit(1)
 
 
 def _yes_no_prompt(prompt):

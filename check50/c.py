@@ -14,7 +14,7 @@ CC = "clang"
 CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
 
 
-def compile(*files, exe_name=None, cc=CC, **cflags):
+def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
     """
     Compile C source files.
 
@@ -60,9 +60,16 @@ def compile(*files, exe_name=None, cc=CC, **cflags):
     # Strip out ANSI codes
     stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout())
 
+    # Log max_log_lines lines of output in case compilation fails
     if process.exitcode != 0:
-        for line in stdout.splitlines():
+        lines = stdout.splitlines()
+
+        if len(lines) > max_log_lines:
+            lines = lines[:max_log_lines // 2] + lines[-(max_log_lines // 2):]
+
+        for line in lines:
             log(line)
+
         raise Failure("code failed to compile")
 
 
