@@ -280,7 +280,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline, --verbose, and --log-level INFO).\n"
+                        help=_("run check50 in development mode (implies --offline, --verbose, and --ansi-log).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -304,7 +304,7 @@ def main():
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
-                        help=_("shows the full traceback of any errors"))
+                        help=_("shows any installed dependencies and shows print statements written in checks"))
     parser.add_argument("--log-level",
                         action="store",
                         default="warning",
