@@ -58,13 +58,25 @@ class TestExitPy(Base):
         process.expect_exact("can't check until a frown turns upside down")
         process.close(force=True)
 
-    def test_with_file(self):
+    def test_with_correct_file(self):
         open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":)")
         process.expect_exact("foo.py exits properly")
+        process.close(force=True)
+
+    def test_with_incorrect_file(self):
+        with open("foo.py", "w") as f:
+            f.write("from sys import exit\nexit(1)")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":(")
+        process.expect_exact("foo.py exits properly")
+        process.expect_exact("expected exit code 0, not 1")
         process.close(force=True)
 
 
