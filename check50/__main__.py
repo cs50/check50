@@ -304,7 +304,7 @@ def main():
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
                         action="store_true",
-                        help=_("shows which dependencies get installed (if any) and shows print statements in checks"))
+                        help=_("shows any print statements in checks if running locally, and shows which dependencies get installed"))
     parser.add_argument("--log-level",
                         action="store",
                         default="warning",
