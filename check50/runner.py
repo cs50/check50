@@ -54,10 +54,9 @@ class CheckResult:
 
 @attr.s(slots=True)
 class DiscoveryResult:
-    # check_names = attr.ib()
-    # check_descriptions = attr.ib()
-    # check_dependencies = attr.ib()
     checks = attr.ib()
+    run_in_parallel = attr.ib(default=True)
+
 
 class Timeout(Failure):
     def __init__(self, seconds):
@@ -185,14 +184,24 @@ class CheckRunner:
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
-        # Discover all checks in the module
-        self.discover()
+        with futures.ProcessPoolExecutor(max_workers=1) as executor:
+            discovery_job = executor.submit(discover_checks(self.checks_path))
+            discovered = discovery_job.result()
 
-        graph = self.build_subgraph(targets) if targets else self.dependency_graph
+            self.check_names = [check["name"] for check in discovered.checks]
 
-        # Ensure that dictionary is ordered by check declaration order (via self.check_names)
-        # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-        results = {name: None for name in self.check_names}
+            # # Map each check name to its description
+            self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
+
+            # Map each check to tuples containing the names of the checks that depend on it
+            self.dependency_graph = collections.defaultdict(set)
+            for check in discovered.checks:
+                self.dependency_graph[check["dependency"]].add(check["name"])
+
+            jobs = self.build_subgraph(targets) if targets else self.dependency_graph
+
+            if not discovered.run_in_parallel:
+                return self.run_checks(jobs, executor)
 
         try:
             max_workers = int(os.environ.get("CHECK50_WORKERS"))
@@ -200,47 +209,38 @@ class CheckRunner:
             max_workers = None
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_path))
-                           for name in graph[None])
-            not_passed = []
+            return self.run_checks(jobs, executor)
 
-            while not_done:
-                done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
-                for future in done:
-                    # Get result from completed check
-                    result, state = future.result()
-                    results[result.name] = result
-                    if result.passed:
-                        # Dispatch dependent checks
-                        for child_name in graph[result.name]:
-                            not_done.add(executor.submit(
-                                run_check(child_name, self.checks_path, state)))
-                    else:
-                        not_passed.append(result.name)
+
+    def run_checks(self, jobs, executor):
+        # Ensure that dictionary is ordered by check declaration order (via self.check_names)
+        # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
+        results = {name: None for name in self.check_names}
+
+        # Start all checks that have no dependencies
+        not_done = set(executor.submit(run_check(name, self.checks_path))
+                       for name in jobs[None])
+        not_passed = []
+
+        while not_done:
+            done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
+            for future in done:
+                # Get result from completed check
+                result, state = future.result()
+                results[result.name] = result
+                if result.passed:
+                    # Dispatch dependent checks
+                    for child_name in jobs[result.name]:
+                        not_done.add(executor.submit(
+                            run_check(child_name, self.checks_path, state)))
+                else:
+                    not_passed.append(result.name)
 
         for name in not_passed:
             self._skip_children(name, results)
 
         # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
         return list(filter(None, results.values()))
-
-
-    def discover(self):
-        # self.check_descriptions = {name: check.__doc__ for name, check in checks}
-        with futures.ProcessPoolExecutor(max_workers=1) as executor:
-            discovery_job = executor.submit(discover_checks(self.checks_path))
-            discovered = discovery_job.result()
-
-        self.check_names = [check["name"] for check in discovered.checks]
-
-        # # Map each check name to its description
-        self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
-
-        # Map each check to tuples containing the names of the checks that depend on it
-        self.dependency_graph = collections.defaultdict(set)
-        for check in discovered.checks:
-            self.dependency_graph[check["dependency"]].add(check["name"])
 
 
     def build_subgraph(self, targets):
@@ -379,7 +379,7 @@ class discover_checks(CheckJob):
                 "description": check.__doc__
             })
 
-        return DiscoveryResult(checks=discovered_checks)
+        return DiscoveryResult(checks=discovered_checks, run_in_parallel=False)
 
 
 class run_check(CheckJob):
