@@ -1,5 +1,6 @@
 import hashlib
 import functools
+import numbers
 import os
 import re
 import shlex
@@ -136,6 +137,29 @@ def import_checks(path):
     return mod
 
 
+def number_regex(number):
+    """
+    Create a regular expression to match the number exactly:
+        (?<!\d)number(?!\d|(\.\d))
+
+    (?<!\d) = negative behind, \
+        asserts that there are no digits in front of the number.
+    (?!\d|(\.\d)) = negative lookahead, \
+        asserts that there are no digits and no . followed by digits after the number.
+
+    :param number: the number to match in the regex
+    :type number: any numbers.Number (such as int, float, ...)
+    :rtype: str
+
+    Example usage::
+
+        # Check that 7.0000 is printed with 5 significant figures
+        check50.run("./prog").stdout(check50.number_regex("7.0000"))
+
+    """
+    return fr"(?<!\d){re.escape(str(number))}(?!\d|(\.\d))"
+
+
 class run:
     """
     Run a command.
@@ -216,8 +240,8 @@ class run:
 
         :param output: optional output to be expected from stdout, raises \
                        :class:`check50.Failure` if no match \
-                       In case output is a float or int, the following regex \
-                       is used to match just that number: r"(?<!\d){re.escape(str(output))}(?!\d|\.)". \
+                       In case output is a float or int, the check50.number_regex \
+                       is used to match just that number". \
                        In case output is a stream its contents are used via output.read().
         :type output: str, int, float, stream
         :param str_output: what will be displayed as expected output, a human \
@@ -253,9 +277,9 @@ class run:
             str_output = str(output)
 
         # In case output is an int/float, use a regex to match exactly that int/float
-        if isinstance(output, int) or isinstance(output, float):
+        if isinstance(output, numbers.Number):
             regex = True
-            output = fr"(?<!\d){re.escape(str(output))}(?!\d|\.)"
+            output = number_regex(output)
 
         expect = self.process.expect if regex else self.process.expect_exact
 
