@@ -1,7 +1,6 @@
 import importlib
 from pathlib import Path
 import py_compile
-import traceback
 
 from . import internal
 from ._api import Failure, exists, log
