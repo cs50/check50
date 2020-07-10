@@ -20,7 +20,9 @@ import lib50
 from . import internal
 from ._api import log, Failure, _copy, _log, _data
 
+
 _check_names = []
+_serial_dependency_state = None
 
 
 @attr.s(slots=True)
@@ -133,16 +135,24 @@ def check(dependency=None, timeout=60, max_log_lines=100):
         check._check_dependency = dependency
 
         @functools.wraps(check)
-        def wrapper(run_root_dir, dependency_state):
+        def wrapper(dependency_state):
+
             # Result template
             result = CheckResult.from_check(check)
+
             # Any shared (returned) state
             state = None
 
+            # In serial operation take the dependency state from memory (_serial_dependency_state)
+            if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL:
+                global _serial_dependency_state
+                dependency_state = _serial_dependency_state
+                _serial_dependency_state = None
+
             try:
                 # Setup check environment, copying disk state from dependency
-                internal.run_dir = run_root_dir / check.__name__
-                src_dir = run_root_dir / (dependency.__name__ if dependency else "-")
+                internal.run_dir = internal.run_root_dir / check.__name__
+                src_dir = internal.run_root_dir / (dependency.__name__ if dependency else "-")
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
@@ -165,6 +175,11 @@ def check(dependency=None, timeout=60, max_log_lines=100):
             else:
                 result.passed = True
             finally:
+                # In serial operation avoid serialization, store state in memory instead
+                if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL:
+                    _serial_dependency_state = state
+                    state = None
+
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, state
@@ -448,6 +463,6 @@ class run_check(CheckJob):
         self.checks_spec.loader.exec_module(mod)
         internal.check_running = True
         try:
-            return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
+            return getattr(mod, self.check_name)(self.state)
         finally:
             internal.check_running = False
