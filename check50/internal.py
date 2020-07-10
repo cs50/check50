@@ -2,6 +2,7 @@
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
 
+import enum
 from pathlib import Path
 import importlib
 import json
@@ -12,6 +13,10 @@ import traceback
 import lib50
 
 from . import _simple, __version__
+
+class CheckRunnerMode(enum.Enum):
+    SERIAL = enum.auto()
+    PARALLEL = enum.auto()
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -30,6 +35,9 @@ check_running = False
 
 #: The user specified slug used to indentifies the set of checks
 slug = None
+
+#: The operation mode of the check runner
+check_runner_mode = CheckRunnerMode.PARALLEL
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")

@@ -55,7 +55,7 @@ class CheckResult:
 @attr.s(slots=True)
 class DiscoveryResult:
     checks = attr.ib()
-    run_in_parallel = attr.ib(default=True)
+    check_runner_mode = attr.ib(default=internal.check_runner_mode)
 
 
 class Timeout(Failure):
@@ -200,7 +200,7 @@ class CheckRunner:
 
             jobs = self.build_subgraph(targets) if targets else self.dependency_graph
 
-            if not discovered.run_in_parallel:
+            if discovered.check_runner_mode == internal.CheckRunnerMode.SERIAL:
                 return self.run_checks(jobs, executor)
 
         try:
@@ -326,6 +326,7 @@ class CheckJob:
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
+        "internal.check_runner_mode",
         "internal._excepthook.outputs",
         "internal._excepthook.output_file",
         "internal._excepthook.verbose"
@@ -379,7 +380,8 @@ class discover_checks(CheckJob):
                 "description": check.__doc__
             })
 
-        return DiscoveryResult(checks=discovered_checks, run_in_parallel=False)
+        return DiscoveryResult(checks=discovered_checks,
+                               check_runner_mode=internal.check_runner_mode)
 
 
 class run_check(CheckJob):

@@ -135,6 +135,18 @@ def import_checks(path):
     return mod
 
 
+def run_checks_in_serial():
+    if internal.check_running:
+        raise internal.Error("Cannot change CheckRunnerMode while a check is running")
+    internal.check_runner_mode = internal.CheckRunnerMode.SERIAL
+
+
+def run_checks_in_parallel():
+    if internal.check_running:
+        raise internal.Error("Cannot change CheckRunnerMode while a check is running")
+    internal.check_runner_mode = internal.CheckRunnerMode.PARALLEL
+
+
 class run:
     """
     Run a command.
