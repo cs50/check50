@@ -1,6 +1,7 @@
 import hashlib
 import functools
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -214,8 +215,11 @@ class run:
         it returns ``self``.
 
         :param output: optional output to be expected from stdout, raises \
-                       :class:`check50.Failure` if no match
-        :type output: str
+                       :class:`check50.Failure` if no match \
+                       In case output is a float or int, the following regex \
+                       is used to match just that number: r"(?<!\d){re.escape(str(output))}(?!\d|\.)". \
+                       In case output is a stream its contents are used via output.read().
+        :type output: str, int, float, stream
         :param str_output: what will be displayed as expected output, a human \
                            readable form of ``output``
         :type str_output: str
@@ -239,15 +243,21 @@ class run:
             self._wait(timeout)
             return self.process.before.replace("\r\n", "\n").lstrip("\n")
 
+        # In case output is a stream (file-like object), read from it
         try:
             output = output.read()
         except AttributeError:
             pass
 
-        expect = self.process.expect if regex else self.process.expect_exact
-
         if str_output is None:
-            str_output = output
+            str_output = str(output)
+
+        # In case output is an int/float, use a regex to match exactly that int/float
+        if isinstance(output, int) or isinstance(output, float):
+            regex = True
+            output = fr"(?<!\d){re.escape(str(output))}(?!\d|\.)"
+
+        expect = self.process.expect if regex else self.process.expect_exact
 
         if output == EOF:
             log(_("checking for EOF..."))
