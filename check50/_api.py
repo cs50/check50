@@ -140,11 +140,11 @@ def import_checks(path):
 def number_regex(number):
     """
     Create a regular expression to match the number exactly:
-        (?<!\d)number(?!\d|(\.\d))
+        (?<!\d)number(?!(\.?\d))
 
     (?<!\d) = negative behind, \
         asserts that there are no digits in front of the number.
-    (?!\d|(\.\d)) = negative lookahead, \
+    (?!(\.?\d)) = negative lookahead, \
         asserts that there are no digits and no . followed by digits after the number.
 
     :param number: the number to match in the regex
@@ -157,7 +157,7 @@ def number_regex(number):
         check50.run("./prog").stdout(check50.number_regex("7.0000"))
 
     """
-    return fr"(?<!\d){re.escape(str(number))}(?!\d|(\.\d))"
+    return fr"(?<!\d){re.escape(str(number))}(?!(\.?\d))"
 
 
 class run:
