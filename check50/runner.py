@@ -190,7 +190,7 @@ class CheckRunner:
 
             self.check_names = [check["name"] for check in discovered.checks]
 
-            # # Map each check name to its description
+            # Map each check name to its description
             self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
 
             # Map each check to tuples containing the names of the checks that depend on it
@@ -198,43 +198,90 @@ class CheckRunner:
             for check in discovered.checks:
                 self.dependency_graph[check["dependency"]].add(check["name"])
 
-            jobs = self.build_subgraph(targets) if targets else self.dependency_graph
+            # If there are targetted checks, build a subgraph with just the relevant checks
+            if targets:
+                self.dependency_graph = self.build_subgraph(targets)
 
             if discovered.check_runner_mode == internal.CheckRunnerMode.SERIAL:
-                return self.run_checks(jobs, executor)
+                return self.run_checks_serial(executor)
 
+        return self.run_checks_parallel()
+
+
+    def run_checks_serial(self, executor):
+        # Grab all jobs to run from the dependency graph: jobs
+        all_checks = set(job for job in self.dependency_graph.keys() if job)
+        for dependents in self.dependency_graph.values():
+            all_checks |= dependents
+
+        # A serial queue of all checks to work through
+        check_queue = []
+
+        # A map from check_name to CheckResult
+        results = {}
+
+        # Enter the jobs by their definition order (self.check_names)
+        for name in self.check_names:
+            if name in all_checks:
+                check_queue.append(name)
+                results[name] = None
+
+        # Run the checks in the queue
+        while check_queue:
+
+            # Get the first check from the queue
+            check = check_queue[0]
+            del check_queue[0]
+
+            # Run the check
+            result, state = executor.submit(run_check(check, self.checks_path)).result()
+            results[check] = result
+
+            # In case the check failed
+            if not result.passed:
+
+                # Record skipped results for each child (dependent)
+                self._skip_children(check, results)
+
+                # Remove each dependent from the queue
+                for dependent in self.dependencies_of((check,)):
+                    try:
+                        check_queue.remove(dependent)
+                    except ValueError:
+                        pass
+
+        return results.values()
+
+
+    def run_checks_parallel(self):
         try:
             max_workers = int(os.environ.get("CHECK50_WORKERS"))
         except (ValueError, TypeError):
             max_workers = None
 
-        with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-            return self.run_checks(jobs, executor)
-
-
-    def run_checks(self, jobs, executor):
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
         results = {name: None for name in self.check_names}
 
-        # Start all checks that have no dependencies
-        not_done = set(executor.submit(run_check(name, self.checks_path))
-                       for name in jobs[None])
-        not_passed = []
+        with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Start all checks that have no dependencies
+            not_done = set(executor.submit(run_check(name, self.checks_path))
+                           for name in self.dependency_graph[None])
+            not_passed = []
 
-        while not_done:
-            done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
-            for future in done:
-                # Get result from completed check
-                result, state = future.result()
-                results[result.name] = result
-                if result.passed:
-                    # Dispatch dependent checks
-                    for child_name in jobs[result.name]:
-                        not_done.add(executor.submit(
-                            run_check(child_name, self.checks_path, state)))
-                else:
-                    not_passed.append(result.name)
+            while not_done:
+                done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
+                for future in done:
+                    # Get result from completed check
+                    result, state = future.result()
+                    results[result.name] = result
+                    if result.passed:
+                        # Dispatch dependent checks
+                        for child_name in self.dependency_graph[result.name]:
+                            not_done.add(executor.submit(
+                                run_check(child_name, self.checks_path, state)))
+                    else:
+                        not_passed.append(result.name)
 
         for name in not_passed:
             self._skip_children(name, results)
@@ -261,7 +308,7 @@ class CheckRunner:
 
 
     def dependencies_of(self, targets):
-        """Get all unique dependencies of the targetted checks (tartgets)."""
+        """Get all unique dependencies of the targetted checks (targets)."""
         inverse_graph = self._create_inverse_dependency_graph()
         deps = set()
         for target in targets:
