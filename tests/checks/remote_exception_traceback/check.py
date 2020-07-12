@@ -1,5 +1,5 @@
 import check50
-from check50.internal import RemoteCheckError
+from check50.exceptions import RemoteCheckError
 
 json = {
     "slug": "jelleas/foo/master",
