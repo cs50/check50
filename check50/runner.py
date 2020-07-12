@@ -16,7 +16,7 @@ import traceback
 
 import attr
 
-from . import exceptions, internal, __version__
+from . import internal, __version__
 from ._api import log, Failure, _copy, _log, _data
 
 _check_names = []

@@ -21,7 +21,7 @@ import lib50
 import requests
 import termcolor
 
-from . import exceptions, internal, renderer, __version__
+from . import _exceptions, internal, renderer, __version__
 from .runner import CheckRunner
 
 LOGGER = logging.getLogger("check50")
@@ -60,7 +60,7 @@ def nullcontext(entry_result=None):
 
 
 
-exceptions.ExceptHook.initialize()
+_exceptions.ExceptHook.initialize()
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -84,7 +84,7 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise exceptions.Error(_("failed to install dependencies"))
+            raise _exceptions.Error(_("failed to install dependencies"))
 
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
@@ -149,22 +149,22 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
         results = res.json()
 
         if res.status_code not in [404, 200]:
-            raise exceptions.RemoteCheckError(results)
+            raise _exceptions.RemoteCheckError(results)
 
         if res.status_code == 200 and results["received_at"] is not None:
             break
         time.sleep(sleep)
     else:
         # Terminate if no response
-        raise exceptions.Error(
+        raise _exceptions.Error(
             _("check50 is taking longer than normal!\n"
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
 
     if not results["check50"]:
-        raise exceptions.RemoteCheckError(results)
+        raise _exceptions.RemoteCheckError(results)
 
     if "error" in results["check50"]:
-        raise exceptions.RemoteCheckError(results["check50"])
+        raise _exceptions.RemoteCheckError(results["check50"])
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -185,7 +185,7 @@ class LogoutAction(argparse.Action):
         try:
             lib50.logout()
         except lib50.Error:
-            raise exceptions.Error(_("failed to logout"))
+            raise _exceptions.Error(_("failed to logout"))
         else:
             termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
@@ -206,7 +206,7 @@ def raise_invalid_slug(slug, offline=False):
         msg += _("\nIf you are confident the slug is correct and you have an internet connection," \
                 " try running without --offline.")
 
-    raise exceptions.Error(msg)
+    raise _exceptions.Error(msg)
 
 
 def process_args(args):
@@ -319,7 +319,7 @@ def main():
     process_args(args)
 
     # Set excepthook
-    exceptions.ExceptHook.initialize(args.output, args.output_file)
+    _exceptions.ExceptHook.initialize(args.output, args.output_file)
 
     # If remote, push files to GitHub and await results
     if not args.local:
@@ -334,13 +334,13 @@ def main():
             if args.dev:
                 internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
-                    raise exceptions.Error(_("{} is not a directory").format(internal.check_dir))
+                    raise _exceptions.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
                     internal.check_dir = lib50.local(internal.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise exceptions.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
+                    raise _exceptions.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
                 except lib50.InvalidSlugError:
                     raise_invalid_slug(internal.slug, offline=args.no_download_checks)
 
