@@ -21,7 +21,7 @@ import lib50
 import requests
 import termcolor
 
-from . import internal, renderer, __version__
+from . import exceptions, internal, renderer, __version__
 from .runner import CheckRunner
 
 LOGGER = logging.getLogger("check50")
@@ -59,25 +59,8 @@ def nullcontext(entry_result=None):
     yield entry_result
 
 
-def yes_no_prompt(prompt):
-    """
-    Raise a prompt, returns True if yes is entered, False if no is entered.
-    Will reraise prompt in case of any other reply.
-    """
-    yes = {"yes", "ye", "y", ""}
-    no = {"no", "n"}
 
-    reply = None
-    while reply not in yes and reply not in no:
-        reply = input(f"{prompt} [Y/n] ").lower()
-
-    return reply in yes
-
-
-# Assume we should print tracebacks until we get command line arguments
-internal._excepthook.outputs = ("ansi",)
-internal._excepthook.output_file = None
-sys.excepthook = internal._excepthook
+exceptions.ExceptHook.initialize()
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -101,7 +84,7 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise internal.Error(_("failed to install dependencies"))
+            raise exceptions.Error(_("failed to install dependencies"))
 
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
@@ -123,7 +106,7 @@ def install_translations(config):
 def compile_checks(checks, prompt=False):
     # Prompt to replace __init__.py (compile destination)
     if prompt and os.path.exists(internal.check_dir / "__init__.py"):
-        if not yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
+        if not internal._yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
             raise Error("Aborting: could not overwrite to __init__.py")
 
     # Compile simple checks
@@ -166,22 +149,22 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
         results = res.json()
 
         if res.status_code not in [404, 200]:
-            raise internal.RemoteCheckError(results)
+            raise exceptions.RemoteCheckError(results)
 
         if res.status_code == 200 and results["received_at"] is not None:
             break
         time.sleep(sleep)
     else:
         # Terminate if no response
-        raise internal.Error(
+        raise exceptions.Error(
             _("check50 is taking longer than normal!\n"
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
 
     if not results["check50"]:
-        raise internal.RemoteCheckError(results)
+        raise exceptions.RemoteCheckError(results)
 
     if "error" in results["check50"]:
-        raise internal.RemoteCheckError(results["check50"])
+        raise exceptions.RemoteCheckError(results["check50"])
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -202,7 +185,7 @@ class LogoutAction(argparse.Action):
         try:
             lib50.logout()
         except lib50.Error:
-            raise internal.Error(_("failed to logout"))
+            raise exceptions.Error(_("failed to logout"))
         else:
             termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
@@ -223,7 +206,7 @@ def raise_invalid_slug(slug, offline=False):
         msg += _("\nIf you are confident the slug is correct and you have an internet connection," \
                 " try running without --offline.")
 
-    raise internal.Error(msg)
+    raise exceptions.Error(msg)
 
 
 def process_args(args):
@@ -336,8 +319,7 @@ def main():
     process_args(args)
 
     # Set excepthook
-    internal._excepthook.outputs = args.output
-    internal._excepthook.output_file = args.output_file
+    exceptions.ExceptHook.initialize(args.output, args.output_file)
 
     # If remote, push files to GitHub and await results
     if not args.local:
@@ -352,13 +334,13 @@ def main():
             if args.dev:
                 internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
-                    raise internal.Error(_("{} is not a directory").format(internal.check_dir))
+                    raise exceptions.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
                     internal.check_dir = lib50.local(internal.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
+                    raise exceptions.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
                 except lib50.InvalidSlugError:
                     raise_invalid_slug(internal.slug, offline=args.no_download_checks)
 
