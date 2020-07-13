@@ -396,5 +396,21 @@ class TestTarget(Base):
         self.assertEqual(output["results"][1]["name"], "exists5")
 
 
+class TestRemoteException(Base):
+    def test_no_traceback(self):
+        # Check that bar (part of traceback) is not shown
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        self.assertRaises(pexpect.exceptions.EOF, lambda: process.expect("bar"))
+
+        # Check that foo (the message) is shown
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        process.expect("foo")
+
+    def test_traceback(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_traceback")
+        process.expect("bar")
+        process.expect("foo")
+
+
 if __name__ == "__main__":
     unittest.main()

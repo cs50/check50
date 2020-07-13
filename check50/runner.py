@@ -16,7 +16,7 @@ import traceback
 
 import attr
 
-from . import internal
+from . import internal, __version__
 from ._api import log, Failure, _copy, _log, _data
 
 _check_names = []
@@ -303,9 +303,8 @@ class run_check:
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
-        "internal._excepthook.outputs",
-        "internal._excepthook.output_file",
-        "internal._excepthook.verbose"
+        "sys.excepthook",
+        "__version__"
     )
 
     def __init__(self, check_name, spec, checks_root, state=None):
