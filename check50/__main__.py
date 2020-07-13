@@ -30,10 +30,10 @@ lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
 
 class LogLevel(enum.IntEnum):
-    ERROR = enum.auto()
-    WARNING = enum.auto()
-    INFO = enum.auto()
-    DEBUG = enum.auto()
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
 
 
 class ColoredFormatter(logging.Formatter):
@@ -128,7 +128,7 @@ def setup_logging(level):
         logger.setLevel(level.upper())
 
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s"))
+        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s", use_color=sys.stderr.isatty()))
 
         # Direct all logs to sys.stderr
         logger.addHandler(handler)
