@@ -1,3 +1,6 @@
+import re
+
+
 def decimal(number):
     """
     Create a regular expression to match the number exactly:
