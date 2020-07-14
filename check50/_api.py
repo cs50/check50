@@ -252,7 +252,7 @@ class run:
         if output == EOF:
             log(_("checking for EOF..."))
         else:
-            output = output.replace("\n", "\r\n")
+            output = str(output).replace("\n", "\r\n")
             log(_("checking for output \"{}\"...").format(str_output))
 
         try:

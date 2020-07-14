@@ -412,5 +412,13 @@ class TestRemoteException(Base):
         process.expect("foo")
 
 
+class TestInternalDirectories(Base):
+    def test_directories_exist(self):
+        with open("foo.py", "w") as f:
+            f.write(os.getcwd())
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/internal_directories")
+        process.expect_exact(":)")
+
 if __name__ == "__main__":
     unittest.main()

@@ -369,21 +369,19 @@ def main():
             checks_file = (internal.check_dir / config["checks"]).resolve()
 
             # Have lib50 decide which files to include
-            included = lib50.files(config.get("files"))[0]
-
+            included_files = lib50.files(config.get("files"))[0]
 
             # Create a working_area (temp dir) named - with all included student files
-            with lib50.working_area(included, name='-') as working_area, \
+            with CheckRunner(checks_file, included_files) as check_runner, \
                     contextlib.redirect_stdout(LoggerWriter(LOGGER, logging.INFO)), \
                     contextlib.redirect_stderr(LoggerWriter(LOGGER, logging.INFO)):
 
-                check_results = CheckRunner(checks_file).run(included, working_area, args.target)
+                check_results = check_runner.run(args.target)
                 results = {
                     "slug": internal.slug,
                     "results": [attr.asdict(result) for result in check_results],
                     "version": __version__
                 }
-
 
     LOGGER.debug(results)
 
