@@ -38,7 +38,7 @@ from ._api import (
     exists,
     hash,
     include,
-    number_regex,
+    regex,
     run,
     log, _log,
     hidden,
@@ -49,5 +49,5 @@ from ._api import (
 from .runner import check
 from pexpect import EOF
 
-__all__ = ["import_checks", "data", "exists", "hash", "include", "number_regex",
+__all__ = ["import_checks", "data", "exists", "hash", "include", "regex",
            "run", "log", "Failure", "Mismatch", "check", "EOF"]

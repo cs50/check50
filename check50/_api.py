@@ -137,33 +137,33 @@ def import_checks(path):
     return mod
 
 
-def number_regex(number):
-    """
-    Create a regular expression to match the number exactly:
-        In case of a positive number:
-            (?<![\d\-])number(?!(\.?\d))
-        In case of a negative number:
-            number(?!(\.?\d))
+class regex:
+    @staticmethod
+    def decimal(number):
+        """
+        Create a regular expression to match the number exactly:
+            In case of a positive number:
+                (?<![\d\-])number(?!(\.?\d))
+            In case of a negative number:
+                number(?!(\.?\d))
 
-    (?<![\d\-]) = negative lookbehind, \
-        asserts that there are no digits and no - in front of the number.
-    (?!(\.?\d)) = negative lookahead, \
-        asserts that there are no digits and no additional . followed by digits after the number.
+        (?<![\d\-]) = negative lookbehind, \
+            asserts that there are no digits and no - in front of the number.
+        (?!(\.?\d)) = negative lookahead, \
+            asserts that there are no digits and no additional . followed by digits after the number.
 
-    :param number: the number to match in the regex
-    :type number: any numbers.Number (such as int, float, ...)
-    :rtype: str
+        :param number: the number to match in the regex
+        :type number: any numbers.Number (such as int, float, ...)
+        :rtype: str
 
-    Example usage::
+        Example usage::
 
-        # Check that 7.0000 is printed with 5 significant figures
-        check50.run("./prog").stdout(check50.number_regex("7.0000"))
+            # Check that 7.0000 is printed with 5 significant figures
+            check50.run("./prog").stdout(check50.regex.decimal("7.0000"))
 
-    """
-    if number < 0:
-        return fr"{re.escape(str(number))}(?!(\.?\d))"
-
-    return fr"(?<![\d\-]){re.escape(str(number))}(?!(\.?\d))"
+        """
+        negative_lookbehind = fr"(?<![\d\-])" if number >= 0 else ""
+        return fr"{negative_lookbehind}{re.escape(str(number))}(?!(\.?\d))"
 
 
 class run:
@@ -285,7 +285,7 @@ class run:
         # In case output is an int/float, use a regex to match exactly that int/float
         if isinstance(output, numbers.Number):
             regex = True
-            output = number_regex(output)
+            output = globals()["regex"].decimal(output)
 
         expect = self.process.expect if regex else self.process.expect_exact
 
