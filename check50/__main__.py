@@ -304,7 +304,7 @@ def main():
                         action="store",
                         choices=[level.name.lower() for level in LogLevel],
                         type=str.lower,
-                        help=_('warning; displays usage warnings.'
+                        help=_('warning: displays usage warnings.'
                                '\ninfo: adds all commands run, any locally installed dependencies and print messages.'
                                '\ndebug: adds the output of all commands run.'))
     parser.add_argument("--ansi-log",
