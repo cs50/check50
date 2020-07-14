@@ -63,12 +63,11 @@ def nullcontext(entry_result=None):
 _exceptions.ExceptHook.initialize()
 
 
-def install_dependencies(dependencies, verbose=False):
+def install_dependencies(dependencies):
     """Install all packages in dependency list via pip."""
     if not dependencies:
         return
 
-    stdout = stderr = None if verbose else subprocess.DEVNULL
     with tempfile.TemporaryDirectory() as req_dir:
         req_file = Path(req_dir) / "requirements.txt"
 
@@ -82,9 +81,11 @@ def install_dependencies(dependencies, verbose=False):
             pip.append("--user")
 
         try:
-            subprocess.check_call(pip, stdout=stdout, stderr=stderr)
+            output = subprocess.check_output(pip, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             raise _exceptions.Error(_("failed to install dependencies"))
+
+        LOGGER.info(output)
 
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
@@ -215,9 +216,11 @@ def process_args(args):
     # dev implies offline, verbose, and log level "INFO" if not overwritten
     if args.dev:
         args.offline = True
-        args.verbose = True
         if "ansi" in args.output:
             args.ansi_log = True
+
+        if not args.log_level:
+            args.log_level = "info"
 
     # offline implies local
     if args.offline:
@@ -226,7 +229,7 @@ def process_args(args):
         args.local = True
 
     if not args.log_level:
-        args.log_level = LogLevel.WARNING
+        args.log_level = "warning"
 
     # Setup logging for lib50
     setup_logging(args.log_level)
@@ -256,15 +259,27 @@ def process_args(args):
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
 
 
+class LoggerWriter:
+    def __init__(self, logger, level):
+        self.logger = logger
+        self.level = level
+
+    def write(self, message):
+        if message != "\n":
+            self.logger.log(self.level, message)
+
+    def flush(self):
+        pass
+
 
 def main():
-    parser = argparse.ArgumentParser(prog="check50")
+    parser = argparse.ArgumentParser(prog="check50", formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline, --verbose, and --ansi-log).\n"
-                               "causes SLUG to be interpreted as a literal path to a checks package"))
+                        help=_("run check50 in development mode (implies --offline, and --log-level info).\n"
+                               "causes slug to be interpreted as a literal path to a checks package."))
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local, --no-download-checks and --no-install-dependencies)"))
@@ -285,18 +300,13 @@ def main():
                         action="store",
                         metavar="FILE",
                         help=_("file to write output to"))
-    parser.add_argument("-v", "--verbose",
-                        action="store_true",
-                        help=_("shows any print statements in checks if running locally, and shows which dependencies get installed"))
     parser.add_argument("--log-level",
                         action="store",
-                        default="warning",
                         choices=[level.name.lower() for level in LogLevel],
                         type=str.lower,
-                        help=_("sets the log level."
-                               ' "warning" displays usage warnings'
-                               ' "info" shows all commands run.'
-                               ' "debug" adds the output of all command run.'))
+                        help=_('warning; displays usage warnings.'
+                               '\ninfo: adds all commands run, any locally installed dependencies and print messages.'
+                               '\ndebug: adds the output of all commands run.'))
     parser.add_argument("--ansi-log",
                         action="store_true",
                         help=_("display log in ansi output mode"))
@@ -354,33 +364,25 @@ def main():
             install_translations(config["translations"])
 
             if not args.no_install_dependencies:
-                install_dependencies(config["dependencies"], verbose=args.verbose)
+                install_dependencies(config["dependencies"])
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
 
             # Have lib50 decide which files to include
             included = lib50.files(config.get("files"))[0]
 
-            # Redirect stdout to devnull if verbose or log level is set
-            should_redirect_devnull = args.verbose or args.log_level
-            with open(os.devnull, "w") if should_redirect_devnull else nullcontext() as devnull:
-                if should_redirect_devnull:
-                    stdout = stderr = devnull
-                else:
-                    stdout = sys.stdout
-                    stderr = sys.stderr
 
-                # Create a working_area (temp dir) named - with all included student files
-                with lib50.working_area(included, name='-') as working_area, \
-                        contextlib.redirect_stdout(stdout), \
-                        contextlib.redirect_stderr(stderr):
+            # Create a working_area (temp dir) named - with all included student files
+            with lib50.working_area(included, name='-') as working_area, \
+                    contextlib.redirect_stdout(LoggerWriter(LOGGER, logging.INFO)), \
+                    contextlib.redirect_stderr(LoggerWriter(LOGGER, logging.INFO)):
 
-                    check_results = CheckRunner(checks_file).run(included, working_area, args.target)
-                    results = {
-                        "slug": internal.slug,
-                        "results": [attr.asdict(result) for result in check_results],
-                        "version": __version__
-                    }
+                check_results = CheckRunner(checks_file).run(included, working_area, args.target)
+                results = {
+                    "slug": internal.slug,
+                    "results": [attr.asdict(result) for result in check_results],
+                    "version": __version__
+                }
 
 
     LOGGER.debug(results)
