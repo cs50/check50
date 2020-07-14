@@ -1,6 +1,8 @@
 import hashlib
 import functools
+import numbers
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -135,6 +137,35 @@ def import_checks(path):
     return mod
 
 
+class regex:
+    @staticmethod
+    def decimal(number):
+        """
+        Create a regular expression to match the number exactly:
+            In case of a positive number:
+                (?<![\d\-])number(?!(\.?\d))
+            In case of a negative number:
+                number(?!(\.?\d))
+
+        (?<![\d\-]) = negative lookbehind, \
+            asserts that there are no digits and no - in front of the number.
+        (?!(\.?\d)) = negative lookahead, \
+            asserts that there are no digits and no additional . followed by digits after the number.
+
+        :param number: the number to match in the regex
+        :type number: any numbers.Number (such as int, float, ...)
+        :rtype: str
+
+        Example usage::
+
+            # Check that 7.0000 is printed with 5 significant figures
+            check50.run("./prog").stdout(check50.regex.decimal("7.0000"))
+
+        """
+        negative_lookbehind = fr"(?<![\d\-])" if number >= 0 else ""
+        return fr"{negative_lookbehind}{re.escape(str(number))}(?!(\.?\d))"
+
+
 class run:
     """
     Run a command.
@@ -214,8 +245,11 @@ class run:
         it returns ``self``.
 
         :param output: optional output to be expected from stdout, raises \
-                       :class:`check50.Failure` if no match
-        :type output: str
+                       :class:`check50.Failure` if no match \
+                       In case output is a float or int, the check50.number_regex \
+                       is used to match just that number". \
+                       In case output is a stream its contents are used via output.read().
+        :type output: str, int, float, stream
         :param str_output: what will be displayed as expected output, a human \
                            readable form of ``output``
         :type str_output: str
@@ -239,15 +273,21 @@ class run:
             self._wait(timeout)
             return self.process.before.replace("\r\n", "\n").lstrip("\n")
 
+        # In case output is a stream (file-like object), read from it
         try:
             output = output.read()
         except AttributeError:
             pass
 
-        expect = self.process.expect if regex else self.process.expect_exact
-
         if str_output is None:
-            str_output = output
+            str_output = str(output)
+
+        # In case output is an int/float, use a regex to match exactly that int/float
+        if isinstance(output, numbers.Number):
+            regex = True
+            output = globals()["regex"].decimal(output)
+
+        expect = self.process.expect if regex else self.process.expect_exact
 
         if output == EOF:
             log(_("checking for EOF..."))
