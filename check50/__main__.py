@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import enum
 import gettext
 import importlib
 import inspect
@@ -20,15 +21,36 @@ import lib50
 import requests
 import termcolor
 
-from . import internal, renderer, __version__
+from . import _exceptions, internal, renderer, __version__
 from .runner import CheckRunner
+
+LOGGER = logging.getLogger("check50")
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
-class RemoteCheckError(internal.Error):
-    def __init__(self, remote_json):
-        super().__init__("check50 ran into an error while running checks! Please contact sysadmins@cs50.harvard.edu!")
-        self.payload = {"remote_json": remote_json}
+
+class LogLevel(enum.IntEnum):
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+
+
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        "ERROR": "red",
+        "WARNING": "yellow",
+        "DEBUG": "cyan",
+        "INFO": "magenta",
+    }
+
+    def __init__(self, fmt, use_color=True):
+        super().__init__(fmt=fmt)
+        self.use_color = use_color
+
+    def format(self, record):
+        msg = super().format(record)
+        return msg if not self.use_color else termcolor.colored(msg, getattr(record, "color", self.COLORS.get(record.levelname)))
 
 
 @contextlib.contextmanager
@@ -37,26 +59,8 @@ def nullcontext(entry_result=None):
     yield entry_result
 
 
-def yes_no_prompt(prompt):
-    """
-    Raise a prompt, returns True if yes is entered, False if no is entered.
-    Will reraise prompt in case of any other reply.
-    """
-    yes = {"yes", "ye", "y", ""}
-    no = {"no", "n"}
 
-    reply = None
-    while reply not in yes and reply not in no:
-        reply = input(f"{prompt} [Y/n] ").lower()
-
-    return reply in yes
-
-
-# Assume we should print tracebacks until we get command line arguments
-internal._excepthook.verbose = True
-internal._excepthook.outputs = ("ansi",)
-internal._excepthook.output_file = None
-sys.excepthook = internal._excepthook
+_exceptions.ExceptHook.initialize()
 
 
 def install_dependencies(dependencies, verbose=False):
@@ -80,7 +84,7 @@ def install_dependencies(dependencies, verbose=False):
         try:
             subprocess.check_call(pip, stdout=stdout, stderr=stderr)
         except subprocess.CalledProcessError:
-            raise internal.Error(_("failed to install dependencies"))
+            raise _exceptions.Error(_("failed to install dependencies"))
 
         # Reload sys.path, to find recently installed packages
         importlib.reload(site)
@@ -102,7 +106,7 @@ def install_translations(config):
 def compile_checks(checks, prompt=False):
     # Prompt to replace __init__.py (compile destination)
     if prompt and os.path.exists(internal.check_dir / "__init__.py"):
-        if not yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
+        if not internal._yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
             raise Error("Aborting: could not overwrite to __init__.py")
 
     # Compile simple checks
@@ -118,20 +122,19 @@ def setup_logging(level):
     level 'info' logs all git commands run to stderr
     level 'debug' logs all git commands and their output to stderr
     """
-    # No verbosity level set, don't log anything
-    if not level:
-        return
 
-    lib50_logger = logging.getLogger("lib50")
+    for logger in (logging.getLogger("lib50"), LOGGER):
+        # Set verbosity level on the lib50 logger
+        logger.setLevel(level.upper())
 
-    # Set verbosity level on the lib50 logger
-    lib50_logger.setLevel(getattr(logging, level.upper()))
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(ColoredFormatter("(%(levelname)s) %(message)s", use_color=sys.stderr.isatty()))
 
-    # Direct all logs to sys.stderr
-    lib50_logger.addHandler(logging.StreamHandler(sys.stderr))
+        # Direct all logs to sys.stderr
+        logger.addHandler(handler)
 
-    # Don't animate the progressbar
-    lib50.ProgressBar.DISABLED = True
+    # Don't animate the progressbar if LogLevel is either info or debug
+    lib50.ProgressBar.DISABLED = logger.level < LogLevel.WARNING
 
 
 def await_results(commit_hash, slug, pings=45, sleep=2):
@@ -146,22 +149,22 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
         results = res.json()
 
         if res.status_code not in [404, 200]:
-            raise RemoteCheckError(results)
+            raise _exceptions.RemoteCheckError(results)
 
         if res.status_code == 200 and results["received_at"] is not None:
             break
         time.sleep(sleep)
     else:
         # Terminate if no response
-        raise internal.Error(
+        raise _exceptions.Error(
             _("check50 is taking longer than normal!\n"
               "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
 
     if not results["check50"]:
-        raise RemoteCheckError(results)
+        raise _exceptions.RemoteCheckError(results)
 
     if "error" in results["check50"]:
-        raise RemoteCheckError(results["check50"])
+        raise _exceptions.RemoteCheckError(results["check50"])
 
     # TODO: Should probably check payload["version"] here to make sure major version is same as __version__
     # (otherwise we may not be able to parse results)
@@ -182,7 +185,7 @@ class LogoutAction(argparse.Action):
         try:
             lib50.logout()
         except lib50.Error:
-            raise internal.Error(_("failed to logout"))
+            raise _exceptions.Error(_("failed to logout"))
         else:
             termcolor.cprint(_("logged out successfully"), "green")
         parser.exit()
@@ -203,7 +206,55 @@ def raise_invalid_slug(slug, offline=False):
         msg += _("\nIf you are confident the slug is correct and you have an internet connection," \
                 " try running without --offline.")
 
-    raise internal.Error(msg)
+    raise _exceptions.Error(msg)
+
+
+def process_args(args):
+    """Validate arguments and apply defaults that are dependent on other arguments"""
+
+    # dev implies offline, verbose, and log level "INFO" if not overwritten
+    if args.dev:
+        args.offline = True
+        args.verbose = True
+        if "ansi" in args.output:
+            args.ansi_log = True
+
+    # offline implies local
+    if args.offline:
+        args.no_install_dependencies = True
+        args.no_download_checks = True
+        args.local = True
+
+    if not args.log_level:
+        args.log_level = LogLevel.WARNING
+
+    # Setup logging for lib50
+    setup_logging(args.log_level)
+
+    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
+    if not args.local:
+        useless_args = []
+        if args.no_download_checks:
+            useless_args.append("--no-downloads-checks")
+        if args.no_install_dependencies:
+            useless_args.append("--no-install-dependencies")
+
+        if useless_args:
+            LOGGER.warning(_("You should always use --local when using: {}").format(", ".join(useless_args)))
+
+    # Filter out any duplicates from args.output
+    seen_output = []
+    for output in args.output:
+        if output in seen_output:
+            LOGGER.warning(_("Duplicate output format specified: {}").format(output))
+        else:
+            seen_output.append(output)
+
+    args.output = seen_output
+
+    if args.ansi_log and "ansi" not in seen_output:
+        LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
+
 
 
 def main():
@@ -212,7 +263,7 @@ def main():
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
-                        help=_("run check50 in development mode (implies --offline and --verbose info).\n"
+                        help=_("run check50 in development mode (implies --offline, --verbose, and --ansi-log).\n"
                                "causes SLUG to be interpreted as a literal path to a checks package"))
     parser.add_argument("--offline",
                         action="store_true",
@@ -220,9 +271,6 @@ def main():
     parser.add_argument("-l", "--local",
                         action="store_true",
                         help=_("run checks locally instead of uploading to cs50"))
-    parser.add_argument("--log",
-                        action="store_true",
-                        help=_("display more detailed information about check results"))
     parser.add_argument("-o", "--output",
                         action="store",
                         nargs="+",
@@ -238,15 +286,20 @@ def main():
                         metavar="FILE",
                         help=_("file to write output to"))
     parser.add_argument("-v", "--verbose",
+                        action="store_true",
+                        help=_("shows any print statements in checks if running locally, and shows which dependencies get installed"))
+    parser.add_argument("--log-level",
                         action="store",
-                        nargs="?",
-                        default="",
-                        const="info",
-                        choices=[attr for attr in dir(logging) if attr.isupper() and isinstance(getattr(logging, attr), int)],
-                        type=str.upper,
-                        help=_("sets the verbosity level."
-                               ' "INFO" displays the full tracebacks of errors and shows all commands run.'
-                               ' "DEBUG" adds the output of all command run.'))
+                        default="warning",
+                        choices=[level.name.lower() for level in LogLevel],
+                        type=str.lower,
+                        help=_("sets the log level."
+                               ' "warning" displays usage warnings'
+                               ' "info" shows all commands run.'
+                               ' "debug" adds the output of all command run.'))
+    parser.add_argument("--ansi-log",
+                        action="store_true",
+                        help=_("display log in ansi output mode"))
     parser.add_argument("--no-download-checks",
                         action="store_true",
                         help=_("do not download checks, but use previously downloaded checks instead (only works with --local)"))
@@ -262,47 +315,18 @@ def main():
 
     internal.slug = args.slug
 
-    # dev implies offline and verbose "info" if not overwritten
-    if args.dev:
-        args.offline = True
-        if not args.verbose:
-            args.verbose = "info"
-
-    # offline implies local
-    if args.offline:
-        args.no_install_dependencies = True
-        args.no_download_checks = True
-        args.local = True
-
-    # Setup logging for lib50 depending on verbosity level
-    setup_logging(args.verbose)
-
-    # Warning in case of running remotely with no_download_checks or no_install_dependencies set
-    if not args.local:
-        useless_args = []
-        if args.no_download_checks:
-            useless_args.append("--no-downloads-checks")
-        if args.no_install_dependencies:
-            useless_args.append("--no-install-dependencies")
-
-        if useless_args:
-            termcolor.cprint(_("Warning: you should always use --local when using: {}".format(", ".join(useless_args))),
-                "yellow", attrs=["bold"])
-
-    # Filter out any duplicates from args.output
-    seen_output = set()
-    args.output = [output for output in args.output if not (output in seen_output or seen_output.add(output))]
+    # Validate arguments and apply defaults
+    process_args(args)
 
     # Set excepthook
-    internal._excepthook.verbose = bool(args.verbose)
-    internal._excepthook.outputs = args.output
-    internal._excepthook.output_file = args.output_file
+    _exceptions.ExceptHook.initialize(args.output, args.output_file)
 
     # If remote, push files to GitHub and await results
     if not args.local:
         commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, internal.slug)
+
     # Otherwise run checks locally
     else:
         with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
@@ -310,13 +334,13 @@ def main():
             if args.dev:
                 internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
-                    raise internal.Error(_("{} is not a directory").format(internal.check_dir))
+                    raise _exceptions.Error(_("{} is not a directory").format(internal.check_dir))
             # Otherwise have lib50 create a local copy of slug
             else:
                 try:
                     internal.check_dir = lib50.local(internal.slug, offline=args.no_download_checks)
                 except lib50.ConnectionError:
-                    raise internal.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
+                    raise _exceptions.Error(_("check50 could not retrieve checks from GitHub. Try running check50 again with --offline.").format(internal.slug))
                 except lib50.InvalidSlugError:
                     raise_invalid_slug(internal.slug, offline=args.no_download_checks)
 
@@ -337,9 +361,10 @@ def main():
             # Have lib50 decide which files to include
             included_files = lib50.files(config.get("files"))[0]
 
-            with open(os.devnull, "w") if args.verbose else nullcontext() as devnull:
-                # Redirect stdout to devnull if some verbosity level is set
-                if not args.verbose:
+            # Redirect stdout to devnull if verbose or log level is set
+            should_redirect_devnull = args.verbose or args.log_level
+            with open(os.devnull, "w") if should_redirect_devnull else nullcontext() as devnull:
+                if should_redirect_devnull:
                     stdout = stderr = devnull
                 else:
                     stdout = sys.stdout
@@ -358,6 +383,8 @@ def main():
                         }
 
 
+    LOGGER.debug(results)
+
     # Render output
     file_manager = open(args.output_file, "w") if args.output_file else nullcontext(sys.stdout)
     with file_manager as output_file:
@@ -366,7 +393,7 @@ def main():
                 output_file.write(renderer.to_json(**results))
                 output_file.write("\n")
             elif output == "ansi":
-                output_file.write(renderer.to_ansi(**results, log=args.log))
+                output_file.write(renderer.to_ansi(**results, _log=args.ansi_log))
                 output_file.write("\n")
             elif output == "html":
                 if os.environ.get("CS50_IDE_TYPE") and args.local:

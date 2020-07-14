@@ -1,7 +1,6 @@
 import importlib
 from pathlib import Path
 import py_compile
-import traceback
 
 from . import internal
 from ._api import Failure, exists, log
@@ -65,5 +64,4 @@ def compile(file):
         for line in e.msg.splitlines():
             log(line)
 
-        raise Failure(_("{} raised while compiling {} (rerun with --log for more details)").format(e.exc_type_name, file))
-
+        raise Failure(_("{} raised while compiling {} (see the log for more details)").format(e.exc_type_name, file))
