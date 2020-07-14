@@ -273,13 +273,13 @@ class LoggerWriter:
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="check50")
+    parser = argparse.ArgumentParser(prog="check50", formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument("slug", help=_("prescribed identifier of work to check"))
     parser.add_argument("-d", "--dev",
                         action="store_true",
                         help=_("run check50 in development mode (implies --offline, and --log-level info).\n"
-                               "causes SLUG to be interpreted as a literal path to a checks package"))
+                               "causes slug to be interpreted as a literal path to a checks package."))
     parser.add_argument("--offline",
                         action="store_true",
                         help=_("run checks completely offline (implies --local, --no-download-checks and --no-install-dependencies)"))
@@ -304,10 +304,9 @@ def main():
                         action="store",
                         choices=[level.name.lower() for level in LogLevel],
                         type=str.lower,
-                        help=_("sets the log level."
-                               ' "warning" displays usage warnings'
-                               ' "info" shows all commands run.'
-                               ' "debug" adds the output of all command run.'))
+                        help=_('warning; displays usage warnings.'
+                               '\ninfo: adds all commands run, any locally installed dependencies and print messages.'
+                               '\ndebug: adds the output of all commands run.'))
     parser.add_argument("--ansi-log",
                         action="store_true",
                         help=_("display log in ansi output mode"))
