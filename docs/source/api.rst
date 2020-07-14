@@ -5,17 +5,20 @@ API docs
 
 .. _check50:
 
+
 check50
 *******
 
 .. automodule:: check50
    :members:
 
+
 check50.c
 **********
 
 .. automodule:: check50.c
   :members:
+
 
 check50.flask
 ****************
@@ -28,6 +31,12 @@ check50.py
 ***********
 .. automodule:: check50.py
    :members:
+
+
+check50.regex
+**************
+.. automodule:: check50.regex
+  :members:
 
 
 check50.internal
