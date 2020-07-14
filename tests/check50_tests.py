@@ -111,7 +111,7 @@ class TestStdoutTimeout(Base):
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
-        process.expect_exact("did not find \"hello\" within 3 seconds")
+        process.expect_exact("check50 waited 1 seconds for the output of the program")
         process.close(force=True)
 
 class TestStdinPy(Base):
