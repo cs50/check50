@@ -140,12 +140,15 @@ def import_checks(path):
 def number_regex(number):
     """
     Create a regular expression to match the number exactly:
-        (?<!\d)number(?!(\.?\d))
+        In case of a positive number:
+            (?<![\d\-])number(?!(\.?\d))
+        In case of a negative number:
+            number(?!(\.?\d))
 
-    (?<!\d) = negative behind, \
-        asserts that there are no digits in front of the number.
+    (?<![\d\-]) = negative lookbehind, \
+        asserts that there are no digits and no - in front of the number.
     (?!(\.?\d)) = negative lookahead, \
-        asserts that there are no digits and no . followed by digits after the number.
+        asserts that there are no digits and no additional . followed by digits after the number.
 
     :param number: the number to match in the regex
     :type number: any numbers.Number (such as int, float, ...)
@@ -157,7 +160,10 @@ def number_regex(number):
         check50.run("./prog").stdout(check50.number_regex("7.0000"))
 
     """
-    return fr"(?<!\d){re.escape(str(number))}(?!(\.?\d))"
+    if number < 0:
+        return fr"{re.escape(str(number))}(?!(\.?\d))"
+
+    return fr"(?<![\d\-]){re.escape(str(number))}(?!(\.?\d))"
 
 
 class run:

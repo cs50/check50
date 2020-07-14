@@ -211,6 +211,25 @@ class TestProcessStdout(Base):
         self.runpy()
         self.process.stdout(1.0)
 
+    def test_negative_number(self):
+        self.write("print(1)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(-1)
+
+        self.write("print(-1)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1)
+
+        self.write("print('2-1')")
+        self.runpy()
+        self.process.stdout(-1)
+
+        self.write("print(-1)")
+        self.runpy()
+        self.process.stdout(-1)
+
 
 class TestProcessStdoutFile(Base):
     def setUp(self):
