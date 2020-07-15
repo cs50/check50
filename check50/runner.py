@@ -64,8 +64,8 @@ class CheckSideEffects:
     state = attr.ib(default=None)
     new_checks = attr.ib(default=attr.Factory(list))
 
-
-_dynamic_side_effects = CheckSideEffects()
+_static_side_effects = collections.defaultdict(CheckSideEffects)
+_dynamic_side_effects = collections.defaultdict(CheckSideEffects)
 
 
 class Timeout(Failure):
@@ -143,7 +143,14 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
         # contain the names of the checks in the order in which they are declared
         _check_names.append(check.__name__)
         check._check_dependency = dependency
-        check._is_dynamic = dynamic
+
+        # This check check becomes dynamic if
+        # - It's marked as such
+        # - A check is running while this check is created
+        # - It's dependending on a dynamic check
+        check._is_dynamic = dynamic \
+                            or internal.check_running \
+                            or (check._check_dependency and check._check_dependency._is_dynamic)
 
         @functools.wraps(check)
         def wrapper(dependency_state):
@@ -154,11 +161,9 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
             # Any side effects from the check
             side_effects = CheckSideEffects()
 
-            # In serial operation take the dependency state from memory (_dynamic_side_effects)
-            if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL or check._is_dynamic:
-                global _dynamic_side_effects
-                dependency_state = _dynamic_side_effects.state
-                _dynamic_side_effects = CheckSideEffects()
+            # If this checks' dependency is dynamic, take the state from memory
+            if dependency and dependency._is_dynamic:
+                dependency_state = _dynamic_side_effects[dependency.__name__].state
 
             try:
                 # Setup check environment, copying disk state from dependency
@@ -183,6 +188,9 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
                     side_effects.new_checks = _check_names
                     _check_names = []
 
+                    # In dynamic operation avoid serialization, store state in memory instead
+                    if check._is_dynamic:
+                        _dynamic_side_effects[check.__name__] = side_effects
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload
@@ -198,10 +206,6 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
             else:
                 result.passed = True
             finally:
-                # In serial operation avoid serialization, store state in memory instead
-                if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL or check._is_dynamic:
-                    _dynamic_side_effects = side_effects
-
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, side_effects
@@ -222,9 +226,11 @@ class CheckRunner:
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
-            discovery_job = executor.submit(discover_checks(self.checks_path))
-            discovered = discovery_job.result()
 
+            # Discover all checks from the check module
+            discovered = executor.submit(discover_checks(self.checks_path)).result()
+
+            # Get the names of all checks in definition order
             self.check_names = [check["name"] for check in discovered.checks]
 
             # Map each check name to its description
@@ -250,17 +256,12 @@ class CheckRunner:
             self.results = {name: None for name in self.check_names}
 
             self.run_static_checks()
-            print(self.results)
+            print(f"static: {self.results}")
             self.run_dynamic_checks(executor)
-            print(self.results)
+            print(f"dynamic: {self.results}")
 
         # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
         return list(filter(None, self.results.values()))
-
-        #     if discovered.check_runner_mode == internal.CheckRunnerMode.SERIAL or self.dynamic_checks:
-        #         return self.run_checks_serial(executor)
-        #
-        # return self.run_checks_parallel()
 
 
     def run_dynamic_checks(self, executor):
@@ -286,7 +287,8 @@ class CheckRunner:
                 continue
 
             # Run the check
-            result, side_effects = executor.submit(run_check(check, self.checks_path)).result()
+            static_state = _static_side_effects[dependency].state
+            result, side_effects = executor.submit(run_check(check, self.checks_path, static_state)).result()
             self.results[check] = result
 
             # Add all dynamically created checks
@@ -319,7 +321,10 @@ class CheckRunner:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
                 for future in done:
                     # Get result from completed check
-                    result, state = future.result()
+                    result, side_effects = future.result()
+
+                    _static_side_effects[result.name] = side_effects
+
                     self.results[result.name] = result
                     if result.passed:
                         dependent_checks = [name for name in self.dependency_graph[result.name]
@@ -328,7 +333,7 @@ class CheckRunner:
                         # Dispatch dependent checks
                         for child_name in dependent_checks:
                             not_done.add(executor.submit(
-                                run_check(child_name, self.checks_path, state)))
+                                run_check(child_name, self.checks_path, side_effects.state)))
                     else:
                         not_passed.append(result.name)
 
