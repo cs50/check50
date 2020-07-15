@@ -26,19 +26,19 @@ Operation modes
 Check50 can run in four mutually exclusive modes of operation.
 
 **********************
+online
+**********************
+By default check50 runs the checks remotely and then waits for the results to come back.
+
+**********************
 local
 **********************
-By default check50 runs locally. That means the checks run locally on the machine you run check50 on. The checks however are fetched remotely from GitHub.
+To run checks locally, pass the :code:`--local` flag. The checks are still fetched remotely from GitHub.
 
 **********************
 offline
 **********************
 Running with :code:`--offline` runs the checks locally and has check50 look for checks locally. check50 will not try to fetch checks remotely in this mode.
-
-**********************
-online
-**********************
-Running with :code:`--online` runs the checks remotely and then waits for the results to come back.
 
 **********************
 dev
@@ -53,12 +53,12 @@ By default check50 will try to keep its output concise in its :code:`ansi` outpu
 **********************
 verbose
 **********************
-Running with :code:`--verbose` lets check50 output both the log and any tracebacks in the :code:`ansi` output mode.
+Running with :code:`--verbose` lets check50 output any tracebacks in the :code:`ansi` output mode.
 
 **********************
-log
+log-level
 **********************
-Running check50 with :code:`--log` will have check50 print out its logs.
+Running check50 with :code:`--log-level INFO` will display any git commands run. :code:`--log-level DEBUG` adds all output of any git commands run.
 
 
 Targeting checks
@@ -68,7 +68,7 @@ Check50 lets you target specific checks by name with the :code:`--target` flags.
 **********************
 target
 **********************
-With :code:`--target` you can target checks from a larger body of checks by name. check50 will only run and show these checks and their dependencies. 
+With :code:`--target` you can target checks from a larger body of checks by name. check50 will only run and show these checks and their dependencies.
 
 
 Output modes

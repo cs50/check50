@@ -42,10 +42,11 @@ from ._api import (
     run_checks_in_serial,
     run_checks_in_parallel,
     log, _log,
-    Failure, Mismatch
+    Failure, Mismatch, Missing
 )
 
 
+from . import regex
 from .runner import check
 from pexpect import EOF
 
@@ -55,11 +56,13 @@ __all__ = ["import_checks",
            "hash",
            "include",
            "hidden",
+           "regex",
            "run",
            "run_checks_in_serial",
            "run_checks_in_parallel",
            "log",
            "Failure",
            "Mismatch",
+           "Missing",
            "check",
            "EOF"]
