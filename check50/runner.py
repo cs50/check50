@@ -17,12 +17,11 @@ import traceback
 import attr
 import lib50
 
-from . import internal, __version__
+from . import internal, _exceptions, __version__
 from ._api import log, Failure, _copy, _log, _data
 
 
 _check_names = []
-_serial_dependency_state = None
 
 
 @attr.s(slots=True)
@@ -60,6 +59,15 @@ class DiscoveryResult:
     check_runner_mode = attr.ib(default=internal.check_runner_mode)
 
 
+@attr.s(slots=True)
+class CheckSideEffects:
+    state = attr.ib(default=None)
+    new_checks = attr.ib(default=attr.Factory(list))
+
+
+_dynamic_side_effects = CheckSideEffects()
+
+
 class Timeout(Failure):
     def __init__(self, seconds):
         super().__init__(rationale=_("check timed out after {} seconds").format(seconds))
@@ -90,13 +98,15 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60, max_log_lines=100):
+def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param dynamic: mark the check as dynamic
+    :type dynamic: bool
     :param max_log_lines: maximum number of lines that can appear in the log
     :type max_log_lines: int
 
@@ -133,6 +143,7 @@ def check(dependency=None, timeout=60, max_log_lines=100):
         # contain the names of the checks in the order in which they are declared
         _check_names.append(check.__name__)
         check._check_dependency = dependency
+        check._is_dynamic = dynamic
 
         @functools.wraps(check)
         def wrapper(dependency_state):
@@ -140,14 +151,14 @@ def check(dependency=None, timeout=60, max_log_lines=100):
             # Result template
             result = CheckResult.from_check(check)
 
-            # Any shared (returned) state
-            state = None
+            # Any side effects from the check
+            side_effects = CheckSideEffects()
 
-            # In serial operation take the dependency state from memory (_serial_dependency_state)
-            if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL:
-                global _serial_dependency_state
-                dependency_state = _serial_dependency_state
-                _serial_dependency_state = None
+            # In serial operation take the dependency state from memory (_dynamic_side_effects)
+            if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL or check._is_dynamic:
+                global _dynamic_side_effects
+                dependency_state = _dynamic_side_effects.state
+                _dynamic_side_effects = CheckSideEffects()
 
             try:
                 # Setup check environment, copying disk state from dependency
@@ -156,10 +167,22 @@ def check(dependency=None, timeout=60, max_log_lines=100):
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
+                global _check_names
+                _check_names = []
+
                 # Run registered functions before/after running check and set timeout
                 with internal.register, _timeout(seconds=timeout):
                     args = (dependency_state,) if inspect.getfullargspec(check).args else ()
-                    state = check(*args)
+
+                    # Run the check
+                    side_effects.state = check(*args)
+
+                    # Register any newly created checks
+                    if _check_names and not check._is_dynamic:
+                        raise _exceptions.Error(_("static check {} cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)".format(check.__name__)))
+                    side_effects.new_checks = _check_names
+                    _check_names = []
+
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload
@@ -176,13 +199,12 @@ def check(dependency=None, timeout=60, max_log_lines=100):
                 result.passed = True
             finally:
                 # In serial operation avoid serialization, store state in memory instead
-                if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL:
-                    _serial_dependency_state = state
-                    state = None
+                if internal.check_runner_mode == internal.CheckRunnerMode.SERIAL or check._is_dynamic:
+                    _dynamic_side_effects = side_effects
 
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
-                return result, state
+                return result, side_effects
         return wrapper
     return decorator
 
@@ -208,6 +230,12 @@ class CheckRunner:
             # Map each check name to its description
             self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
 
+            # All check names marked as static
+            self.static_checks = [check["name"] for check in discovered.checks if not check["is_dynamic"]]
+
+            # All check names marked as dynamic
+            self.dynamic_checks = [check["name"] for check in discovered.checks if check["is_dynamic"]]
+
             # Map each check to tuples containing the names of the checks that depend on it
             self.dependency_graph = collections.defaultdict(set)
             for check in discovered.checks:
@@ -217,29 +245,28 @@ class CheckRunner:
             if targets:
                 self.dependency_graph = self.build_subgraph(targets)
 
-            if discovered.check_runner_mode == internal.CheckRunnerMode.SERIAL:
-                return self.run_checks_serial(executor)
+            # Ensure that dictionary is ordered by check declaration order (via self.check_names)
+            # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
+            self.results = {name: None for name in self.check_names}
 
-        return self.run_checks_parallel()
+            self.run_static_checks()
+            print(self.results)
+            self.run_dynamic_checks(executor)
+            print(self.results)
+
+        # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
+        return list(filter(None, self.results.values()))
+
+        #     if discovered.check_runner_mode == internal.CheckRunnerMode.SERIAL or self.dynamic_checks:
+        #         return self.run_checks_serial(executor)
+        #
+        # return self.run_checks_parallel()
 
 
-    def run_checks_serial(self, executor):
-        # Grab all jobs to run from the dependency graph: jobs
-        all_checks = set(job for job in self.dependency_graph.keys() if job)
-        for dependents in self.dependency_graph.values():
-            all_checks |= dependents
+    def run_dynamic_checks(self, executor):
+        inverse_dependency_graph = self._create_inverse_dependency_graph()
 
-        # A serial queue of all checks to work through
-        check_queue = []
-
-        # A map from check_name to CheckResult
-        results = {}
-
-        # Enter the jobs by their definition order (self.check_names)
-        for name in self.check_names:
-            if name in all_checks:
-                check_queue.append(name)
-                results[name] = None
+        check_queue = self.dynamic_checks[:]
 
         # Run the checks in the queue
         while check_queue:
@@ -248,27 +275,29 @@ class CheckRunner:
             check = check_queue[0]
             del check_queue[0]
 
+            # If there is already a result for this check, skip
+            if self.results[check]:
+                continue
+
+            # If there is a dependency and it didn't pass, skip
+            dependency = inverse_dependency_graph[check]
+            if dependency and not self.results[dependency].passed:
+                self._skip(check, dependency)
+                continue
+
             # Run the check
-            result, state = executor.submit(run_check(check, self.checks_path)).result()
-            results[check] = result
+            result, side_effects = executor.submit(run_check(check, self.checks_path)).result()
+            self.results[check] = result
 
-            # In case the check failed
-            if not result.passed:
-
-                # Record skipped results for each child (dependent)
-                self._skip_children(check, results)
-
-                # Remove each dependent from the queue
-                for dependent in self.dependencies_of((check,)):
-                    try:
-                        check_queue.remove(dependent)
-                    except ValueError:
-                        pass
-
-        return results.values()
+            # Add all dynamically created checks
+            for new_check in side_effects.new_checks:
+                inverse_dependency_graph[new_check["name"]] = new_check["dependency"]
+                self.dependency_graph[new_check["dependency"]] = new_check["name"]
+                self.check_descriptions[new_check["name"]] = new_check["description"]
+                check_queue.append(new_check["name"])
 
 
-    def run_checks_parallel(self):
+    def run_static_checks(self):
         try:
             max_workers = int(os.environ.get("CHECK50_WORKERS"))
         except (ValueError, TypeError):
@@ -276,12 +305,14 @@ class CheckRunner:
 
         # Ensure that dictionary is ordered by check declaration order (via self.check_names)
         # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-        results = {name: None for name in self.check_names}
+        results = {name: None for name in self.static_checks}
+
+        static_checks = set(self.static_checks)
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
             not_done = set(executor.submit(run_check(name, self.checks_path))
-                           for name in self.dependency_graph[None])
+                           for name in self.dependency_graph[None] if name in static_checks)
             not_passed = []
 
             while not_done:
@@ -289,20 +320,20 @@ class CheckRunner:
                 for future in done:
                     # Get result from completed check
                     result, state = future.result()
-                    results[result.name] = result
+                    self.results[result.name] = result
                     if result.passed:
+                        dependent_checks = [name for name in self.dependency_graph[result.name]
+                                            if name in static_checks]
+
                         # Dispatch dependent checks
-                        for child_name in self.dependency_graph[result.name]:
+                        for child_name in dependent_checks:
                             not_done.add(executor.submit(
                                 run_check(child_name, self.checks_path, state)))
                     else:
                         not_passed.append(result.name)
 
         for name in not_passed:
-            self._skip_children(name, results)
-
-        # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
-        return list(filter(None, results.values()))
+            self._skip_children(name)
 
 
     def build_subgraph(self, targets):
@@ -345,18 +376,22 @@ class CheckRunner:
         return inverse_dependency_graph
 
 
-    def _skip_children(self, check_name, results):
+    def _skip_children(self, check_name):
         """
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
         for name in self.dependency_graph[check_name]:
-            if results[name] is None:
-                results[name] = CheckResult(name=name, description=self.check_descriptions[name],
-                                            passed=None,
-                                            dependency=check_name,
-                                            cause={"rationale": _("can't check until a frown turns upside down")})
-                self._skip_children(name, results)
+            if self.results[name] is None:
+                self._skip(name, check_name)
+                self._skip_children(name)
+
+
+    def _skip(self, name, dependency):
+        self.results[name] = CheckResult(name=name, description=self.check_descriptions[name],
+                                         passed=None,
+                                         dependency=dependency,
+                                         cause={"rationale": _("can't check until a frown turns upside down")})
 
 
     def __enter__(self):
@@ -440,7 +475,8 @@ class discover_checks(CheckJob):
             discovered_checks.append({
                 "name": name,
                 "dependency": None if check._check_dependency is None else check._check_dependency.__name__,
-                "description": check.__doc__
+                "description": check.__doc__,
+                "is_dynamic": check._is_dynamic
             })
 
         return DiscoveryResult(checks=discovered_checks,
