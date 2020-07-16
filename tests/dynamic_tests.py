@@ -108,5 +108,13 @@ class TestPassState(Base):
         process.expect(pexpect.EOF)
 
 
+class TestImport(Base):
+    def test_import_checks_module_once(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/import_checks_module_once")
+        process.expect_exact(":) foo")
+        process.expect_exact(":) bar")
+        process.expect(pexpect.EOF)
+
+
 if __name__ == "__main__":
     unittest.main()
