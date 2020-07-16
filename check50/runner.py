@@ -132,7 +132,6 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
 
     """
     def decorator(check):
-
         check._check_dependency = dependency
 
         # This check check becomes dynamic if
@@ -142,10 +141,6 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
         check._is_dynamic = dynamic \
                             or internal.check_running \
                             or (check._check_dependency and check._check_dependency._is_dynamic)
-
-        # Modules are evaluated from the top of the file down, so CheckRunner will
-        # contain checks in the order in which they are declared
-        CheckRunner.register_check(check)
 
         @functools.wraps(check)
         def wrapper(dependency_state):
@@ -158,7 +153,7 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
 
             # If this checks' dependency is dynamic, take the state from memory
             if dependency and dependency._is_dynamic:
-                dependency_state = CheckRunner._dynamic_side_effects[dependency.__name__].state
+                dependency_state = CHECK_REGISTRY.dynamic_side_effects[dependency.__name__].state
 
             try:
                 # Setup check environment, copying disk state from dependency
@@ -167,7 +162,7 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
 
-                existing_checks = CheckRunner._checks[:]
+                existing_checks = CHECK_REGISTRY.checks[:]
 
                 # Run registered functions before/after running check and set timeout
                 with internal.register, _timeout(seconds=timeout):
@@ -177,14 +172,14 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
                     side_effects.state = check(*args)
 
                     # Register any newly created checks
-                    if len(CheckRunner._checks) > len(existing_checks) and not check._is_dynamic:
+                    if len(CHECK_REGISTRY.checks) > len(existing_checks) and not check._is_dynamic:
                         raise _exceptions.Error(_("static check {} cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)".format(check.__name__)))
-                    side_effects.new_checks = [c for c in CheckRunner._checks if c not in existing_checks]
+                    side_effects.new_checks = [c for c in CHECK_REGISTRY.checks if c not in existing_checks]
 
                     # In dynamic operation avoid serialization, store state in memory instead
                     if check._is_dynamic:
-                        CheckRunner._dynamic_side_effects[check.__name__] = side_effects
-                        side_effects = CheckSideEffects()
+                        CHECK_REGISTRY.dynamic_side_effects[check.__name__] = side_effects
+                        side_effects = CheckSideEffects(new_checks=side_effects.new_checks)
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload
@@ -203,16 +198,49 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, side_effects
+
+        # Modules are evaluated from the top of the file down, so CheckRunner will
+        # contain checks in the order in which they are declared
+        CHECK_REGISTRY.register_check(wrapper)
+
         return wrapper
     return decorator
 
 
+class _CheckRegistry:
+    def __init__(self):
+        self.checks = []
+        self.static_side_effects = collections.defaultdict(CheckSideEffects)
+        self.dynamic_side_effects = collections.defaultdict(CheckSideEffects)
+        self._checks_in_memory = {}
+
+
+    def get_check(self, name):
+        return self._checks_in_memory[name]
+
+
+    def register_check(self, check):
+        self.checks.append({
+            "name": check.__name__,
+            "dependency": None if check._check_dependency is None else check._check_dependency.__name__,
+            "description": check.__doc__,
+            "is_dynamic": check._is_dynamic
+        })
+
+        self._checks_in_memory[check.__name__] = check
+
+
+    def clear(self):
+        self.checks.clear()
+        self._checks_in_memory.clear()
+        self.static_side_effects.clear()
+        self.dynamic_side_effects.clear()
+
+# Sole instance of CheckRegistry, NOT thread-safe
+CHECK_REGISTRY = _CheckRegistry()
+
+
 class CheckRunner:
-    _checks = []
-    _static_side_effects = collections.defaultdict(CheckSideEffects)
-    _dynamic_side_effects = collections.defaultdict(CheckSideEffects)
-
-
     def __init__(self, checks_path, included_files):
         self.checks_path = checks_path
         self.included_files = included_files
@@ -286,7 +314,7 @@ class CheckRunner:
                 continue
 
             # Run the check
-            static_state = CheckRunner._static_side_effects[dependency].state
+            static_state = CHECK_REGISTRY.static_side_effects[dependency].state
             result, side_effects = executor.submit(run_check(check, self.checks_path, static_state)).result()
             self.results[check] = result
 
@@ -296,6 +324,7 @@ class CheckRunner:
                 self.dependency_graph[new_check["dependency"]] = new_check["name"]
                 self.check_descriptions[new_check["name"]] = new_check["description"]
                 check_queue.append(new_check["name"])
+                self.results[new_check["name"]] = None
 
 
     def run_static_checks(self):
@@ -322,7 +351,7 @@ class CheckRunner:
                     # Get result from completed check
                     result, side_effects = future.result()
 
-                    CheckRunner._static_side_effects[result.name] = side_effects
+                    CHECK_REGISTRY.static_side_effects[result.name] = side_effects
 
                     self.results[result.name] = result
                     if result.passed:
@@ -369,23 +398,6 @@ class CheckRunner:
                 deps.add(curr_check)
                 curr_check = inverse_graph[curr_check]
         return deps
-
-
-    @staticmethod
-    def register_check(check):
-        CheckRunner._checks.append({
-            "name": check.__name__,
-            "dependency": None if check._check_dependency is None else check._check_dependency.__name__,
-            "description": check.__doc__,
-            "is_dynamic": check._is_dynamic
-        })
-
-
-    @staticmethod
-    def clear():
-        CheckRunner._checks.clear()
-        CheckRunner._static_side_effects.clear()
-        CheckRunner._dynamic_side_effects.clear()
 
 
     def _create_inverse_dependency_graph(self):
@@ -479,11 +491,11 @@ class discover_checks(CheckJob):
         # Clear CheckRunner, import module, then save check_names. Not thread safe.
         # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
         # but there are a lot of subtleties with using `inspect` or similar here
-        CheckRunner.clear()
+        CHECK_REGISTRY.clear()
         check_module = importlib.util.module_from_spec(self.checks_spec)
         self.checks_spec.loader.exec_module(check_module)
 
-        return DiscoveryResult(checks=CheckRunner._checks.copy(),
+        return DiscoveryResult(checks=CHECK_REGISTRY.checks.copy(),
                                check_runner_mode=internal.check_runner_mode)
 
 
@@ -504,6 +516,6 @@ class run_check(CheckJob):
         self.checks_spec.loader.exec_module(mod)
         internal.check_running = True
         try:
-            return getattr(mod, self.check_name)(self.state)
+            return CHECK_REGISTRY.get_check(self.check_name)(self.state)
         finally:
             internal.check_running = False
