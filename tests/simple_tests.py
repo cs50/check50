@@ -2,26 +2,13 @@ import unittest
 import os
 import yaml
 import pathlib
+import sys
 import tempfile
 
 from check50 import _simple
 
-class Base(unittest.TestCase):
 
-    config_file = ".check50.yaml"
-
-    def setUp(self):
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
-
-    def tearDown(self):
-        self.working_directory.cleanup()
-
-    def write(self, source):
-        with open(self.config_file, "w") as f:
-            f.write(source)
-
-class TestCompile(Base):
+class TestCompile(unittest.TestCase):
     def test_one_complete_check(self):
         checks = yaml.safe_load(\
 """checks:
@@ -162,4 +149,5 @@ def bar():
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])
+    unittest.TextTestRunner(verbosity=2).run(suite)

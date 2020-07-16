@@ -3,28 +3,16 @@ import os
 import sys
 import tempfile
 import unittest
+
 import check50
 import check50.flask
 
-try:
-    import flask
-    FLASK_INSTALLED = True
-except ModuleNotFoundError:
-    FLASK_INSTALLED = False
+from bases import FlaskBase
+
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
-class Base(unittest.TestCase):
-    def setUp(self):
-        if not FLASK_INSTALLED:
-            raise unittest.SkipTest("flask not installed")
 
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
-
-    def tearDown(self):
-        self.working_directory.cleanup()
-
-class TestApp(Base):
+class TestApp(FlaskBase):
     def test_app(self):
         src = \
 """from flask import Flask
@@ -45,7 +33,7 @@ def root():
 
 
 
-class TestFlask(Base):
+class TestFlask(FlaskBase):
     def test_status(self):
         src = \
 """from flask import Flask

@@ -6,28 +6,18 @@ import os
 import functools
 import tempfile
 import pathlib
+
 import check50
 import check50.c
 import check50.internal
 
-CLANG_INSTALLED = bool(shutil.which("clang"))
-VALGRIND_INSTALLED = bool(shutil.which("valgrind"))
+from bases import CBase
+
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
-class Base(unittest.TestCase):
-    def setUp(self):
-        if not CLANG_INSTALLED:
-            raise unittest.SkipTest("clang not installed")
-        if not VALGRIND_INSTALLED:
-            raise unittest.SkipTest("valgrind not installed")
 
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
 
-    def tearDown(self):
-        self.working_directory.cleanup()
-
-class TestCompile(Base):
+class TestCompile(CBase):
     def test_compile_incorrect(self):
         open("blank.c", "w").close()
 
@@ -47,7 +37,7 @@ class TestCompile(Base):
         self.assertTrue(os.path.isfile("hello"))
         check50.run("./hello").stdout("hello, world!", regex=False)
 
-class TestValgrind(Base):
+class TestValgrind(CBase):
     def setUp(self):
         super().setUp()
         if not (sys.platform == "linux" or sys.platform == "linux2"):

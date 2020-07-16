@@ -8,30 +8,9 @@ import tempfile
 import check50
 import check50.internal
 
+from bases import PythonBase
 
-class Base(unittest.TestCase):
-    def setUp(self):
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
-
-        self.filename = "foo.py"
-        self.write("")
-
-        self.process = None
-
-    def tearDown(self):
-        if self.process and self.process.process.isalive():
-            self.process.kill()
-        self.working_directory.cleanup()
-
-    def write(self, source):
-        with open(self.filename, "w") as f:
-            f.write(source)
-
-    def runpy(self):
-        self.process = check50.run(f"python3 ./{self.filename}")
-
-class TestInclude(Base):
+class TestInclude(PythonBase):
     def setUp(self):
         super().setUp()
         self._old_check_dir = check50.internal.check_dir
@@ -49,7 +28,7 @@ class TestInclude(Base):
         self.assertTrue((pathlib.Path(".").absolute() / "baz.txt").exists())
         self.assertTrue((check50.internal.check_dir / "baz.txt").exists())
 
-class TestExists(Base):
+class TestExists(PythonBase):
     def test_file_does_not_exist(self):
         with self.assertRaises(check50.Failure):
             check50.exists("i_do_not_exist")
@@ -58,7 +37,7 @@ class TestExists(Base):
         check50.exists(self.filename)
 
 
-class TestImportChecks(Base):
+class TestImportChecks(PythonBase):
     def setUp(self):
         super().setUp()
         self._old_check_dir = check50.internal.check_dir
@@ -89,19 +68,19 @@ class TestImportChecks(Base):
         self.assertEqual(mod.qux, 0)
 
 
-class TestRun(Base):
+class TestRun(PythonBase):
     def test_returns_process(self):
         self.process = check50.run("python3 ./{self.filename}")
 
 
-class TestProcessKill(Base):
+class TestProcessKill(PythonBase):
     def test_kill(self):
         self.runpy()
         self.assertTrue(self.process.process.isalive())
         self.process.kill()
         self.assertFalse(self.process.process.isalive())
 
-class TestProcessStdin(Base):
+class TestProcessStdin(PythonBase):
     def test_expect_prompt_no_prompt(self):
         self.write("x = input()")
         self.runpy()
@@ -120,7 +99,7 @@ class TestProcessStdin(Base):
         self.process.stdin("bar", prompt=False)
         self.assertTrue(self.process.process.isalive())
 
-class TestProcessStdout(Base):
+class TestProcessStdout(PythonBase):
     def test_no_out(self):
         self.runpy()
         out = self.process.stdout(timeout=1)
@@ -231,7 +210,7 @@ class TestProcessStdout(Base):
         self.process.stdout(-1)
 
 
-class TestProcessStdoutFile(Base):
+class TestProcessStdoutFile(PythonBase):
     def setUp(self):
         super().setUp()
         self.txt_filename = "foo.txt"
@@ -258,7 +237,7 @@ class TestProcessStdoutFile(Base):
         with open(self.txt_filename, "r") as f:
             self.process.stdout(f)
 
-class TestProcessExit(Base):
+class TestProcessExit(PythonBase):
     def test_exit(self):
         self.write("sys.exit(1)")
         self.runpy()
@@ -276,13 +255,13 @@ class TestProcessExit(Base):
         exit_code = self.process.exit()
         self.assertEqual(exit_code, 1)
 
-class TestProcessKill(Base):
+class TestProcessKill(PythonBase):
     def test_kill(self):
         self.runpy()
         self.process.kill()
         self.assertFalse(self.process.process.isalive())
 
-class TestProcessReject(Base):
+class TestProcessReject(PythonBase):
     def test_reject(self):
         self.write("input()")
         self.runpy()
@@ -297,4 +276,5 @@ class TestProcessReject(Base):
             self.process.reject()
 
 if __name__ == '__main__':
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])
+    unittest.TextTestRunner(verbosity=2).run(suite)

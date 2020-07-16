@@ -6,25 +6,10 @@ import tempfile
 import check50.py
 import check50.internal
 
-class Base(unittest.TestCase):
-    def setUp(self):
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
+from bases import PythonBase
 
-        self.filename = "foo.py"
-        self.write("")
 
-    def write(self, source):
-        with open(self.filename, "w") as f:
-            f.write(source)
-
-    def tearDown(self):
-        self.working_directory.cleanup()
-
-    def runpy(self):
-        self.process = check50.run(f"python3 ./{self.filename}")
-
-class TestAppendCode(Base):
+class TestAppendCode(PythonBase):
     def setUp(self):
         super().setUp()
         self.other_filename = "bar.py"
@@ -51,7 +36,7 @@ class TestAppendCode(Base):
         self.assertEqual(content1, "qux\nbaz")
 
 
-class TestImport_(Base):
+class TestImport_(PythonBase):
     def setUp(self):
         super().setUp()
         self._old_check_dir = check50.internal.check_dir
@@ -75,4 +60,5 @@ class TestImport_(Base):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])
+    unittest.TextTestRunner(verbosity=2).run(suite)

@@ -1,35 +1,13 @@
 import unittest
-import contextlib
-import json
 import pexpect
 import pathlib
-import shutil
-import os
-import tempfile
+
+from bases import SpawnBase
 
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks/dynamic"
 
-class Base(unittest.TestCase):
-    def setUp(self):
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
 
-    def tearDown(self):
-        self.working_directory.cleanup()
-
-    @contextlib.contextmanager
-    def spawn(self, cmd):
-        process = pexpect.spawn(cmd)
-        process.str_last_chars = 1000
-
-        try:
-            yield process
-        except pexpect.exceptions.ExceptionPexpect as e:
-            e.value += "\n process output in utf-8:\n" + process.before.decode("utf-8")
-            raise e
-
-
-class TestOrder(Base):
+class TestOrder(SpawnBase):
     def test_display_order(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/display_order") as process:
             process.expect_exact(":) foo")
@@ -44,7 +22,7 @@ class TestOrder(Base):
             process.expect(pexpect.EOF)
 
 
-class TestCreate(Base):
+class TestCreate(SpawnBase):
     def test_create_one(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/create_one") as process:
             process.expect_exact(":) foo")
@@ -103,7 +81,7 @@ class TestCreate(Base):
             process.expect(pexpect.EOF)
 
 
-class TestUnittest(Base):
+class TestUnittest(SpawnBase):
     def test_create_checks_from_unittest(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/python_unittest") as process:
             process.expect_exact(":( some_tests.FooTest.test_fails passes")
@@ -111,7 +89,7 @@ class TestUnittest(Base):
             process.expect(pexpect.EOF)
 
 
-class TestPassState(Base):
+class TestPassState(SpawnBase):
     def test_pass_dynamic_state(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/pass_dynamic_state") as process:
             process.expect_exact(":) foo")
@@ -134,7 +112,7 @@ class TestPassState(Base):
             process.expect(pexpect.EOF)
 
 
-class TestImport(Base):
+class TestImport(SpawnBase):
     def test_import_checks_module_once(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/import_checks_module_once") as process:
             process.expect_exact(":) foo")
@@ -149,4 +127,5 @@ class TestImport(Base):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])
+    unittest.TextTestRunner(verbosity=2).run(suite)
