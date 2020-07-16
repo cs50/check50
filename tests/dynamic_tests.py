@@ -25,9 +25,42 @@ class TestCreate(Base):
         process.expect_exact(":) bar")
         process.expect(pexpect.EOF)
 
+    def test_collapsible_list(self):
+        with open("answer.txt", "w") as f:
+            f.write("wrong")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/collapsible_list")
+        process.expect_exact(":( foo")
+        process.expect(pexpect.EOF)
+
+        with open("answer.txt", "w") as f:
+            f.write("correct")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/collapsible_list")
+        process.expect_exact(":) foo")
+        process.expect_exact(":) bar")
+        process.expect_exact(":) baz")
+        process.expect(pexpect.EOF)
+
+    def test_collapsible_list_on_failure(self):
+        with open("answer.txt", "w") as f:
+            f.write("wrong")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/collapsible_list_on_failure")
+        process.expect_exact(":( foo")
+        process.expect_exact(":) bar")
+        process.expect_exact(":) baz")
+        process.expect(pexpect.EOF)
+
+        with open("answer.txt", "w") as f:
+            f.write("correct")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/collapsible_list_on_failure")
+        process.expect_exact(":) foo")
+        process.expect(pexpect.EOF)
+
     def test_static_create_error(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/static_create_error")
-        process.expect_exact(":|")
         process.expect_exact("static check foo cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)")
         process.expect(pexpect.EOF)
 

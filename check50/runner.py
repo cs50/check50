@@ -175,16 +175,6 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
 
                     # Run the check
                     side_effects.state = check(*args)
-
-                    # Register any newly created checks
-                    if len(CHECK_REGISTRY.checks) > len(existing_checks) and not check._is_dynamic:
-                        raise _exceptions.Error(_("static check {} cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)".format(check.__name__)))
-                    side_effects.new_checks = [c for c in CHECK_REGISTRY.checks if c not in existing_checks]
-
-                    # In dynamic operation avoid serialization, store state in memory instead
-                    if check._is_dynamic:
-                        CHECK_REGISTRY.dynamic_side_effects[check.__name__] = side_effects
-                        side_effects = CheckSideEffects(new_checks=side_effects.new_checks)
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload
@@ -200,6 +190,18 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
             else:
                 result.passed = True
             finally:
+                # Register any newly created checks
+                if len(CHECK_REGISTRY.checks) > len(existing_checks) and not check._is_dynamic:
+                    raise _exceptions.Error(_("static check {} cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)".format(check.__name__)))
+                side_effects.new_checks = [c for c in CHECK_REGISTRY.checks if c not in existing_checks]
+
+                # In dynamic operation avoid serialization, store state in memory instead
+                if check._is_dynamic:
+                    CHECK_REGISTRY.dynamic_side_effects[check.__name__] = side_effects
+
+                    # Create new serializable side-effects to return to main process
+                    side_effects = CheckSideEffects(new_checks=side_effects.new_checks)
+
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
                 return result, side_effects
@@ -287,10 +289,11 @@ class CheckRunner:
             # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
             self.results = {name: None for name in self.check_names}
 
+            # Run all checks
             self.run_static_checks()
-            print(f"static: {self.results}")
+
+            # Re-use the discovery executor so that the checks' module is not re-imported
             self.run_dynamic_checks(executor)
-            print(f"dynamic: {self.results}")
 
         # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
         return list(filter(None, self.results.values()))
@@ -517,8 +520,13 @@ class run_check(CheckJob):
 
     def __call__(self):
         super().__call__()
-        mod = importlib.util.module_from_spec(self.checks_spec)
-        self.checks_spec.loader.exec_module(mod)
+
+        # If there are no known checks or the check is static, (re-)import the checks' module
+        if not CHECK_REGISTRY.checks or not CHECK_REGISTRY.get_check(self.check_name)._is_dynamic:
+            mod = importlib.util.module_from_spec(self.checks_spec)
+            self.checks_spec.loader.exec_module(mod)
+
+        # Run the check
         internal.check_running = True
         try:
             return CHECK_REGISTRY.get_check(self.check_name)(self.state)
