@@ -132,6 +132,11 @@ def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
 
     """
     def decorator(check):
+        if dependency is not None and not hasattr(dependency, "_check_dependency"):
+            raise _exceptions.Error(_("the dependency {} of check {} must be a check50 check itself".format(
+                dependency, check.__name__
+            )))
+
         check._check_dependency = dependency
 
         # This check check becomes dynamic if

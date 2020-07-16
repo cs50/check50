@@ -39,8 +39,6 @@ from ._api import (
     hidden,
     include,
     run,
-    run_checks_in_serial,
-    run_checks_in_parallel,
     log, _log,
     Failure, Mismatch, Missing
 )
@@ -58,8 +56,6 @@ __all__ = ["import_checks",
            "hidden",
            "regex",
            "run",
-           "run_checks_in_serial",
-           "run_checks_in_parallel",
            "log",
            "Failure",
            "Mismatch",
