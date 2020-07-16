@@ -115,6 +115,12 @@ class TestImport(Base):
         process.expect_exact(":) bar")
         process.expect(pexpect.EOF)
 
+    def test_import_checks_module_twice(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/import_checks_module_twice")
+        process.expect_exact(":) foo")
+        process.expect_exact(":) bar")
+        process.expect(pexpect.EOF)
+
 
 if __name__ == "__main__":
     unittest.main()
