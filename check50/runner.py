@@ -53,7 +53,6 @@ class CheckResult:
 @attr.s(slots=True)
 class DiscoveryResult:
     checks = attr.ib()
-    check_runner_mode = attr.ib(default=internal.check_runner_mode)
 
 
 @attr.s(slots=True)
@@ -464,7 +463,6 @@ class CheckJob:
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
-        "internal.check_runner_mode",
         "internal.student_dir",
         "internal.run_root_dir",
         "sys.excepthook",
@@ -503,8 +501,7 @@ class discover_checks(CheckJob):
         check_module = importlib.util.module_from_spec(self.checks_spec)
         self.checks_spec.loader.exec_module(check_module)
 
-        return DiscoveryResult(checks=CHECK_REGISTRY.checks.copy(),
-                               check_runner_mode=internal.check_runner_mode)
+        return DiscoveryResult(checks=CHECK_REGISTRY.checks.copy())
 
 
 class run_check(CheckJob):

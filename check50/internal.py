@@ -14,10 +14,6 @@ import lib50
 
 from . import _simple, _exceptions
 
-class CheckRunnerMode(enum.Enum):
-    SERIAL = enum.auto()
-    PARALLEL = enum.auto()
-
 #: Directory containing the check and its associated files
 check_dir = None
 
@@ -35,9 +31,6 @@ check_running = False
 
 #: The user specified slug used to indentifies the set of checks
 slug = None
-
-#: The operation mode of the check runner
-check_runner_mode = CheckRunnerMode.PARALLEL
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
@@ -170,7 +163,7 @@ def compile_checks(checks, prompt=False, out_file="__init__.py"):
     # Prompt to replace __init__.py (compile destination)
     if prompt and file_path.exists():
         if not _yes_no_prompt("check50 will compile the YAML checks to __init__.py, are you sure you want to overwrite its contents?"):
-            raise _exceptions.Error("Aborting: could not overwrite to __init__.py")
+            raise _exceptions.Error("Aborting: could not overwrite __init__.py")
 
     # Compile simple checks
     with open(check_dir / out_file, "w") as f:
