@@ -18,6 +18,21 @@ class Base(unittest.TestCase):
         self.working_directory.cleanup()
 
 
+class TestOrder(Base):
+    def test_display_order(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/display_order")
+        process.expect_exact(":) foo")
+        process.expect_exact(":) bar")
+        process.expect_exact(":) baz")
+        process.expect_exact(":) qux")
+        process.expect(pexpect.EOF)
+
+    def test_execution_order(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/execution_order")
+        process.expect_exact("1234")
+        process.expect(pexpect.EOF)
+
+
 class TestCreate(Base):
     def test_create_one(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/create_one")
