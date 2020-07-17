@@ -262,22 +262,11 @@ class CheckRunner:
 
             # Discover all checks from the check module
             discovered = executor.submit(discover_checks(self.checks_path)).result()
-
-            # Get the names of all checks in definition order
-            self.check_names = [check["name"] for check in discovered.checks]
-
-            # Map each check name to its description
-            self.check_descriptions = {check["name"]: check["description"] for check in discovered.checks}
-
-            # All check names marked as static
-            self.static_checks = [check["name"] for check in discovered.checks if not check["is_dynamic"]]
-
-            # All check names marked as dynamic
-            self.dynamic_checks = [check["name"] for check in discovered.checks if check["is_dynamic"]]
+            self.checks = discovered.checks
 
             # Map each check to tuples containing the names of the checks that depend on it
             self.dependency_graph = collections.defaultdict(set)
-            for check in discovered.checks:
+            for check in self.checks:
                 self.dependency_graph[check["dependency"]].add(check["name"])
 
             # If there are targetted checks, build a subgraph with just the relevant checks
@@ -286,7 +275,7 @@ class CheckRunner:
 
             # Ensure that dictionary is ordered by check declaration order (via self.check_names)
             # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-            self.results = {name: None for name in self.check_names}
+            self.results = {check["name"]: None for check in self.checks}
 
             # Run all checks
             self.run_static_checks()
@@ -301,7 +290,8 @@ class CheckRunner:
     def run_dynamic_checks(self, executor):
         inverse_dependency_graph = self._create_inverse_dependency_graph()
 
-        check_queue = self.dynamic_checks[:]
+        # All check names marked as dynamic
+        check_queue = [check["name"] for check in self.checks if check["is_dynamic"]]
 
         # Run the checks in the queue
         while check_queue:
@@ -329,7 +319,6 @@ class CheckRunner:
             for new_check in side_effects.new_checks:
                 inverse_dependency_graph[new_check["name"]] = new_check["dependency"]
                 self.dependency_graph[new_check["dependency"]] = new_check["name"]
-                self.check_descriptions[new_check["name"]] = new_check["description"]
                 check_queue.append(new_check["name"])
                 self.results[new_check["name"]] = None
 
@@ -340,11 +329,7 @@ class CheckRunner:
         except (ValueError, TypeError):
             max_workers = None
 
-        # Ensure that dictionary is ordered by check declaration order (via self.check_names)
-        # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-        results = {name: None for name in self.static_checks}
-
-        static_checks = set(self.static_checks)
+        static_checks = [check["name"] for check in self.checks if not check["is_dynamic"]]
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
@@ -428,7 +413,8 @@ class CheckRunner:
 
 
     def _skip(self, name, dependency):
-        self.results[name] = CheckResult(name=name, description=self.check_descriptions[name],
+        description = [c["description"] for c in self.checks if c["name"] == name][0]
+        self.results[name] = CheckResult(name=name, description=description,
                                          passed=None,
                                          dependency=dependency,
                                          cause={"rationale": _("can't check until a frown turns upside down")})
