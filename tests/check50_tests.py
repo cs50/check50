@@ -114,6 +114,17 @@ class TestStdoutPy(Base):
         process.expect_exact("prints hello")
         process.close(force=True)
 
+class TestStdoutTimeout(Base):
+    def test_stdout_timeout(self):
+        with open("foo.py", "w") as f:
+            f.write("while True: pass")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":(")
+        process.expect_exact("check50 waited 1 seconds for the output of the program")
+        process.close(force=True)
 
 class TestStdinPy(Base):
     def test_no_file(self):
@@ -240,6 +251,36 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":)")
         process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
+
+class TestStdinHumanReadable(Base):
+    def test_without_human_readable_string(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("checking that foo.py exists...")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name")
+        process.expect_exact("running python3 foo.py...")
+        process.expect_exact("sending input bar...")
+        process.expect_exact("checking for output \"hello bar\"...")
+        process.close(force=True)
+
+    def test_with_human_readable_string(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input("prompt")')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_human_readable_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("checking that foo.py exists...")
+        process.expect_exact(":)")
+        process.expect_exact("takes input")
+        process.expect_exact("running python3 foo.py...")
+        process.expect_exact("sending input bbb...")
         process.close(force=True)
 
 

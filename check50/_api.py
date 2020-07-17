@@ -166,12 +166,15 @@ class run:
         command = "bash -c {}".format(shlex.quote(command))
         self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
 
-    def stdin(self, line, prompt=True, timeout=3):
+    def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """
         Send line to stdin, optionally expect a prompt.
 
         :param line: line to be send to stdin
         :type line: str
+        :param str_line: what will be displayed as the delivered input, a human \
+                           readable form of ``line``
+        :type str_line: str
         :param prompt: boolean indicating whether a prompt is expected, if True absorbs \
                        all of stdout before inserting line into stdin and raises \
                        :class:`check50.Failure` if stdout is empty
@@ -181,10 +184,13 @@ class run:
         :raises check50.Failure: if ``prompt`` is set to True and no prompt is given
 
         """
+        if str_line is None:
+            str_line = line
+
         if line == EOF:
             log("sending EOF...")
         else:
-            log(_("sending input {}...").format(line))
+            log(_("sending input {}...").format(str_line))
 
         if prompt:
             try:
@@ -210,7 +216,7 @@ class run:
             pass
         return self
 
-    def stdout(self, output=None, str_output=None, regex=True, timeout=3):
+    def stdout(self, output=None, str_output=None, regex=True, timeout=3, show_timeout=False):
         """
         Retrieve all output from stdout until timeout (3 sec by default). If ``output``
         is None, ``stdout`` returns all of the stdout outputted by the process, else
@@ -229,6 +235,9 @@ class run:
         :type regex: bool
         :param timeout: maximum number of seconds to wait for ``output``
         :type timeout: int / float
+        :param show_timeout: flag indicating whether the timeout in seconds \
+                                  should be displayed when a timeout occurs
+        :type show_timeout: bool
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
                                   process outputs matches it
         :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
@@ -275,6 +284,9 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
+            if show_timeout:
+                raise Missing(str_output, self.process.before,
+                              help=_("check50 waited {} seconds for the output of the program").format(timeout))
             raise Missing(str_output, self.process.before)
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
