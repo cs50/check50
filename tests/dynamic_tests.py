@@ -76,8 +76,7 @@ class TestCreate(SpawnBase):
 
     def test_register_twice(self):
         with self.spawn(f"check50 --dev {CHECKS_DIRECTORY}/register_twice") as process:
-            process.expect_exact(":) foo")
-            process.expect_exact(":) bar")
+            process.expect_exact("check with name bar is defined twice. Each check must have a unique name.")
             process.expect(pexpect.EOF)
 
 

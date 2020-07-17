@@ -251,6 +251,15 @@ class CheckRunner:
         self.checks_path = checks_path
         self.included_files = included_files
 
+        # Maps check name to check data
+        self.checks = {}
+
+        # Maps check name to CheckResult
+        self.results = {}
+
+        # Maps check name to dependent check names
+        self.dependency_graph = collections.defaultdict(set)
+
 
     def run(self, targets=None):
         """
@@ -261,20 +270,14 @@ class CheckRunner:
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
             # Discover all checks from the check module
             discovered = executor.submit(discover_checks(self.checks_path)).result()
-            self.checks = {c["name"]: c for c in discovered.checks}
 
-            # Map each check to tuples containing the names of the checks that depend on it
-            self.dependency_graph = collections.defaultdict(set)
-            for check in self.checks.values():
-                self.dependency_graph[check["dependency"]].add(check["name"])
+            # Register all discovered checks
+            for check in discovered.checks:
+                self.add_check(check)
 
             # If there are targetted checks, build a subgraph with just the relevant checks
             if targets:
                 self.dependency_graph = self.build_subgraph(targets)
-
-            # Ensure that dictionary is ordered by check declaration order (via self.check_names)
-            # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-            self.results = {name: None for name in self.checks}
 
             # Run all checks
             self.run_static_checks()
@@ -288,7 +291,7 @@ class CheckRunner:
 
     def run_dynamic_checks(self, executor):
         # All check names marked as dynamic
-        check_queue = [check["name"] for check in self.checks.values() if check["is_dynamic"]]
+        check_queue = [name for name in self.checks if self.checks[name]["is_dynamic"]]
 
         # Run the checks in the queue
         while check_queue:
@@ -314,10 +317,8 @@ class CheckRunner:
 
             # Add all dynamically created checks
             for new_check in side_effects.new_checks:
-                self.checks[new_check["name"]] = new_check
-                self.dependency_graph[new_check["dependency"]] = new_check["name"]
+                self.add_check(new_check)
                 check_queue.append(new_check["name"])
-                self.results[new_check["name"]] = None
 
 
     def run_static_checks(self):
@@ -340,9 +341,12 @@ class CheckRunner:
                     # Get result from completed check
                     result, side_effects = future.result()
 
+                    # Store side effects
                     CHECK_REGISTRY.static_side_effects[result.name] = side_effects
 
+                    # Store result
                     self.results[result.name] = result
+
                     if result.passed:
                         dependent_checks = [name for name in self.dependency_graph[result.name]
                                             if name in static_checks]
@@ -386,6 +390,25 @@ class CheckRunner:
                 deps.add(curr_check)
                 curr_check = self.checks[curr_check]["dependency"]
         return deps
+
+
+    def add_check(self, check):
+        """Add a check to the runner"""
+
+        # In case check (A) is depending on check B that is not known, error
+        # This can occur if check B is not targeted, and check A is dynamic
+        if check["dependency"] and check["dependency"] not in self.checks:
+            raise _exceptions.Error(_("check {} depends on an unknown check {} "
+                                      .format(check["name"], check["dependency"])))
+
+        # In case the check was already defined
+        if check["name"] in self.checks:
+            raise _exceptions.Error(_("check with name {} is defined twice. Each check must have a unique name."
+                                      .format(check["name"])))
+
+        self.checks[check["name"]] = check
+        self.dependency_graph[check["dependency"]].add(check["name"])
+        self.results[check["name"]] = None
 
 
     def _skip_children(self, check_name):
