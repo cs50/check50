@@ -72,5 +72,4 @@ class TestValgrind(CBase):
 
 
 if __name__ == "__main__":
-    suite = unittest.TestLoader().loadTestsFromModule(module=sys.modules[__name__])
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    unittest.main()

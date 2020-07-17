@@ -2,7 +2,6 @@
 Additional check50 internals exposed to extension writers in addition to the standard API
 """
 
-import enum
 from pathlib import Path
 import importlib
 import json
