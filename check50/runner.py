@@ -259,14 +259,13 @@ class CheckRunner:
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
-
             # Discover all checks from the check module
             discovered = executor.submit(discover_checks(self.checks_path)).result()
-            self.checks = discovered.checks
+            self.checks = {c["name"]: c for c in discovered.checks}
 
             # Map each check to tuples containing the names of the checks that depend on it
             self.dependency_graph = collections.defaultdict(set)
-            for check in self.checks:
+            for check in self.checks.values():
                 self.dependency_graph[check["dependency"]].add(check["name"])
 
             # If there are targetted checks, build a subgraph with just the relevant checks
@@ -275,7 +274,7 @@ class CheckRunner:
 
             # Ensure that dictionary is ordered by check declaration order (via self.check_names)
             # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-            self.results = {check["name"]: None for check in self.checks}
+            self.results = {name: None for name in self.checks}
 
             # Run all checks
             self.run_static_checks()
@@ -288,10 +287,8 @@ class CheckRunner:
 
 
     def run_dynamic_checks(self, executor):
-        inverse_dependency_graph = self._create_inverse_dependency_graph()
-
         # All check names marked as dynamic
-        check_queue = [check["name"] for check in self.checks if check["is_dynamic"]]
+        check_queue = [check["name"] for check in self.checks.values() if check["is_dynamic"]]
 
         # Run the checks in the queue
         while check_queue:
@@ -305,7 +302,7 @@ class CheckRunner:
                 continue
 
             # If there is a dependency and it didn't pass, skip
-            dependency = inverse_dependency_graph[check]
+            dependency = self.checks[check]["dependency"]
             if dependency and not self.results[dependency].passed:
                 self._skip(check, dependency)
                 continue
@@ -317,7 +314,7 @@ class CheckRunner:
 
             # Add all dynamically created checks
             for new_check in side_effects.new_checks:
-                inverse_dependency_graph[new_check["name"]] = new_check["dependency"]
+                self.checks[new_check["name"]] = new_check
                 self.dependency_graph[new_check["dependency"]] = new_check["name"]
                 check_queue.append(new_check["name"])
                 self.results[new_check["name"]] = None
@@ -329,7 +326,7 @@ class CheckRunner:
         except (ValueError, TypeError):
             max_workers = None
 
-        static_checks = [check["name"] for check in self.checks if not check["is_dynamic"]]
+        static_checks = [check["name"] for check in self.checks.values() if not check["is_dynamic"]]
 
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
@@ -380,25 +377,15 @@ class CheckRunner:
 
     def dependencies_of(self, targets):
         """Get all unique dependencies of the targetted checks (targets)."""
-        inverse_graph = self._create_inverse_dependency_graph()
         deps = set()
         for target in targets:
-            if target not in inverse_graph:
+            if target not in self.checks:
                 raise internal.Error(_("Unknown check: {}").format(e.args[0]))
             curr_check = target
             while curr_check is not None and curr_check not in deps:
                 deps.add(curr_check)
-                curr_check = inverse_graph[curr_check]
+                curr_check = self.checks[curr_check]["dependency"]
         return deps
-
-
-    def _create_inverse_dependency_graph(self):
-        """Build an inverse dependency map, from a check to its dependency."""
-        inverse_dependency_graph = {}
-        for check_name, dependents in self.dependency_graph.items():
-            for dependent_name in dependents:
-                inverse_dependency_graph[dependent_name] = check_name
-        return inverse_dependency_graph
 
 
     def _skip_children(self, check_name):
@@ -413,8 +400,7 @@ class CheckRunner:
 
 
     def _skip(self, name, dependency):
-        description = [c["description"] for c in self.checks if c["name"] == name][0]
-        self.results[name] = CheckResult(name=name, description=description,
+        self.results[name] = CheckResult(name=name, description=self.checks[name]["description"],
                                          passed=None,
                                          dependency=dependency,
                                          cause={"rationale": _("can't check until a frown turns upside down")})
