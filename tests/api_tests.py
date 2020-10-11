@@ -163,6 +163,74 @@ class TestProcessStdout(Base):
             self.process.stdout(".o.", regex=False)
         self.assertFalse(self.process.process.isalive())
 
+    def test_int(self):
+        self.write("print(123)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1)
+
+        self.write("print(21)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1)
+
+        self.write("print(1.0)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1)
+
+        self.write("print('a1b')")
+        self.runpy()
+        self.process.stdout(1)
+
+        self.write("print(1)")
+        self.runpy()
+        self.process.stdout(1)
+
+    def test_float(self):
+        self.write("print(1.01)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1.0)
+
+        self.write("print(21.0)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1.0)
+
+        self.write("print(1)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1.0)
+
+        self.write("print('a1.0b')")
+        self.runpy()
+        self.process.stdout(1.0)
+
+        self.write("print(1.0)")
+        self.runpy()
+        self.process.stdout(1.0)
+
+    def test_negative_number(self):
+        self.write("print(1)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(-1)
+
+        self.write("print(-1)")
+        self.runpy()
+        with self.assertRaises(check50.Failure):
+            self.process.stdout(1)
+
+        self.write("print('2-1')")
+        self.runpy()
+        self.process.stdout(-1)
+
+        self.write("print(-1)")
+        self.runpy()
+        self.process.stdout(-1)
+
+
 class TestProcessStdoutFile(Base):
     def setUp(self):
         super().setUp()

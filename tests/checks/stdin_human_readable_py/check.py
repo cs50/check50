@@ -6,6 +6,6 @@ def exists():
     check50.exists("foo.py")
 
 @check50.check(exists)
-def prints_hello():
-    """prints hello"""
-    check50.run("python3 foo.py").stdout("hello", show_timeout=True, timeout=1)
+def takes_input():
+    """takes input"""
+    check50.run("python3 foo.py").stdin("aaa", prompt=False, str_line="bbb")

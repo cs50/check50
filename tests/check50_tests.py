@@ -58,13 +58,25 @@ class TestExitPy(Base):
         process.expect_exact("can't check until a frown turns upside down")
         process.close(force=True)
 
-    def test_with_file(self):
+    def test_with_correct_file(self):
         open("foo.py", "w").close()
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":)")
         process.expect_exact("foo.py exits properly")
+        process.close(force=True)
+
+    def test_with_incorrect_file(self):
+        with open("foo.py", "w") as f:
+            f.write("from sys import exit\nexit(1)")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":(")
+        process.expect_exact("foo.py exits properly")
+        process.expect_exact("expected exit code 0, not 1")
         process.close(force=True)
 
 
@@ -102,6 +114,17 @@ class TestStdoutPy(Base):
         process.expect_exact("prints hello")
         process.close(force=True)
 
+class TestStdoutTimeout(Base):
+    def test_stdout_timeout(self):
+        with open("foo.py", "w") as f:
+            f.write("while True: pass")
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact(":(")
+        process.expect_exact("check50 waited 1 seconds for the output of the program")
+        process.close(force=True)
 
 class TestStdinPy(Base):
     def test_no_file(self):
@@ -228,6 +251,36 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":)")
         process.expect_exact("prints hello name (chaining) (order)")
+        process.close(force=True)
+
+class TestStdinHumanReadable(Base):
+    def test_without_human_readable_string(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input()\nprint("hello", name)')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("checking that foo.py exists...")
+        process.expect_exact(":)")
+        process.expect_exact("prints hello name")
+        process.expect_exact("running python3 foo.py...")
+        process.expect_exact("sending input bar...")
+        process.expect_exact("checking for output \"hello bar\"...")
+        process.close(force=True)
+
+    def test_with_human_readable_string(self):
+        with open("foo.py", "w") as f:
+            f.write('name = input("prompt")')
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_human_readable_py")
+        process.expect_exact(":)")
+        process.expect_exact("foo.py exists")
+        process.expect_exact("checking that foo.py exists...")
+        process.expect_exact(":)")
+        process.expect_exact("takes input")
+        process.expect_exact("running python3 foo.py...")
+        process.expect_exact("sending input bbb...")
         process.close(force=True)
 
 
@@ -383,6 +436,30 @@ class TestTarget(Base):
         self.assertEqual(output["results"][0]["name"], "exists4")
         self.assertEqual(output["results"][1]["name"], "exists5")
 
+
+class TestRemoteException(Base):
+    def test_no_traceback(self):
+        # Check that bar (part of traceback) is not shown
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        self.assertRaises(pexpect.exceptions.EOF, lambda: process.expect("bar"))
+
+        # Check that foo (the message) is shown
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        process.expect("foo")
+
+    def test_traceback(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_traceback")
+        process.expect("bar")
+        process.expect("foo")
+
+
+class TestInternalDirectories(Base):
+    def test_directories_exist(self):
+        with open("foo.py", "w") as f:
+            f.write(os.getcwd())
+
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/internal_directories")
+        process.expect_exact(":)")
 
 if __name__ == "__main__":
     unittest.main()

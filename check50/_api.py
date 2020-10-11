@@ -1,6 +1,8 @@
 import hashlib
 import functools
+import numbers
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -10,7 +12,7 @@ import time
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
-from . import internal
+from . import internal, regex
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -135,6 +137,7 @@ def import_checks(path):
     return mod
 
 
+
 class run:
     """
     Run a command.
@@ -163,12 +166,15 @@ class run:
         command = "bash -c {}".format(shlex.quote(command))
         self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
 
-    def stdin(self, line, prompt=True, timeout=3):
+    def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """
         Send line to stdin, optionally expect a prompt.
 
         :param line: line to be send to stdin
         :type line: str
+        :param str_line: what will be displayed as the delivered input, a human \
+                           readable form of ``line``
+        :type str_line: str
         :param prompt: boolean indicating whether a prompt is expected, if True absorbs \
                        all of stdout before inserting line into stdin and raises \
                        :class:`check50.Failure` if stdout is empty
@@ -178,10 +184,13 @@ class run:
         :raises check50.Failure: if ``prompt`` is set to True and no prompt is given
 
         """
+        if str_line is None:
+            str_line = line
+
         if line == EOF:
             log("sending EOF...")
         else:
-            log(_("sending input {}...").format(line))
+            log(_("sending input {}...").format(str_line))
 
         if prompt:
             try:
@@ -207,15 +216,18 @@ class run:
             pass
         return self
 
-    def stdout(self, output=None, str_output=None, regex=True, timeout=3):
+    def stdout(self, output=None, str_output=None, regex=True, timeout=3, show_timeout=False):
         """
         Retrieve all output from stdout until timeout (3 sec by default). If ``output``
         is None, ``stdout`` returns all of the stdout outputted by the process, else
         it returns ``self``.
 
         :param output: optional output to be expected from stdout, raises \
-                       :class:`check50.Failure` if no match
-        :type output: str
+                       :class:`check50.Failure` if no match \
+                       In case output is a float or int, the check50.number_regex \
+                       is used to match just that number". \
+                       In case output is a stream its contents are used via output.read().
+        :type output: str, int, float, stream
         :param str_output: what will be displayed as expected output, a human \
                            readable form of ``output``
         :type str_output: str
@@ -223,6 +235,9 @@ class run:
         :type regex: bool
         :param timeout: maximum number of seconds to wait for ``output``
         :type timeout: int / float
+        :param show_timeout: flag indicating whether the timeout in seconds \
+                                  should be displayed when a timeout occurs
+        :type show_timeout: bool
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
                                   process outputs matches it
         :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
@@ -239,20 +254,26 @@ class run:
             self._wait(timeout)
             return self.process.before.replace("\r\n", "\n").lstrip("\n")
 
+        # In case output is a stream (file-like object), read from it
         try:
             output = output.read()
         except AttributeError:
             pass
 
-        expect = self.process.expect if regex else self.process.expect_exact
-
         if str_output is None:
-            str_output = output
+            str_output = str(output)
+
+        # In case output is an int/float, use a regex to match exactly that int/float
+        if isinstance(output, numbers.Number):
+            regex = True
+            output = globals()["regex"].decimal(output)
+
+        expect = self.process.expect if regex else self.process.expect_exact
 
         if output == EOF:
             log(_("checking for EOF..."))
         else:
-            output = output.replace("\n", "\r\n")
+            output = str(output).replace("\n", "\r\n")
             log(_("checking for output \"{}\"...").format(str_output))
 
         try:
@@ -263,6 +284,9 @@ class run:
                 result += self.process.after
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
+            if show_timeout:
+                raise Missing(str_output, self.process.before,
+                              help=_("check50 waited {} seconds for the output of the program").format(timeout))
             raise Missing(str_output, self.process.before)
         except UnicodeDecodeError:
             raise Failure(_("output not valid ASCII text"))
@@ -401,6 +425,10 @@ class Missing(Failure):
 
     def __init__(self, missing_item, collection, help=None):
         super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+
+        if missing_item == EOF:
+            missing_item = "EOF"
+
         self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
 
 
