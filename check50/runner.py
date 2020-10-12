@@ -17,10 +17,8 @@ import traceback
 import attr
 import lib50
 
-from . import internal, __version__
+from . import internal, _exceptions, __version__
 from ._api import log, Failure, _copy, _log, _data
-
-_check_names = []
 
 
 @attr.s(slots=True)
@@ -39,7 +37,8 @@ class CheckResult:
         """Create a check_result given a check function, automatically recording the name,
         the dependency, and the (translated) description.
         """
-        return cls(name=check.__name__, description=_(check.__doc__ if check.__doc__ else check.__name__.replace("_", " ")),
+        return cls(name=check.__name__,
+                   description=_(check.__doc__ if check.__doc__ else check.__name__.replace("_", " ")),
                    dependency=check._check_dependency.__name__ if check._check_dependency else None,
                    *args,
                    **kwargs)
@@ -50,6 +49,16 @@ class CheckResult:
         Throws a KeyError if not."""
         return cls(**{field.name: d[field.name] for field in attr.fields(cls)})
 
+
+@attr.s(slots=True)
+class DiscoveryResult:
+    checks = attr.ib()
+
+
+@attr.s(slots=True)
+class CheckSideEffects:
+    state = attr.ib(default=None)
+    new_checks = attr.ib(default=attr.Factory(list))
 
 
 class Timeout(Failure):
@@ -82,13 +91,15 @@ def _timeout(seconds):
         signal.signal(signal.SIGALRM, signal.SIG_DFL)
 
 
-def check(dependency=None, timeout=60, max_log_lines=100):
+def check(dependency=None, timeout=60, dynamic=False, max_log_lines=100):
     """Mark function as a check.
 
     :param dependency: the check that this check depends on
     :type dependency: function
     :param timeout: maximum number of seconds the check can run
     :type timeout: int
+    :param dynamic: mark the check as dynamic
+    :type dynamic: bool
     :param max_log_lines: maximum number of lines that can appear in the log
     :type max_log_lines: int
 
@@ -120,30 +131,49 @@ def check(dependency=None, timeout=60, max_log_lines=100):
 
     """
     def decorator(check):
+        if dependency is not None and not hasattr(dependency, "_check_dependency"):
+            raise _exceptions.Error(_("the dependency {} of check {} must be a check50 check itself".format(
+                dependency, check.__name__
+            )))
 
-        # Modules are evaluated from the top of the file down, so _check_names will
-        # contain the names of the checks in the order in which they are declared
-        _check_names.append(check.__name__)
         check._check_dependency = dependency
 
+        # This check check becomes dynamic if
+        # - It's marked as such
+        # - A check is running while this check is created
+        # - It's dependending on a dynamic check
+        check._is_dynamic = dynamic \
+                            or internal.check_running \
+                            or (check._check_dependency and check._check_dependency._is_dynamic)
+
         @functools.wraps(check)
-        def wrapper(run_root_dir, dependency_state):
+        def wrapper(dependency_state):
+
             # Result template
             result = CheckResult.from_check(check)
-            # Any shared (returned) state
-            state = None
+
+            # Any side effects from the check
+            side_effects = CheckSideEffects()
+
+            # If this checks' dependency is dynamic, take the state from memory
+            if dependency and dependency._is_dynamic:
+                dependency_state = CHECK_REGISTRY.dynamic_side_effects[dependency.__name__].state
 
             try:
                 # Setup check environment, copying disk state from dependency
-                internal.run_dir = run_root_dir / check.__name__
-                src_dir = run_root_dir / (dependency.__name__ if dependency else "-")
+                internal.run_dir = internal.run_root_dir / check.__name__
+                src_dir = internal.run_root_dir / (dependency.__name__ if dependency else "-")
                 shutil.copytree(src_dir, internal.run_dir)
                 os.chdir(internal.run_dir)
+
+                existing_checks = CHECK_REGISTRY.checks[:]
 
                 # Run registered functions before/after running check and set timeout
                 with internal.register, _timeout(seconds=timeout):
                     args = (dependency_state,) if inspect.getfullargspec(check).args else ()
-                    state = check(*args)
+
+                    # Run the check
+                    side_effects.state = check(*args)
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload
@@ -159,11 +189,61 @@ def check(dependency=None, timeout=60, max_log_lines=100):
             else:
                 result.passed = True
             finally:
+                # Register any newly created checks
+                if len(CHECK_REGISTRY.checks) > len(existing_checks) and not check._is_dynamic:
+                    raise _exceptions.Error(_("static check {} cannot create other checks, please mark it as dynamic with @check50.check(dynamic=True)".format(check.__name__)))
+                side_effects.new_checks = [c for c in CHECK_REGISTRY.checks if c not in existing_checks]
+
+                # In dynamic operation avoid serialization, store state in memory instead
+                if check._is_dynamic:
+                    CHECK_REGISTRY.dynamic_side_effects[check.__name__] = side_effects
+
+                    # Create new serializable side-effects to return to main process
+                    side_effects = CheckSideEffects(new_checks=side_effects.new_checks)
+
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
-                return result, state
+                return result, side_effects
+
+        # Modules are evaluated from the top of the file down, so CheckRunner will
+        # contain checks in the order in which they are declared
+        CHECK_REGISTRY.register_check(wrapper)
+
         return wrapper
     return decorator
+
+
+class _CheckRegistry:
+    def __init__(self):
+        self.checks = []
+        self.static_side_effects = collections.defaultdict(CheckSideEffects)
+        self.dynamic_side_effects = collections.defaultdict(CheckSideEffects)
+        self._checks_in_memory = {}
+
+
+    def get_check(self, name):
+        return self._checks_in_memory[name]
+
+
+    def register_check(self, check):
+        self.checks.append({
+            "name": check.__name__,
+            "dependency": None if check._check_dependency is None else check._check_dependency.__name__,
+            "description": check.__doc__,
+            "is_dynamic": check._is_dynamic
+        })
+
+        self._checks_in_memory[check.__name__] = check
+
+
+    def clear(self):
+        self.checks.clear()
+        self._checks_in_memory.clear()
+        self.static_side_effects.clear()
+        self.dynamic_side_effects.clear()
+
+# Sole instance of CheckRegistry, NOT thread-safe
+CHECK_REGISTRY = _CheckRegistry()
 
 
 class CheckRunner:
@@ -171,48 +251,115 @@ class CheckRunner:
         self.checks_path = checks_path
         self.included_files = included_files
 
+        # Maps check name to check data
+        self.checks = {}
+
+        # Maps check name to CheckResult
+        self.results = {}
+
+        # Maps check name to dependent check names
+        self.dependency_graph = collections.defaultdict(set)
+
+
     def run(self, targets=None):
         """
         Run checks concurrently.
         Returns a list of CheckResults ordered by declaration order of the checks in the imported module
         targets allows you to limit which checks run. If targets is false-y, all checks are run.
         """
-        graph = self.build_subgraph(targets) if targets else self.dependency_graph
+        with futures.ProcessPoolExecutor(max_workers=1) as executor:
+            # Discover all checks from the check module
+            discovered = executor.submit(discover_checks(self.checks_path)).result()
 
-        # Ensure that dictionary is ordered by check declaration order (via self.check_names)
-        # NOTE: Requires CPython 3.6. If we need to support older versions of Python, replace with OrderedDict.
-        results = {name: None for name in self.check_names}
+            # Register all discovered checks
+            for check in discovered.checks:
+                self.add_check(check)
 
+            # If there are targetted checks, build a subgraph with just the relevant checks
+            if targets:
+                self.dependency_graph = self.build_subgraph(targets)
+
+            # Run all checks
+            self.run_static_checks()
+
+            # Re-use the discovery executor so that the checks' module is not re-imported
+            self.run_dynamic_checks(executor)
+
+        # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
+        return list(filter(None, self.results.values()))
+
+
+    def run_dynamic_checks(self, executor):
+        # All check names marked as dynamic
+        check_queue = [name for name in self.checks if self.checks[name]["is_dynamic"]]
+
+        # Run the checks in the queue
+        while check_queue:
+
+            # Get the first check from the queue
+            check = check_queue[0]
+            del check_queue[0]
+
+            # If there is already a result for this check, skip
+            if self.results[check]:
+                continue
+
+            # If there is a dependency and it didn't pass, skip
+            dependency = self.checks[check]["dependency"]
+            if dependency and not self.results[dependency].passed:
+                self._skip(check, dependency)
+                continue
+
+            # Run the check
+            static_state = CHECK_REGISTRY.static_side_effects[dependency].state
+            result, side_effects = executor.submit(run_check(check, self.checks_path, static_state)).result()
+            self.results[check] = result
+
+            # Add all dynamically created checks
+            for new_check in side_effects.new_checks:
+                self.add_check(new_check)
+                check_queue.append(new_check["name"])
+
+
+    def run_static_checks(self):
         try:
             max_workers = int(os.environ.get("CHECK50_WORKERS"))
         except (ValueError, TypeError):
             max_workers = None
 
+        static_checks = [check["name"] for check in self.checks.values() if not check["is_dynamic"]]
+
         with futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             # Start all checks that have no dependencies
-            not_done = set(executor.submit(run_check(name, self.checks_spec))
-                           for name in graph[None])
+            not_done = set(executor.submit(run_check(name, self.checks_path))
+                           for name in self.dependency_graph[None] if name in static_checks)
             not_passed = []
 
             while not_done:
                 done, not_done = futures.wait(not_done, return_when=futures.FIRST_COMPLETED)
                 for future in done:
                     # Get result from completed check
-                    result, state = future.result()
-                    results[result.name] = result
+                    result, side_effects = future.result()
+
+                    # Store side effects
+                    CHECK_REGISTRY.static_side_effects[result.name] = side_effects
+
+                    # Store result
+                    self.results[result.name] = result
+
                     if result.passed:
+                        dependent_checks = [name for name in self.dependency_graph[result.name]
+                                            if name in static_checks]
+
                         # Dispatch dependent checks
-                        for child_name in graph[result.name]:
+                        for child_name in dependent_checks:
                             not_done.add(executor.submit(
-                                run_check(child_name, self.checks_spec, state)))
+                                run_check(child_name, self.checks_path, side_effects.state)))
                     else:
                         not_passed.append(result.name)
 
         for name in not_passed:
-            self._skip_children(name, results)
-
-        # Don't include checks we don't have results for (i.e. in the case that targets != None) in the list.
-        return list(filter(None, results.values()))
+            self._skip_children(name)
 
 
     def build_subgraph(self, targets):
@@ -233,40 +380,53 @@ class CheckRunner:
 
 
     def dependencies_of(self, targets):
-        """Get all unique dependencies of the targetted checks (tartgets)."""
-        inverse_graph = self._create_inverse_dependency_graph()
+        """Get all unique dependencies of the targetted checks (targets)."""
         deps = set()
         for target in targets:
-            if target not in inverse_graph:
+            if target not in self.checks:
                 raise internal.Error(_("Unknown check: {}").format(e.args[0]))
             curr_check = target
             while curr_check is not None and curr_check not in deps:
                 deps.add(curr_check)
-                curr_check = inverse_graph[curr_check]
+                curr_check = self.checks[curr_check]["dependency"]
         return deps
 
 
-    def _create_inverse_dependency_graph(self):
-        """Build an inverse dependency map, from a check to its dependency."""
-        inverse_dependency_graph = {}
-        for check_name, dependents in self.dependency_graph.items():
-            for dependent_name in dependents:
-                inverse_dependency_graph[dependent_name] = check_name
-        return inverse_dependency_graph
+    def add_check(self, check):
+        """Add a check to the runner"""
+
+        # In case check (A) is depending on check B that is not known, error
+        # This can occur if check B is not targeted, and check A is dynamic
+        if check["dependency"] and check["dependency"] not in self.checks:
+            raise _exceptions.Error(_("check {} depends on an unknown check {} "
+                                      .format(check["name"], check["dependency"])))
+
+        # In case the check was already defined
+        if check["name"] in self.checks:
+            raise _exceptions.Error(_("check with name {} is defined twice. Each check must have a unique name."
+                                      .format(check["name"])))
+
+        self.checks[check["name"]] = check
+        self.dependency_graph[check["dependency"]].add(check["name"])
+        self.results[check["name"]] = None
 
 
-    def _skip_children(self, check_name, results):
+    def _skip_children(self, check_name):
         """
         Recursively skip the children of check_name (presumably because check_name
         did not pass).
         """
         for name in self.dependency_graph[check_name]:
-            if results[name] is None:
-                results[name] = CheckResult(name=name, description=self.check_descriptions[name],
-                                            passed=None,
-                                            dependency=check_name,
-                                            cause={"rationale": _("can't check until a frown turns upside down")})
-                self._skip_children(name, results)
+            if self.results[name] is None:
+                self._skip(name, check_name)
+                self._skip_children(name)
+
+
+    def _skip(self, name, dependency):
+        self.results[name] = CheckResult(name=name, description=self.checks[name]["description"],
+                                         passed=None,
+                                         dependency=dependency,
+                                         cause={"rationale": _("can't check until a frown turns upside down")})
 
 
     def __enter__(self):
@@ -281,30 +441,6 @@ class CheckRunner:
         self._cd_manager = lib50.cd(internal.run_root_dir)
         self._cd_manager.__enter__()
 
-        # TODO: Naming the module "checks" is arbitray. Better name?
-        self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
-
-        # Clear check_names, import module, then save check_names. Not thread safe.
-        # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
-        # but there are a lot of subtleties with using `inspect` or similar here
-        _check_names.clear()
-        check_module = importlib.util.module_from_spec(self.checks_spec)
-        self.checks_spec.loader.exec_module(check_module)
-        self.check_names = _check_names.copy()
-        _check_names.clear()
-
-        # Grab all checks from the module
-        checks = inspect.getmembers(check_module, lambda f: hasattr(f, "_check_dependency"))
-
-        # Map each check to tuples containing the names of the checks that depend on it
-        self.dependency_graph = collections.defaultdict(set)
-        for name, check in checks:
-            dependency = None if check._check_dependency is None else check._check_dependency.__name__
-            self.dependency_graph[dependency].add(name)
-
-        # Map each check name to its description
-        self.check_descriptions = {name: check.__doc__ for name, check in checks}
-
         return self
 
 
@@ -316,13 +452,7 @@ class CheckRunner:
         self._cd_manager.__exit__(type, value, tb)
 
 
-class run_check:
-    """
-    Check job that runs in a separate process.
-    This is only a class to get around the fact that `pickle` can't serialize closures.
-    This class is essentially a function that reimports the check module and runs the check.
-    """
-
+class CheckJob:
     # All attributes shared between check50's main process and each checks' process
     # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     CROSS_PROCESS_ATTRIBUTES = (
@@ -334,11 +464,10 @@ class run_check:
         "__version__"
     )
 
-    def __init__(self, check_name, spec, state=None):
-        self.check_name = check_name
-        self.spec = spec
-        self.state = state
-        self.attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
+    def __init__(self, checks_path):
+        self.checks_path = checks_path
+        self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
+        self._attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
 
     @staticmethod
     def _set_attribute(name, value):
@@ -352,13 +481,46 @@ class run_check:
         setattr(obj, parts[-1], value)
 
     def __call__(self):
-        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
+        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
             self._set_attribute(name, val)
 
-        mod = importlib.util.module_from_spec(self.spec)
-        self.spec.loader.exec_module(mod)
+
+class discover_checks(CheckJob):
+    def __call__(self):
+        super().__call__()
+
+        # Clear CheckRunner, import module, then save check_names. Not thread safe.
+        # Ideally, there'd be a better way to extract declaration order than @check mutating global state,
+        # but there are a lot of subtleties with using `inspect` or similar here
+        CHECK_REGISTRY.clear()
+        check_module = importlib.util.module_from_spec(self.checks_spec)
+        self.checks_spec.loader.exec_module(check_module)
+
+        return DiscoveryResult(checks=CHECK_REGISTRY.checks.copy())
+
+
+class run_check(CheckJob):
+    """
+    Check job that runs in a separate process.
+    This is only a class to get around the fact that `pickle` can't serialize closures.
+    This class is essentially a function that reimports the check module and runs the check.
+    """
+    def __init__(self, check_name, checks_path, state=None):
+        super().__init__(checks_path)
+        self.check_name = check_name
+        self.state = state
+
+    def __call__(self):
+        super().__call__()
+
+        # If there are no known checks or the check is static, (re-)import the checks' module
+        if not CHECK_REGISTRY.checks or not CHECK_REGISTRY.get_check(self.check_name)._is_dynamic:
+            mod = importlib.util.module_from_spec(self.checks_spec)
+            self.checks_spec.loader.exec_module(mod)
+
+        # Run the check
         internal.check_running = True
         try:
-            return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
+            return CHECK_REGISTRY.get_check(self.check_name)(self.state)
         finally:
             internal.check_running = False

@@ -27,7 +27,6 @@ def _setup_translation():
     _translation.install()
 
 
-
 # Encapsulated inside a function so their local variables/imports aren't seen by autocompleters
 _set_version()
 _setup_translation()
@@ -37,10 +36,10 @@ from ._api import (
     data, _data,
     exists,
     hash,
+    hidden,
     include,
     run,
     log, _log,
-    hidden,
     Failure, Mismatch, Missing
 )
 
@@ -49,5 +48,17 @@ from . import regex
 from .runner import check
 from pexpect import EOF
 
-__all__ = ["import_checks", "data", "exists", "hash", "include", "regex",
-           "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF"]
+__all__ = ["import_checks",
+           "data",
+           "exists",
+           "hash",
+           "include",
+           "hidden",
+           "regex",
+           "run",
+           "log",
+           "Failure",
+           "Mismatch",
+           "Missing",
+           "check",
+           "EOF"]
