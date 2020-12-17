@@ -6,8 +6,10 @@ import functools
 import inspect
 import importlib
 import gettext
+import multiprocessing
 import os
 from pathlib import Path
+import pickle
 import shutil
 import signal
 import sys
@@ -338,7 +340,19 @@ class run_check:
         self.check_name = check_name
         self.spec = spec
         self.state = state
-        self.attribute_values = tuple(eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES)
+        self.attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
+        
+        # Replace all unpickle-able values with nothing, assuming they've been set externally,
+        # and will be set again upon re-importing the checks module
+        # https://github.com/cs50/check50/issues/235
+        for i, value in enumerate(self.attribute_values):
+            try:
+                pickle.dumps(value)
+            except pickle.PicklingError:
+                self.attribute_values[i] = None
+                
+        self.attribute_values = tuple(self.attribute_values)
+
 
     @staticmethod
     def _set_attribute(name, value):
@@ -352,8 +366,9 @@ class run_check:
         setattr(obj, parts[-1], value)
 
     def __call__(self):
-        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
-            self._set_attribute(name, val)
+        if multiprocessing.get_start_method() == "spawn":
+            for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
+                self._set_attribute(name, val)
 
         mod = importlib.util.module_from_spec(self.spec)
         self.spec.loader.exec_module(mod)
