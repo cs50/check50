@@ -19,7 +19,7 @@ import traceback
 import attr
 import lib50
 
-from . import internal, __version__
+from . import internal, _exceptions, __version__
 from ._api import log, Failure, _copy, _log, _data
 
 _check_names = []
@@ -240,7 +240,7 @@ class CheckRunner:
         deps = set()
         for target in targets:
             if target not in inverse_graph:
-                raise internal.Error(_("Unknown check: {}").format(e.args[0]))
+                raise _exceptions.Error(_("Unknown check: {}").format(e.args[0]))
             curr_check = target
             while curr_check is not None and curr_check not in deps:
                 deps.add(curr_check)
@@ -340,18 +340,42 @@ class run_check:
         self.check_name = check_name
         self.spec = spec
         self.state = state
-        self.attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
+        self._store_attributes()
+
+    def _store_attributes(self):
+        """"
+        Store all values from the attributes from run_check.CROSS_PROCESS_ATTRIBUTES on this object,
+        in case multiprocessing is using spawn as its starting method. 
+        """
+
+        # Attributes only need to be passed explicitely to child processes when using spawn
+        if multiprocessing.get_start_method() != "spawn":
+           return
+
+        self._attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
         
         # Replace all unpickle-able values with nothing, assuming they've been set externally,
         # and will be set again upon re-importing the checks module
         # https://github.com/cs50/check50/issues/235
-        for i, value in enumerate(self.attribute_values):
+        for i, value in enumerate(self._attribute_values):
             try:
                 pickle.dumps(value)
-            except pickle.PicklingError:
-                self.attribute_values[i] = None
+            except (pickle.PicklingError, AttributeError):
+                self._attribute_values[i] = None
                 
-        self.attribute_values = tuple(self.attribute_values)
+        self._attribute_values = tuple(self._attribute_values)
+
+
+    def _set_attributes(self):
+        """
+        If the parent process set any values in self._attribute_values, 
+        restore them in the child process.
+        """
+        if not hasattr(self, "_attribute_values"):
+           return
+
+        for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
+            self._set_attribute(name, val)
 
 
     @staticmethod
@@ -365,13 +389,18 @@ class run_check:
 
         setattr(obj, parts[-1], value)
 
-    def __call__(self):
-        if multiprocessing.get_start_method() == "spawn":
-            for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self.attribute_values):
-                self._set_attribute(name, val)
 
+    def __call__(self):
+        # Restore any attributes from the partent process
+        self._set_attributes()
+
+        # Create the checks module
         mod = importlib.util.module_from_spec(self.spec)
+
+        # Execute (effectively import) the checcks module
         self.spec.loader.exec_module(mod)
+
+        # Run just the check named self.check_name
         internal.check_running = True
         try:
             return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
