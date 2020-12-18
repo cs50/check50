@@ -391,7 +391,7 @@ class run_check:
 
 
     def __call__(self):
-        # Restore any attributes from the partent process
+        # Restore any attributes from the parent process
         self._set_attributes()
 
         # Create the checks module
