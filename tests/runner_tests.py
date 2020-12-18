@@ -26,9 +26,6 @@ else:
 
 class TestMultiprocessingStartMethods(unittest.TestCase):
     def setUp(self):
-        self.working_directory = tempfile.TemporaryDirectory()
-        os.chdir(self.working_directory.name)
-
         # Keep track of get_start_method
         # This function gets monkey patched to ensure run_check is aware of the multiprocessing context, 
         # without needing to explicitely pass the context to run_check.
@@ -37,13 +34,9 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         self._get_start_method = multiprocessing.get_start_method()
 
     def tearDown(self):
-        self.working_directory.cleanup()
         multiprocessing.get_start_method = self._get_start_method
 
     def test_unpicklable_attribute(self):
-        with open("foo.py", "w") as f:
-            pass
-
         # Create the checks_spec and check_name needed for run_check
         checks_path = CHECKS_DIRECTORY / "unpicklable_attribute/__init__.py"
         check_name = "foo"
