@@ -397,7 +397,7 @@ class run_check:
         # Create the checks module
         mod = importlib.util.module_from_spec(self.spec)
 
-        # Execute (effectively import) the checcks module
+        # Execute (effectively import) the checks module
         self.spec.loader.exec_module(mod)
 
         # Run just the check named self.check_name
