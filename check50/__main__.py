@@ -373,8 +373,8 @@ def main():
 
             # Create a working_area (temp dir) named - with all included student files
             with CheckRunner(checks_file, included_files) as check_runner, \
-                    contextlib.redirect_stdout(LoggerWriter(LOGGER, logging.INFO)), \
-                    contextlib.redirect_stderr(LoggerWriter(LOGGER, logging.INFO)):
+                    contextlib.redirect_stdout(LoggerWriter(LOGGER, logging.NOTSET)), \
+                    contextlib.redirect_stderr(LoggerWriter(LOGGER, logging.NOTSET)):
 
                 check_results = check_runner.run(args.target)
                 results = {
