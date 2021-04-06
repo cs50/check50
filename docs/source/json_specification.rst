@@ -59,7 +59,7 @@ Produces the following:
                 },
                 "data": {},
                 "dependency": "compiles"
-            },
+            }
         ],
         "version": "3.0.0"
     }
