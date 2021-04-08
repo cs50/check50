@@ -1,3 +1,4 @@
+import contextlib
 import json
 import sys
 import traceback
@@ -6,6 +7,13 @@ import lib50
 import termcolor
 
 from . import internal, __version__
+
+
+@contextlib.contextmanager
+def nullcontext(entry_result=None):
+    """This is just contextlib.nullcontext but that function is only available in 3.7+."""
+    yield entry_result
+
 
 class Error(Exception):
     """Exception for internal check50 errors."""
