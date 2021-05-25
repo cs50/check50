@@ -3,6 +3,7 @@ import json
 import pexpect
 import pathlib
 import shutil
+import subprocess
 import os
 import tempfile
 
@@ -460,6 +461,36 @@ class TestInternalDirectories(Base):
 
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/internal_directories")
         process.expect_exact(":)")
+
+
+class TestExitCode(Base):
+    def test_error_result_exit_code(self):
+        process = subprocess.run(
+            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/error"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2
+        )
+        self.assertEqual(process.returncode, 1)
+
+    def test_failed_check_exit_code(self):
+        process = subprocess.run(
+            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/failure"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2
+        )
+        self.assertEqual(process.returncode, 1)
+
+    def test_successful_exit(self):
+        process = subprocess.run(
+            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/success"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2
+        )
+        self.assertEqual(process.returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
