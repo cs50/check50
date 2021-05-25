@@ -467,7 +467,8 @@ class TestExitCode(Base):
     def test_error_result_exit_code(self):
         process = subprocess.run(
             ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/error"],
-            capture_output=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             timeout=2
         )
         self.assertEqual(process.returncode, 1)
@@ -475,7 +476,8 @@ class TestExitCode(Base):
     def test_failed_check_exit_code(self):
         process = subprocess.run(
             ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/failure"],
-            capture_output=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             timeout=2
         )
         self.assertEqual(process.returncode, 1)
