@@ -482,6 +482,15 @@ class TestExitCode(Base):
         )
         self.assertEqual(process.returncode, 1)
 
+    def test_successful_exit(self):
+        process = subprocess.run(
+            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/success"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2
+        )
+        self.assertEqual(process.returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
