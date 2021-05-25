@@ -410,6 +410,11 @@ def main():
 
                     termcolor.cprint(_("To see the results in your browser go to {}").format(url), "white", attrs=["bold"])
 
+    sys.exit(should_fail(results))
+
+def should_fail(results):
+    return "error" in results or any(not result["passed"] for result in results["results"])
+
 
 if __name__ == "__main__":
     main()
