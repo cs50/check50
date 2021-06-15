@@ -12,8 +12,8 @@ script:
   # - python setup.py compile_catalog
   - python -m tests
   - travis-sphinx build
-# TODO: remove branches flag when we actually deploy to master
-after_success: travis-sphinx deploy --branches master,develop
+# TODO: remove branches flag when we actually deploy to main
+after_success: travis-sphinx deploy --branches main,develop
 before_deploy: |
   version="v$(check50 --version | cut --delimiter ' ' --fields 2)"
   if [ -z "$(git tag --list "$version")" ]; then \
@@ -26,15 +26,15 @@ deploy:
   api_key: $GH_TOKEN
   skip_cleanup: true
   on:
-    branch: master
+    branch: main
 - provider: pypi
   user: "$PYPI_USERNAME"
   password: "$PYPI_PASSWORD"
   skip_cleanup: true
   on:
-    branch: master
+    branch: main
 - provider: script
-  script: 'curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data "{ \"request\": { \"branch\": \"master\" } }" "https://api.travis-ci.org/repo/cs50%2Fmanual50/requests"'
+  script: 'curl --silent --request POST --header "Content-Type: application/json" --header "Accept: application/json" --header "Travis-API-Version: 3" --header "Authorization: token $TRAVIS_TOKEN" --data "{ \"request\": { \"branch\": \"main\" } }" "https://api.travis-ci.org/repo/cs50%2Fmanual50/requests"'
   on: develop
 notifications:
   slack:
