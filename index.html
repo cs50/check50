@@ -1,0 +1,258 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>check50 &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running check50" href="check50_user.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="check50_user.html">Running check50</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json_specification.html">JSON specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="check_writer.html">Writing check50 checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extension_writer.html">Writing check50 extensions</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+        
+      <li><code class="docutils literal notranslate"><span class="pre">check50</span></code></li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="check50">
+<h1><code class="docutils literal notranslate"><span class="pre">check50</span></code><a class="headerlink" href="#check50" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>check50 is a tool for checking student code. As a student you can use check50 to check your CS50 problem sets or any other Problem sets for which check50 checks exist. check50 allows teachers to automatically grade code on correctness and to provide automatic feedback while students are coding.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>First make sure you have Python 3.6 or higher installed. You can download Python <a href="https://www.python.org/downloads/" target="_blank">here</a>.</p>
+<p>check50 has a dependency on git, please make sure to <a href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git" target="_blank">install git</a> if git is not already installed.</p>
+<p>To install check50 under Linux / OS X:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install check50
+</pre></div>
+</div>
+<p>Under Windows, please <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10" target="_blank">install the Linux subsystem</a>. Then install check50 within the subsystem.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>To use check50 to check a problem, execute check50 like so:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 &lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;check&gt;
+</pre></div>
+</div>
+<p>For instance, if you want to check <a href="https://github.com/cs50/problems/tree/2018/x/caesar" target="_blank">CS50's Caesar problem from edX 2018</a> you call:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 cs50/problems/2018/x/caesar
+</pre></div>
+</div>
+<p>You can choose to run checks locally by passing the <code class="docutils literal notranslate"><span class="pre">--local</span></code> flag like so:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --local &lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;check&gt;
+</pre></div>
+</div>
+<p>For an overview of all flags run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --help
+</pre></div>
+</div>
+</section>
+<section id="design">
+<h2>Design<a class="headerlink" href="#design" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Write checks for code in code</strong> check50 uses pure Python for checks and exposes a small Python api for common functionality.</p></li>
+<li><p><strong>Extensibility in checks</strong> Anyone can add checks to check50 without asking for permission. In fact, here is a tutorial to get you started: <a class="reference internal" href="check_writer.html#check-writer"><span class="std std-ref">Writing check50 checks</span></a></p></li>
+<li><p><strong>Extensibility in the tool itself</strong> We cannot predict everything you need, nor can we cater for every use-case out of the box. This is why check50 provides you with a mechanism for adding your own code to the tool, once more without asking for permission. This lets you support different programming languages and add new functionality. Jump to <a class="reference internal" href="extension_writer.html#extension-writer"><span class="std std-ref">Writing check50 extensions</span></a> to learn more.</p></li>
+<li><p><strong>PaaS</strong> check50 can run online. This guarantees a consistent environment and lets you check code for correctness without introducing your own hardware.</p></li>
+</ul>
+</section>
+<section id="checks">
+<h2>Checks<a class="headerlink" href="#checks" title="Permalink to this headline">¶</a></h2>
+<p>In check50 the checks are decoupled from the tool. You can find CS50’s set of checks for CS50 problem sets at <a href="https://github.com/cs50/problems" target="_blank">/cs50/problems</a>. If you would like to develop your own set of checks such that you can use check50 in your own course jump to  <a class="reference internal" href="check_writer.html#check-writer"><span class="std std-ref">Writing check50 checks</span></a>.</p>
+<p>Under the hood, checks are naked Python functions decorated with the <code class="docutils literal notranslate"><span class="pre">&#64;check50.check</span></code> decorator. check50 exposes several functions, see <a class="reference internal" href="api.html#api"><span class="std std-ref">API docs</span></a>, that allow you to easily write checks for input/output testing. check50 comes with three builtin extensions: <code class="docutils literal notranslate"><span class="pre">c</span></code>, <code class="docutils literal notranslate"><span class="pre">py</span></code> and <code class="docutils literal notranslate"><span class="pre">flask</span></code>. These extensions add extra functionality for C, Python and Python’s Flask framework to check50’s core.</p>
+<p>By design check50 is extensible. If you want to add support for other programming languages / frameworks and you are comfortable with Python please check out <a class="reference internal" href="extension_writer.html#extension-writer"><span class="std std-ref">Writing check50 extensions</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,321 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>JSON specification &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Writing check50 checks" href="check_writer.html" />
+    <link rel="prev" title="API docs" href="api.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="check50_user.html">Running check50</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">JSON specification</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#top-level">Top level</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#results">results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cause">cause</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#error">error</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="check_writer.html">Writing check50 checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extension_writer.html">Writing check50 extensions</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>JSON specification</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/json_specification.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="json-specification">
+<span id="id1"></span><h1>JSON specification<a class="headerlink" href="#json-specification" title="Permalink to this headline">¶</a></h1>
+<p>Check50 can create a machine readable output in the form of <cite>json</cite>. For instance, running check50 with <cite>-o json</cite> on a non compiling implementation of one of our problems called caesar:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 cs50/problems/2018/x/caesar -o json
+</pre></div>
+</div>
+<p>Produces the following:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;slug&quot;</span><span class="p">:</span> <span class="s2">&quot;cs50/problems/2018/x/caesar&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;results&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;exists&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;caesar.c exists.&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;checking that caesar.c exists...&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="kc">null</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;caesar.c compiles.&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;running clang caesar.c -o caesar -std=c11 -ggdb -lm -lcs50...&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;caesar.c:24:5: warning: implicit declaration of function &#39;f&#39; is invalid in C99&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;      [-Wimplicit-function-declaration]&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    f (argc != 2)&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    ^&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;caesar.c:24:18: error: expected &#39;;&#39; after expression&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    f (argc != 2)&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;                 ^&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;                 ;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;1 warning and 1 error generated.&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;code failed to compile&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;help&quot;</span><span class="p">:</span> <span class="kc">null</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;exists&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_a_as_b&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;a\&quot; as \&quot;b\&quot; using 1 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;3.0.0&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<section id="top-level">
+<h2>Top level<a class="headerlink" href="#top-level" title="Permalink to this headline">¶</a></h2>
+<p>Assuming <cite>check50</cite> is able to run successfully, you will find three keys at the top level of the json output: <cite>slug</cite>, <cite>results</cite> and <cite>version</cite>.</p>
+<ul class="simple">
+<li><p><strong>slug</strong> (<cite>string</cite>) is the slug with which check50 was run, <cite>cs50/problems/2018/x/caesar</cite> in the above example.</p></li>
+<li><p><strong>results</strong> (<cite>[object]</cite>) is a list containing the results of each run check. More on this key below.</p></li>
+<li><p><strong>version</strong> (<cite>string</cite>) is the version of check50 used to run the checks.</p></li>
+</ul>
+<p>If check50 encounters an error while running, e.g. due to an invalid slug, the <cite>results</cite> key will be replaced by an <cite>error</cite> key containing information about the error encountered.</p>
+</section>
+<section id="results">
+<h2>results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
+<p>If the results key exists (that is, check50 was able to run the checks successfully), it will contain a list of objects each corresponding to a check. The order of these objects corresponds to the order the checks appear in the file in which they were written. Each object will contain the following fields:</p>
+<ul class="simple">
+<li><p><strong>name</strong> (<cite>string</cite>) is the unique name of the check (the literal name of the Python function specifying the check).</p></li>
+<li><p><strong>description</strong> (<cite>string</cite>) is a description of the check.</p></li>
+<li><p><strong>passed</strong> (<cite>bool</cite>, nullable) is <cite>true</cite> if the check passed, <cite>false</cite> if the check failed, or <cite>null</cite> if the check was skipped (either because the check’s dependency did not pass or because the check threw some unexpected error).</p></li>
+<li><p><strong>log</strong> (<cite>[string]</cite>) contains the log accrewed during the execution of the check. Each element of the list is a line from the log.</p></li>
+<li><p><strong>cause</strong> (<cite>object</cite>, nullable) contains the reason that a check did not pass. If <cite>passed</cite> is <cite>true</cite>, <cite>cause</cite> will be <cite>null</cite> and <cite>cause</cite> will never be <cite>null</cite> if <cite>passed</cite> is not <cite>true</cite>. More detail about keys that may appear within <cite>cause</cite> below.</p></li>
+<li><p><strong>data</strong> (<cite>object</cite>) contains arbitrary data communicated by the check via the <cite>check50.data</cite> API call. Checks could use this to add additional information such as memory usage to the results, but check50 itself does not add anything to <cite>data</cite> by default.</p></li>
+<li><p><strong>dependency</strong> (<cite>string</cite>, nullable) is the name of the check upon which this check depends, or <cite>null</cite> if the check has no dependency.</p></li>
+</ul>
+<section id="cause">
+<h3>cause<a class="headerlink" href="#cause" title="Permalink to this headline">¶</a></h3>
+<p>The cause key is <cite>null</cite> if the check passed and non-null. This key is by design an open-ended object. Everything in the <cite>.payload</cite> attribute of a <cite>check50.Failure</cite> will be put in the <cite>cause</cite> key. Through this mechanism you can communicate any information you want from a failing check to the results. Depending on what occurred, check50 adds the following keys to <cite>cause</cite>:</p>
+<ul class="simple">
+<li><p><strong>rationale</strong> (<cite>string</cite>) is a stduent-facing explanation of why the check did not pass (e.g. the student’s program did not output what was expected).</p></li>
+<li><p><strong>help</strong> (<cite>string</cite>) is an additional help message that may appear alongside the rationale giving additional context.</p></li>
+<li><p><strong>expected</strong> (<cite>string</cite>) and <strong>actual</strong> (<cite>string</cite>) are keys that always appear in a pair. In case you are expecting X as output, but Y was found instead, you will find these keys containing X and Y in the <cite>cause</cite> field. These appear when a check raises a <cite>check50.Mismatch</cite> exception.</p></li>
+<li><p><strong>error</strong> (<cite>object</cite>) appears in <cite>cause</cite> when an unexpected error occurred during a check. It will contain the keys <cite>type</cite>, <cite>value</cite>, <cite>traceback</cite> and <cite>data</cite> with the same properties as in the top-level <cite>error</cite> key described below.</p></li>
+</ul>
+</section>
+</section>
+<section id="error">
+<h2>error<a class="headerlink" href="#error" title="Permalink to this headline">¶</a></h2>
+<p>If check50 encounters an unexpected error, the <cite>error</cite> key will replace the <cite>results</cite> key in the JSON output. It will contain the following keys:</p>
+<ul class="simple">
+<li><p><strong>type</strong> (<cite>string</cite>) contains the type name of the thrown exception.</p></li>
+<li><p><strong>value</strong> (<cite>string</cite>) contains the result of converting the exception to a string.</p></li>
+<li><p><strong>traceback</strong> (<cite>[string]</cite>) contains the stack trace of the thrown exception.</p></li>
+<li><p><strong>data</strong> (<cite>object</cite>) contains any additional data the exception may carry in its <cite>payload</cite> attribute.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

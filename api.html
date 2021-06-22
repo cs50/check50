@@ -1,0 +1,1037 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>API docs &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="JSON specification" href="json_specification.html" />
+    <link rel="prev" title="Running check50" href="check50_user.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="check50_user.html">Running check50</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API docs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#check50">check50</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-check50.c">check50.c</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-check50.flask">check50.flask</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-check50.py">check50.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-check50.regex">check50.regex</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-check50.internal">check50.internal</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="json_specification.html">JSON specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="check_writer.html">Writing check50 checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extension_writer.html">Writing check50 extensions</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>API docs</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="api-docs">
+<span id="api"></span><h1>API docs<a class="headerlink" href="#api-docs" title="Permalink to this headline">¶</a></h1>
+<section id="check50">
+<span id="id1"></span><h2>check50<a class="headerlink" href="#check50" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-check50"></span><dl class="py exception">
+<dt class="sig sig-object py" id="check50.EOF">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">EOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.EOF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raised when EOF is read from a child.
+This usually means the child has exited.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="check50.Failure">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">Failure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rationale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Failure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception signifying check failure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rationale</strong> (<em>str</em>) – message to be displayed capturing why the check failed</p></li>
+<li><p><strong>help</strong> (<em>str</em>) – optional help message to be displayed</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./cash&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;4.2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="k">if</span> <span class="mi">10</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
+    <span class="n">help</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="mi">11</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
+        <span class="n">help</span> <span class="o">=</span> <span class="s2">&quot;did you forget to round your result?&quot;</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Failure</span><span class="p">(</span><span class="s2">&quot;Expected a different result&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.Failure.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rationale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Failure.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="check50.Mismatch">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">Mismatch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Mismatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception signifying check failure due to a mismatch in expected and actual outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>expected</strong> – the expected value</p></li>
+<li><p><strong>actual</strong> – the actual value</p></li>
+<li><p><strong>help</strong> (<em>str</em>) – optional help message to be displayed</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">match</span>
+<span class="n">expected</span> <span class="o">=</span> <span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="n">actual</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">actual</span><span class="p">):</span>
+    <span class="n">help</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">match</span><span class="p">(</span><span class="n">expected</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">actual</span><span class="p">):</span>
+        <span class="n">help</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;did you forget a newline (&#39;\n&#39;) at the end of your printf string?&quot;</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Mismatch</span><span class="p">(</span><span class="s2">&quot;hello, world</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">actual</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.Mismatch.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">expected</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">actual</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Mismatch.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="check50.Missing">
+<em class="property"><span class="pre">exception</span> </em><span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">Missing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">missing_item</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Missing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception signifying check failure due to an item missing from a collection.
+This is typically a specific substring in a longer string, for instance the contents of stdout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> – the expected item / substring</p></li>
+<li><p><strong>collection</strong> – the collection / string</p></li>
+<li><p><strong>help</strong> (<em>str</em>) – optional help message to be displayed</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">actual</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./fibonacci 5&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="s2">&quot;5&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">actual</span> <span class="ow">and</span> <span class="s2">&quot;3&quot;</span> <span class="ow">in</span> <span class="n">actual</span><span class="p">:</span>
+    <span class="n">help</span> <span class="o">=</span> <span class="s2">&quot;Be sure to start the sequence at 1&quot;</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Missing</span><span class="p">(</span><span class="s2">&quot;5&quot;</span><span class="p">,</span> <span class="n">actual</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.Missing.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">missing_item</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">help</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.Missing.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.check">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dependency</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">60</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_log_lines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark function as a check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dependency</strong> (<em>function</em>) – the check that this check depends on</p></li>
+<li><p><strong>timeout</strong> (<em>int</em>) – maximum number of seconds the check can run</p></li>
+<li><p><strong>max_log_lines</strong> (<em>int</em>) – maximum number of lines that can appear in the log</p></li>
+</ul>
+</dd>
+</dl>
+<p>When a check depends on another, the former will only run if the latter passes.
+Additionally, the dependent check will inherit the filesystem of its dependency.
+This is particularly useful when writing e.g., a <code class="docutils literal notranslate"><span class="pre">compiles</span></code> check that compiles a
+student’s program (and checks that it compiled successfully). Any checks that run the
+student’s program will logically depend on this check, and since they inherit the
+resulting filesystem of the check, they will immidiately have access to the compiled
+program without needing to recompile.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span> <span class="c1"># Mark &#39;exists&#39; as a check</span>
+<span class="k">def</span> <span class="nf">exists</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;hello.c exists&quot;&quot;&quot;</span>
+    <span class="n">check50</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;hello.c&quot;</span><span class="p">)</span>
+
+<span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">exists</span><span class="p">)</span> <span class="c1"># Mark &#39;compiles&#39; as a check that depends on &#39;exists&#39;</span>
+<span class="k">def</span> <span class="nf">compiles</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;hello.c compiles&quot;&quot;&quot;</span>
+    <span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;hello.c&quot;</span><span class="p">)</span>
+
+<span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">compiles</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">prints_hello</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;prints &quot;Hello, world!\\n&quot;&quot;&quot;</span>
+    <span class="c1"># Since &#39;prints_hello&#39;, depends on &#39;compiles&#39; it inherits the compiled binary</span>
+    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;hello, world</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.data">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add data to the check payload</p>
+<dl class="field-list simple">
+<dt class="field-odd">Params kwargs</dt>
+<dd class="field-odd"><p>key/value mappings to be added to the check payload</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">data</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="mf">7.3</span><span class="p">,</span> <span class="n">mem</span><span class="o">=</span><span class="mi">23</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.exists">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">paths</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assert that all given paths exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Params paths</dt>
+<dd class="field-odd"><p>files/directories to be checked for existence</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if any <code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">in</span> <span class="pre">paths</span></code> does not exist</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;foo.c&quot;</span><span class="p">,</span> <span class="s2">&quot;foo.h&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.hash">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">hash</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hashes file using SHA-256.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>str</em>) – name of file to be hashed</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if <code class="docutils literal notranslate"><span class="pre">file</span></code> does not exist</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.import_checks">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">import_checks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.import_checks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import checks module given relative path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – relative path from which to import checks module</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the imported module</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>FileNotFoundError</strong> – if <code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">/</span> <span class="pre">.check50.yaml</span></code> does not exist</p></li>
+<li><p><strong>yaml.YAMLError</strong> – if <code class="docutils literal notranslate"><span class="pre">path</span> <span class="pre">/</span> <span class="pre">.check50.yaml</span></code> is not a valid YAML file</p></li>
+</ul>
+</dd>
+</dl>
+<p>This function is particularly useful when a set of checks logically extends
+another, as is often the case in CS50’s own problems that have a “less comfy”
+and “more comfy” version. The “more comfy” version can include all of the
+“less comfy” checks like so:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">less</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">import_checks</span><span class="p">(</span><span class="s2">&quot;../less&quot;</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">less</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>the <code class="docutils literal notranslate"><span class="pre">__name__</span></code> of the imported module is given by the basename
+of the specified path (<code class="docutils literal notranslate"><span class="pre">less</span></code> in the above example).</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.include">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">include</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">paths</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.include" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy files/directories from the check directory (<a class="reference internal" href="#check50.internal.check_dir" title="check50.internal.check_dir"><code class="xref py py-data docutils literal notranslate"><span class="pre">check50.internal.check_dir</span></code></a>),
+to the current directory</p>
+<dl class="field-list simple">
+<dt class="field-odd">Params paths</dt>
+<dd class="field-odd"><p>files/directories to be copied</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;foo.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;bar.txt&quot;</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;foo.txt&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;bar.txt&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.log">
+<span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add to check log</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>line</strong> (<em>str</em>) – line to be added to the check log</p>
+</dd>
+</dl>
+<p>The check log is student-visible via the <code class="docutils literal notranslate"><span class="pre">--log</span></code> flag to <code class="docutils literal notranslate"><span class="pre">check50</span></code>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="check50.run">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">check50.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a command.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>command</strong> (<em>str</em>) – command to be run</p></li>
+<li><p><strong>env</strong> (<em>dict</em>) – environment in which to run command</p></li>
+</ul>
+</dd>
+</dl>
+<p>By default, the command will be run using the same environment as <code class="docutils literal notranslate"><span class="pre">check50</span></code>,
+these mappings may be overriden via the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./foo&quot;</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="p">{</span> <span class="s2">&quot;HOME&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span> <span class="p">})</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.exit">
+<span class="sig-name descname"><span class="pre">exit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.exit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wait for process to exit or until timeout (5 sec by default) and asserts
+that process exits with <code class="docutils literal notranslate"><span class="pre">code</span></code>. If <code class="docutils literal notranslate"><span class="pre">code</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, returns the code
+the process exited with.</p>
+<p>..note:: In order to ensure that spawned child processes do not outlive the check that spawned them, it is good practice to call either method (with no arguments if the exit code doesn’t matter) or <code class="docutils literal notranslate"><span class="pre">.kill()</span></code> on every spawned process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>code</strong> (<em>int</em>) – code to assert process exits with</p></li>
+<li><p><strong>timeout</strong> (<em>int / float</em>) – maximum number of seconds to wait for the program to end</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if <code class="docutils literal notranslate"><span class="pre">code</span></code> is given and does not match the actual exitcode within <code class="docutils literal notranslate"><span class="pre">timeout</span></code></p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">code</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">code</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Failure</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;expected exit code 0, not </span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.kill">
+<span class="sig-name descname"><span class="pre">kill</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.kill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kill the process.</p>
+<p>Child will first be sent a <code class="docutils literal notranslate"><span class="pre">SIGHUP</span></code>, followed by a <code class="docutils literal notranslate"><span class="pre">SIGINT</span></code> and
+finally a <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code> if it ignores the first two.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.reject">
+<span class="sig-name descname"><span class="pre">reject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.reject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that the process survives for timeout. Useful for checking whether program is waiting on input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>timeout</strong> (<em>int / float</em>) – number of seconds to wait</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if process ends before <code class="docutils literal notranslate"><span class="pre">timeout</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.stdin">
+<span class="sig-name descname"><span class="pre">stdin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_line</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.stdin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send line to stdin, optionally expect a prompt.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>line</strong> (<em>str</em>) – line to be send to stdin</p></li>
+<li><p><strong>str_line</strong> (<em>str</em>) – what will be displayed as the delivered input, a human                            readable form of <code class="docutils literal notranslate"><span class="pre">line</span></code></p></li>
+<li><p><strong>prompt</strong> (<em>bool</em>) – boolean indicating whether a prompt is expected, if True absorbs                        all of stdout before inserting line into stdin and raises                        <a class="reference internal" href="#check50.Failure" title="check50.Failure"><code class="xref py py-class docutils literal notranslate"><span class="pre">check50.Failure</span></code></a> if stdout is empty</p></li>
+<li><p><strong>timeout</strong> (<em>int / float</em>) – maximum number of seconds to wait for prompt</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if <code class="docutils literal notranslate"><span class="pre">prompt</span></code> is set to True and no prompt is given</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.run.stdout">
+<span class="sig-name descname"><span class="pre">stdout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_timeout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.run.stdout" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve all output from stdout until timeout (3 sec by default). If <code class="docutils literal notranslate"><span class="pre">output</span></code>
+is None, <code class="docutils literal notranslate"><span class="pre">stdout</span></code> returns all of the stdout outputted by the process, else
+it returns <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output</strong> (<em>str</em><em>, </em><em>int</em><em>, </em><em>float</em><em>, </em><em>stream</em>) – optional output to be expected from stdout, raises                        <a class="reference internal" href="#check50.Failure" title="check50.Failure"><code class="xref py py-class docutils literal notranslate"><span class="pre">check50.Failure</span></code></a> if no match                        In case output is a float or int, the check50.number_regex                        is used to match just that number”.                        In case output is a stream its contents are used via output.read().</p></li>
+<li><p><strong>str_output</strong> (<em>str</em>) – what will be displayed as expected output, a human                            readable form of <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
+<li><p><strong>regex</strong> (<em>bool</em>) – flag indicating whether <code class="docutils literal notranslate"><span class="pre">output</span></code> should be treated as a regex</p></li>
+<li><p><strong>timeout</strong> (<em>int / float</em>) – maximum number of seconds to wait for <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
+<li><p><strong>show_timeout</strong> (<em>bool</em>) – flag indicating whether the timeout in seconds                                   should be displayed when a timeout occurs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#check50.Mismatch" title="check50.Mismatch"><strong>check50.Mismatch</strong></a> – if <code class="docutils literal notranslate"><span class="pre">output</span></code> is specified and nothing that the                                   process outputs matches it</p></li>
+<li><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if process times out or if it outputs invalid UTF-8 text.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?&quot;</span><span class="p">,</span> <span class="s2">&quot;hello, world&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+
+<span class="n">output</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Mismatch</span><span class="p">(</span><span class="s2">&quot;hello, world&quot;</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-check50.c">
+<span id="check50-c"></span><h2>check50.c<a class="headerlink" href="#module-check50.c" title="Permalink to this headline">¶</a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.c.CC">
+<span class="sig-prename descclassname"><span class="pre">check50.c.</span></span><span class="sig-name descname"><span class="pre">CC</span></span><em class="property"> <span class="pre">=</span> <span class="pre">'clang'</span></em><a class="headerlink" href="#check50.c.CC" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default compiler for <a class="reference internal" href="#check50.c.compile" title="check50.c.compile"><code class="xref py py-func docutils literal notranslate"><span class="pre">check50.c.compile()</span></code></a></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.c.CFLAGS">
+<span class="sig-prename descclassname"><span class="pre">check50.c.</span></span><span class="sig-name descname"><span class="pre">CFLAGS</span></span><em class="property"> <span class="pre">=</span> <span class="pre">{'ggdb':</span> <span class="pre">True,</span> <span class="pre">'lm':</span> <span class="pre">True,</span> <span class="pre">'std':</span> <span class="pre">'c11'}</span></em><a class="headerlink" href="#check50.c.CFLAGS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default CFLAGS for <a class="reference internal" href="#check50.c.compile" title="check50.c.compile"><code class="xref py py-func docutils literal notranslate"><span class="pre">check50.c.compile()</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.c.compile">
+<span class="sig-prename descclassname"><span class="pre">check50.c.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">files</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exe_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'clang'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_log_lines</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">cflags</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.c.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile C source files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>files</strong> – filenames to be compiled</p></li>
+<li><p><strong>exe_name</strong> – name of resulting executable</p></li>
+<li><p><strong>cc</strong> – compiler to use (<a class="reference internal" href="#check50.c.CC" title="check50.c.CC"><code class="xref py py-data docutils literal notranslate"><span class="pre">check50.c.CC</span></code></a> by default)</p></li>
+<li><p><strong>cflags</strong> – additional flags to pass to the compiler</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if compilation failed (i.e., if the compiler returns a non-zero exit status).</p></li>
+<li><p><strong>RuntimeError</strong> – if no filenames are specified</p></li>
+</ul>
+</dd>
+</dl>
+<p>If <code class="docutils literal notranslate"><span class="pre">exe_name</span></code> is None, <a class="reference internal" href="#check50.c.compile" title="check50.c.compile"><code class="xref py py-func docutils literal notranslate"><span class="pre">check50.c.compile()</span></code></a> will default to the first
+file specified sans the <code class="docutils literal notranslate"><span class="pre">.c</span></code> extension:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;foo.c&quot;</span><span class="p">,</span> <span class="s2">&quot;bar.c&quot;</span><span class="p">)</span> <span class="c1"># clang foo.c bar.c -o foo -std=c11 -ggdb -lm</span>
+</pre></div>
+</div>
+<p>Additional CFLAGS may be passed as keyword arguments like so:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;foo.c&quot;</span><span class="p">,</span> <span class="s2">&quot;bar.c&quot;</span><span class="p">,</span> <span class="n">lcs50</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># clang foo.c bar.c -o foo -std=c11 -ggdb -lm -lcs50</span>
+</pre></div>
+</div>
+<p>In the same vein, the default CFLAGS may be overriden via keyword arguments:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;foo.c&quot;</span><span class="p">,</span> <span class="s2">&quot;bar.c&quot;</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="s2">&quot;c99&quot;</span><span class="p">,</span> <span class="n">lm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># clang foo.c bar.c -o foo -std=c99 -ggdb</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.c.valgrind">
+<span class="sig-prename descclassname"><span class="pre">check50.c.</span></span><span class="sig-name descname"><span class="pre">valgrind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">env</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.c.valgrind" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run a command with valgrind.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>command</strong> (<em>str</em>) – command to be run</p></li>
+<li><p><strong>env</strong> (<em>str</em>) – environment in which to run command</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if, at the end of the check, valgrind reports any errors</p>
+</dd>
+</dl>
+<p>This function works exactly like <a class="reference internal" href="#check50.run" title="check50.run"><code class="xref py py-func docutils literal notranslate"><span class="pre">check50.run()</span></code></a>, with the additional effect that <code class="docutils literal notranslate"><span class="pre">command</span></code> is run through
+<code class="docutils literal notranslate"><span class="pre">valgrind</span></code> and <code class="docutils literal notranslate"><span class="pre">valgrind</span></code>’s output is automatically reviewed at the end of the check for memory leaks and other
+bugs. If <code class="docutils literal notranslate"><span class="pre">valgrind</span></code> reports any issues, the check is failed and student-friendly messages are printed to the log.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">valgrind</span><span class="p">(</span><span class="s2">&quot;./leaky&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is recommended that the student’s code is compiled with the <cite>-ggdb</cite>
+flag so that additional information, such as the file and line number at which
+the issue was detected can be included in the log as well.</p>
+</div>
+</dd></dl>
+
+</section>
+<section id="module-check50.flask">
+<span id="check50-flask"></span><h2>check50.flask<a class="headerlink" href="#module-check50.flask" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="check50.flask.app">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">check50.flask.</span></span><span class="sig-name descname"><span class="pre">app</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'application.py'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">app_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'app'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spawn a Flask app.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – path to python file containing Flask app</p></li>
+<li><p><strong>app_name</strong> – name of Flask app in file</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">flask</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="s2">&quot;application.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'application.py'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">app_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'app'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.content">
+<span class="sig-name descname"><span class="pre">content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches for <cite>output</cite> regex within HTML page. kwargs are passed to BeautifulSoup’s find function to filter for tags.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">route</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">follow_redirects</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send GET request to app.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>route</strong> (<em>str</em>) – route to send request to</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – form data to include in request</p></li>
+<li><p><strong>params</strong> – URL parameters to include in request</p></li>
+<li><p><strong>follow_redirects</strong> (<em>bool</em>) – enable redirection (defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">self</span></code></p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if Flask application throws an uncaught exception</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">flask</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="s2">&quot;application.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/buy&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;q&quot;</span><span class="p">:</span> <span class="s2">&quot;02138&quot;</span><span class="p">})</span><span class="o">.</span><span class="n">content</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.post">
+<span class="sig-name descname"><span class="pre">post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">route</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">follow_redirects</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.post" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send POST request to app.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>route</strong> (<em>str</em>) – route to send request to</p></li>
+<li><p><strong>data</strong> (<em>dict</em>) – form data to include in request</p></li>
+<li><p><strong>params</strong> – URL parameters to include in request</p></li>
+<li><p><strong>follow_redirects</strong> (<em>bool</em>) – enable redirection (defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if Flask application throws an uncaught exception</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">flask</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="s2">&quot;application.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/buy&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="s2">&quot;GOOG&quot;</span><span class="p">,</span> <span class="s2">&quot;shares&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">})</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.raw_content">
+<span class="sig-name descname"><span class="pre">raw_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.raw_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Searches for <cite>output</cite> regex match within content of page, regardless of mimetype.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.flask.app.status">
+<span class="sig-name descname"><span class="pre">status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.flask.app.status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check status code in response returned by application.
+If <code class="docutils literal notranslate"><span class="pre">code</span></code> is not None, assert that <code class="docutils literal notranslate"><span class="pre">code</span></code> is returned by application,
+else simply return the status code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>code</strong> (<em>int</em>) – <code class="docutils literal notranslate"><span class="pre">code</span></code> to assert that application returns</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">check50</span><span class="o">.</span><span class="n">flask</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="s2">&quot;application.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+
+<span class="n">status</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">flask</span><span class="o">.</span><span class="n">app</span><span class="p">(</span><span class="s2">&quot;application.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">status</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">status</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Failure</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;expected status code 200, but got </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-check50.py">
+<span id="check50-py"></span><h2>check50.py<a class="headerlink" href="#module-check50.py" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.py.append_code">
+<span class="sig-prename descclassname"><span class="pre">check50.py.</span></span><span class="sig-name descname"><span class="pre">append_code</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">original</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">codefile</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.py.append_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Append the contents of one file to another.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>original</strong> (<em>str</em>) – name of file that will be appended to</p></li>
+<li><p><strong>codefile</strong> (<em>str</em>) – name of file that will be appende</p></li>
+</ul>
+</dd>
+</dl>
+<p>This function is particularly useful when one wants to replace a function
+in student code with their own implementation of one. If two functions are
+defined with the same name in Python, the latter definition is taken so overwriting
+a function is as simple as writing it to a file and then appending it to the
+student’s code.</p>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Include a file containing our own implementation of a lookup function.</span>
+<span class="n">check50</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s2">&quot;lookup.py&quot;</span><span class="p">)</span>
+
+<span class="c1"># Overwrite the lookup function in helpers.py with our own implementation.</span>
+<span class="n">check50</span><span class="o">.</span><span class="n">py</span><span class="o">.</span><span class="n">append_code</span><span class="p">(</span><span class="s2">&quot;helpers.py&quot;</span><span class="p">,</span> <span class="s2">&quot;lookup.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.py.compile">
+<span class="sig-prename descclassname"><span class="pre">check50.py.</span></span><span class="sig-name descname"><span class="pre">compile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.py.compile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile a Python program into byte code</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>file</strong> – file to be compiled</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if compilation fails e.g. if there is a SyntaxError</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.py.import_">
+<span class="sig-prename descclassname"><span class="pre">check50.py.</span></span><span class="sig-name descname"><span class="pre">import_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.py.import_" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import a Python program given a raw file path</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – path to python file to be imported</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="#check50.Failure" title="check50.Failure"><strong>check50.Failure</strong></a> – if <code class="docutils literal notranslate"><span class="pre">path</span></code> doesn’t exist, or if the Python file at <code class="docutils literal notranslate"><span class="pre">path</span></code> throws an exception when imported.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-check50.regex">
+<span id="check50-regex"></span><h2>check50.regex<a class="headerlink" href="#module-check50.regex" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.regex.decimal">
+<span class="sig-prename descclassname"><span class="pre">check50.regex.</span></span><span class="sig-name descname"><span class="pre">decimal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">number</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.regex.decimal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a regular expression to match the number exactly:</p>
+<p>In case of a positive number:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>(?&lt;![\d\-])number(?!(\.?\d))
+</pre></div>
+</div>
+<p>In case of a negative number:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>number(?!(\.?\d))
+</pre></div>
+</div>
+<p><code class="code docutils literal notranslate"><span class="pre">(?&lt;![\d\-])</span></code> = negative lookbehind,         asserts that there are no digits and no - in front of the number.</p>
+<p><code class="code docutils literal notranslate"><span class="pre">(?!(\.?\d))</span></code> = negative lookahead,         asserts that there are no digits and no additional . followed by digits after the number.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>number</strong> (<em>any numbers.Number</em><em> (</em><em>such as int</em><em>, </em><em>float</em><em>, </em><em>...</em><em>)</em>) – the number to match in the regex</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+<p>Example usage:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check that 7.0000 is printed with 5 significant figures</span>
+<span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./prog&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="n">check50</span><span class="o">.</span><span class="n">regex</span><span class="o">.</span><span class="n">decimal</span><span class="p">(</span><span class="s2">&quot;7.0000&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="module-check50.internal">
+<span id="check50-internal"></span><h2>check50.internal<a class="headerlink" href="#module-check50.internal" title="Permalink to this headline">¶</a></h2>
+<p>Additional check50 internals exposed to extension writers in addition to the standard API</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.CONFIG_LOADER">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">CONFIG_LOADER</span></span><em class="property"> <span class="pre">=</span> <span class="pre">&lt;lib50.config.Loader</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#check50.internal.CONFIG_LOADER" title="Permalink to this definition">¶</a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">lib50</span></code> config loader</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="check50.internal.Register">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">Register</span></span><a class="headerlink" href="#check50.internal.Register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class with which functions can be registered to run before / after checks.
+<a class="reference internal" href="#check50.internal.register" title="check50.internal.register"><code class="xref py py-data docutils literal notranslate"><span class="pre">check50.internal.register</span></code></a> should be the sole instance of this class.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.internal.Register.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.Register.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.internal.Register.after_check">
+<span class="sig-name descname"><span class="pre">after_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.Register.after_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run func once at the end of the check, then discard func.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> – callback to run after check</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>check50.internal.Error</strong> – if called when no check is being run</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.internal.Register.after_every">
+<span class="sig-name descname"><span class="pre">after_every</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.Register.after_every" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run func at the end of every check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> – callback to be run after every check</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>check50.internal.Error</strong> – if called when a check is being run</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="check50.internal.Register.before_every">
+<span class="sig-name descname"><span class="pre">before_every</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.Register.before_every" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run func at the start of every check.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>func</strong> – callback to be run before every check</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>check50.internal.Error</strong> – if called when a check is being run</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.check_dir">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">check_dir</span></span><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#check50.internal.check_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Directory containing the check and its associated files</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.check_running">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">check_running</span></span><em class="property"> <span class="pre">=</span> <span class="pre">False</span></em><a class="headerlink" href="#check50.internal.check_running" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boolean that indicates if a check is currently running</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.internal.compile_checks">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">compile_checks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'__init__.py'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.compile_checks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compile YAML checks to a Python file</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>checks</strong> – YAML checks read from config</p></li>
+<li><p><strong>prompt</strong> (<em>bool</em>) – prompt user if <code class="docutils literal notranslate"><span class="pre">out_file</span></code> already exists</p></li>
+<li><p><strong>out_file</strong> (<em>str</em>) – file to write compiled checks</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">out_file</span></code></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.internal.import_file">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">import_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.import_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import a file given a raw file path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – Name of module to be imported</p></li>
+<li><p><strong>path</strong> (<em>str / Path</em>) – Path to Python file</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="check50.internal.load_config">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">load_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">check_dir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#check50.internal.load_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load configuration file from <code class="docutils literal notranslate"><span class="pre">check_dir</span> <span class="pre">/</span> <span class="pre">&quot;.cs50.yaml&quot;</span></code>, applying
+defaults to unspecified values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>check_dir</strong> (<em>str / Path</em>) – directory from which to load config file</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.register">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">register</span></span><em class="property"> <span class="pre">=</span> <span class="pre">&lt;check50.internal.Register</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#check50.internal.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sole instance of the <a class="reference internal" href="#check50.internal.Register" title="check50.internal.Register"><code class="xref py py-class docutils literal notranslate"><span class="pre">check50.internal.Register</span></code></a> class</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.run_dir">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">run_dir</span></span><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#check50.internal.run_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Temporary directory in which the current check is being run</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.run_root_dir">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">run_root_dir</span></span><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#check50.internal.run_root_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Temporary directory that is the root (parent) of all run_dir(s)</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.slug">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">slug</span></span><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#check50.internal.slug" title="Permalink to this definition">¶</a></dt>
+<dd><p>The user specified slug used to indentifies the set of checks</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="check50.internal.student_dir">
+<span class="sig-prename descclassname"><span class="pre">check50.internal.</span></span><span class="sig-name descname"><span class="pre">student_dir</span></span><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#check50.internal.student_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Directory check50 was run from</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

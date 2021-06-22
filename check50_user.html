@@ -1,0 +1,436 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Running check50 &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API docs" href="api.html" />
+    <link rel="prev" title="check50" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running check50</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#slug">Slug</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operation-modes">Operation modes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#online">online</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#local">local</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#offline">offline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dev">dev</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#additional-output">Additional output</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#verbose">verbose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#log-level">log-level</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#targeting-checks">Targeting checks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#target">target</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#output-modes">Output modes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ansi">ansi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#html">html</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#json">json</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json_specification.html">JSON specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="check_writer.html">Writing check50 checks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extension_writer.html">Writing check50 extensions</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Running check50</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/check50_user.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="running-check50">
+<span id="check50-user"></span><h1>Running check50<a class="headerlink" href="#running-check50" title="Permalink to this headline">¶</a></h1>
+<section id="slug">
+<h2>Slug<a class="headerlink" href="#slug" title="Permalink to this headline">¶</a></h2>
+<p>check50 requires one positional argument, a so called slug. Something like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 cs50/problems/2018/x/caesar
+</pre></div>
+</div>
+<p>Why? Well, anyone can write checks for check50 without needing to ask for permission. To achieve this goal check50, the tool, is decoupled from any of its checks. The checks themselves are hosted anywhere on a popular hosting platform for code, GitHub. All you need to do to add your own checks is to put them on anywhere on GitHub. With this flexibility comes a price, as check50 does not know where your checks live on GitHub. In order to uniquely identify a collection of checks on GitHub check50 needs the following:</p>
+<ul class="simple">
+<li><p>org</p></li>
+<li><p>repository</p></li>
+<li><p>branch</p></li>
+<li><p>path to problem</p></li>
+</ul>
+<p>These four pieces of information separated by a / is what check50 calls a slug, a string that uniquely identifies a set of checks. For instance the slug <code class="code docutils literal notranslate"><span class="pre">cs50/problems/2018/x/caesar</span></code> uniquely identifies the org <code class="code docutils literal notranslate"><span class="pre">cs50</span></code>, the repository <code class="code docutils literal notranslate"><span class="pre">problems</span></code>, the branch <code class="code docutils literal notranslate"><span class="pre">2018/x</span></code> and the path <code class="code docutils literal notranslate"><span class="pre">caesar</span></code>.</p>
+</section>
+<section id="operation-modes">
+<h2>Operation modes<a class="headerlink" href="#operation-modes" title="Permalink to this headline">¶</a></h2>
+<p>Check50 can run in four mutually exclusive modes of operation.</p>
+<section id="online">
+<h3>online<a class="headerlink" href="#online" title="Permalink to this headline">¶</a></h3>
+<p>By default check50 runs the checks remotely and then waits for the results to come back.</p>
+</section>
+<section id="local">
+<h3>local<a class="headerlink" href="#local" title="Permalink to this headline">¶</a></h3>
+<p>To run checks locally, pass the <code class="code docutils literal notranslate"><span class="pre">--local</span></code> flag. The checks are still fetched remotely from GitHub.</p>
+</section>
+<section id="offline">
+<h3>offline<a class="headerlink" href="#offline" title="Permalink to this headline">¶</a></h3>
+<p>Running with <code class="code docutils literal notranslate"><span class="pre">--offline</span></code> runs the checks locally and has check50 look for checks locally. check50 will not try to fetch checks remotely in this mode.</p>
+</section>
+<section id="dev">
+<h3>dev<a class="headerlink" href="#dev" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="code docutils literal notranslate"><span class="pre">--dev</span></code> flag signals check50 to run in developer mode. This implies <code class="code docutils literal notranslate"><span class="pre">--offline</span></code>. More on this mode in <a class="reference internal" href="check_writer.html#check-writer"><span class="std std-ref">Writing check50 checks</span></a>.</p>
+</section>
+</section>
+<section id="additional-output">
+<h2>Additional output<a class="headerlink" href="#additional-output" title="Permalink to this headline">¶</a></h2>
+<p>By default check50 will try to keep its output concise in its <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> output mode. For each check you will see at most its description and rationale/help on why the check failed. check50 will by default hide tracebacks and log output. You can show both by running check50 with the <code class="code docutils literal notranslate"><span class="pre">--verbose</span></code> flag, or just the log with the <code class="code docutils literal notranslate"><span class="pre">--log</span></code> flag.</p>
+<section id="verbose">
+<h3>verbose<a class="headerlink" href="#verbose" title="Permalink to this headline">¶</a></h3>
+<p>Running with <code class="code docutils literal notranslate"><span class="pre">--verbose</span></code> lets check50 output any tracebacks in the <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> output mode.</p>
+</section>
+<section id="log-level">
+<h3>log-level<a class="headerlink" href="#log-level" title="Permalink to this headline">¶</a></h3>
+<p>Running check50 with <code class="code docutils literal notranslate"><span class="pre">--log-level</span> <span class="pre">INFO</span></code> will display any git commands run. <code class="code docutils literal notranslate"><span class="pre">--log-level</span> <span class="pre">DEBUG</span></code> adds all output of any git commands run.</p>
+</section>
+</section>
+<section id="targeting-checks">
+<h2>Targeting checks<a class="headerlink" href="#targeting-checks" title="Permalink to this headline">¶</a></h2>
+<p>Check50 lets you target specific checks by name with the <code class="code docutils literal notranslate"><span class="pre">--target</span></code> flags. This will have check50 run just these checks and their dependencies.</p>
+<section id="target">
+<h3>target<a class="headerlink" href="#target" title="Permalink to this headline">¶</a></h3>
+<p>With <code class="code docutils literal notranslate"><span class="pre">--target</span></code> you can target checks from a larger body of checks by name. check50 will only run and show these checks and their dependencies.</p>
+</section>
+</section>
+<section id="output-modes">
+<h2>Output modes<a class="headerlink" href="#output-modes" title="Permalink to this headline">¶</a></h2>
+<p>check50 supports three output modes: <code class="code docutils literal notranslate"><span class="pre">ansi</span></code>, <code class="code docutils literal notranslate"><span class="pre">html</span></code> and <code class="code docutils literal notranslate"><span class="pre">json</span></code>. In short, the <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> output mode is text-based output meant to be displayed in a terminal. <code class="code docutils literal notranslate"><span class="pre">html</span></code> is an extension of <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> showing the same results but in a webpage. This allows for visual comparisons and more information to be displayed in general. Finally, the <code class="code docutils literal notranslate"><span class="pre">json</span></code> output mode provides a machine readable form of output, that can for instance be used for automatic grading.</p>
+<p>The output modes can be mixed and matched through the <code class="code docutils literal notranslate"><span class="pre">--output</span></code> or <code class="code docutils literal notranslate"><span class="pre">-o</span></code> flag.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 &lt;slug&gt; -o ansi
+check50 &lt;slug&gt; -o ansi html <span class="c1"># equivalent to check50 &lt;slug&gt;</span>
+check50 &lt;slug&gt; -o json
+</pre></div>
+</div>
+<p>By default check50 shows both <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> and <code class="code docutils literal notranslate"><span class="pre">html</span></code> output.</p>
+<section id="ansi">
+<h3>ansi<a class="headerlink" href="#ansi" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> output mode will have check50 print the results from the checks to stdout. This output mode keeps students in the terminal, the environment in which they are running check50 in the first place. Limited by its nature, check50’s <code class="code docutils literal notranslate"><span class="pre">ansi</span></code> output mode is not suited for large pieces of text or visual comparisons. The output format is sufficient for showing which checks passed and failed, and offering short text based help or explanation on those checks.</p>
+<img alt="_images/ansi_output.png" src="_images/ansi_output.png" />
+</section>
+<section id="html">
+<h3>html<a class="headerlink" href="#html" title="Permalink to this headline">¶</a></h3>
+<p>In addition to <code class="code docutils literal notranslate"><span class="pre">ansi</span></code>, check50 comes with a <code class="code docutils literal notranslate"><span class="pre">html</span></code> output mode. This output mode allows check50 to show results side by side and to display more verbose information like the log by default. check50 creates a local self contained static html file in <code class="code docutils literal notranslate"><span class="pre">/tmp</span></code> and will output the path to file in stdout.</p>
+<img alt="_images/html_output.png" src="_images/html_output.png" />
+</section>
+<section id="json">
+<h3>json<a class="headerlink" href="#json" title="Permalink to this headline">¶</a></h3>
+<p>check50 can provide machine readable output in the form of <code class="code docutils literal notranslate"><span class="pre">json</span></code>. By default this output mode will print to stdout, but like any other form of output check50 can write to a file with the <code class="code docutils literal notranslate"><span class="pre">--output-file</span></code> command line option. For a complete overview of the <code class="code docutils literal notranslate"><span class="pre">json</span></code> output please refer to the <a class="reference internal" href="json_specification.html#json-specification"><span class="std std-ref">JSON specification</span></a>.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nt">&quot;slug&quot;</span><span class="p">:</span> <span class="s2">&quot;cs50/problems/2018/x/caesar&quot;</span><span class="p">,</span>
+    <span class="nt">&quot;results&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;exists&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;caesar.c exists.&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;checking that caesar.c exists...&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="kc">null</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;caesar.c compiles.&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="s2">&quot;running clang caesar.c -o caesar -std=c11 -ggdb -lm -lcs50...&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;caesar.c:24:5: warning: implicit declaration of function &#39;f&#39; is invalid in C99&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;      [-Wimplicit-function-declaration]&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    f (argc != 2)&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    ^&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;caesar.c:24:18: error: expected &#39;;&#39; after expression&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;    f (argc != 2)&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;                 ^&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;                 ;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;1 warning and 1 error generated.&quot;</span>
+            <span class="p">],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;code failed to compile&quot;</span><span class="p">,</span>
+                <span class="nt">&quot;help&quot;</span><span class="p">:</span> <span class="kc">null</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;exists&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_a_as_b&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;a\&quot; as \&quot;b\&quot; using 1 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_barfoo_as_yxocll&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;barfoo\&quot; as \&quot;yxocll\&quot; using 23 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_BARFOO_as_EDUIRR&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;BARFOO\&quot; as \&quot;EDUIRR\&quot; using 3 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_BaRFoo_FeVJss&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;BaRFoo\&quot; as \&quot;FeVJss\&quot; using 4 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts_barfoo_as_onesbb&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;barfoo\&quot; as \&quot;onesbb\&quot; using 65 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;checks_for_handling_non_alpha&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;encrypts \&quot;world, say hello!\&quot; as \&quot;iadxp, emk tqxxa!\&quot; using 12 as key&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="nt">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;handles_no_argv&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;handles lack of argv[1]&quot;</span><span class="p">,</span>
+            <span class="nt">&quot;passed&quot;</span><span class="p">:</span> <span class="kc">null</span><span class="p">,</span>
+            <span class="nt">&quot;log&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="nt">&quot;cause&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="nt">&quot;rationale&quot;</span><span class="p">:</span> <span class="s2">&quot;can&#39;t check until a frown turns upside down&quot;</span>
+            <span class="p">},</span>
+            <span class="nt">&quot;data&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="nt">&quot;dependency&quot;</span><span class="p">:</span> <span class="s2">&quot;compiles&quot;</span>
+        <span class="p">}</span>
+    <span class="p">],</span>
+    <span class="nt">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;3.0.0&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

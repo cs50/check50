@@ -1,0 +1,261 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Writing check50 extensions &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Writing check50 checks" href="check_writer.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="check50_user.html">Running check50</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json_specification.html">JSON specification</a></li>
+<li class="toctree-l1"><a class="reference internal" href="check_writer.html">Writing check50 checks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing check50 extensions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#check50-internal">check50.internal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-a-javascript-extension">Example: a JavaScript extension</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#check50-js">check50_js</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Writing check50 extensions</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/extension_writer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="writing-check50-extensions">
+<span id="extension-writer"></span><h1>Writing check50 extensions<a class="headerlink" href="#writing-check50-extensions" title="Permalink to this headline">¶</a></h1>
+<p>Core to check50’s design is extensibility. Not only in checks, but also in the tool itself. We designed <code class="code docutils literal notranslate"><span class="pre">check50.c</span></code>, <code class="code docutils literal notranslate"><span class="pre">check50.py</span></code> and <code class="code docutils literal notranslate"><span class="pre">check50.flask</span></code> to be extensions of check50 that ship with check50. By design these three modules are all standalone and only depend on the core of check50, and no other part of check50 depends on them. In other words, you can remove or add any of these modules and check50 would still function as expected.</p>
+<p>We ship check50 with three extensions because these extensions are core to the material cs50 teaches. But different courses have different needs, and we realize we cannot predict and cater for every usecase. This is why check50 comes with the ability to <cite>pip install</cite> other Python packages. You can configure this via the <code class="code docutils literal notranslate"><span class="pre">dependencies</span></code> key in <code class="code docutils literal notranslate"><span class="pre">.cs50.yaml</span></code>. Through this mechanism you can write your own extension and then have check50 install it for you whenever check50 runs. Host your extension anywhere <cite>pip</cite> can install from, for instance GitHub or PyPi. And all you have to do then is to fill in the <code class="code docutils literal notranslate"><span class="pre">dependencies</span></code> key of <code class="code docutils literal notranslate"><span class="pre">.cs50.yaml</span></code> with the location of your extension. check50 will make sure your extension is always there when the checks are run.</p>
+<section id="check50-internal">
+<h2>check50.internal<a class="headerlink" href="#check50-internal" title="Permalink to this headline">¶</a></h2>
+<p>In addition to all the functionality check50 exposes, we expose an extra API for extensions in <code class="code docutils literal notranslate"><span class="pre">check50.internal</span></code>. You can find the documentation in <a class="reference internal" href="api.html#api"><span class="std std-ref">API docs</span></a>.</p>
+</section>
+<section id="example-a-javascript-extension">
+<h2>Example: a JavaScript extension<a class="headerlink" href="#example-a-javascript-extension" title="Permalink to this headline">¶</a></h2>
+<p>Out of the box check50 does not ship with any JavaScript specific functionality. You can use check50’s generic API and run a <code class="code docutils literal notranslate"><span class="pre">.js</span></code> file through an interpreter such as <code class="code docutils literal notranslate"><span class="pre">node</span></code>: <code class="code docutils literal notranslate"><span class="pre">check50.run('node</span> <span class="pre">&lt;student_file.js&gt;')</span></code>. But we realize most JavaScript classes are not about writing command-line scripts, and we do need a way to call functions. This is why we wrote a small javascript extension for check50 dubbed check50_js at
+<a class="reference external" href="https://github.com/cs50/check50/tree/sample-extension">https://github.com/cs50/check50/tree/sample-extension</a>.</p>
+<section id="check50-js">
+<h3>check50_js<a class="headerlink" href="#check50-js" title="Permalink to this headline">¶</a></h3>
+<p>The challenge in writing this extension is that check50 itself is written in Python, so we need an interface between the two languages. This could be as simple as an intermediate JavaScript script that runs the students function and then outputs the results to stdout for check50 to read. But this approach does create indirection and creates quite some clutter in the checks codebase. Luckily, in case of Python and JavaScript (and PHP and Perl) we have access to a Python package called <code class="code docutils literal notranslate"><span class="pre">python-bond</span></code>. This package lets us “bond” two languages together, and lets you evaluate code in another language’s interpreter. Effectively creating a channel through which you can evaluate code and call functions from the other language. This is what we ended up doing for our JavaScript extension.</p>
+<p>You can find example checks using check50_js and their solutions at:</p>
+<ul class="simple">
+<li><p><strong>hello.js</strong>: <a class="reference external" href="https://github.com/cs50/check50/tree/examples/js/hello">checks</a> <a class="reference external" href="https://github.com/cs50/check50/tree/examples/solutions/hello_js/hello.js">solution</a></p></li>
+<li><p><strong>line.js</strong>: <a class="reference external" href="https://github.com/cs50/check50/tree/examples/js/line">checks</a> <a class="reference external" href="https://github.com/cs50/check50/tree/examples/solutions/line_js/line.js">solution</a></p></li>
+<li><p><strong>addition.js</strong>: <a class="reference external" href="https://github.com/cs50/check50/tree/examples/js/addition">checks</a> <a class="reference external" href="https://github.com/cs50/check50/tree/examples/solutions/addition_js/addition.js">solution</a></p></li>
+</ul>
+<p>To try any of these examples for yourself, simply run:</p>
+<ul class="simple">
+<li><p><strong>hello.js</strong>:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget https://raw.githubusercontent.com/cs50/check50/examples/solutions/hello_js/hello.js
+check50 cs50/check50/examples/js/hello
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>line.js</strong>:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget https://raw.githubusercontent.com/cs50/check50/examples/solutions/line_js/line.js
+check50 cs50/check50/examples/js/line
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>addition.js</strong>:</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>wget https://raw.githubusercontent.com/cs50/check50/examples/solutions/addition_js/addition.js
+check50 cs50/check50/examples/js/addition
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,725 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Writing check50 checks &mdash; check50 Docs</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="https://cs50.readthedocs.io/_static/custom.css?1624403627" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://cs50.readthedocs.io/_static/custom.js?1624403627"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Writing check50 extensions" href="extension_writer.html" />
+    <link rel="prev" title="JSON specification" href="json_specification.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> check50
+          
+
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="check50_user.html">Running check50</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="json_specification.html">JSON specification</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Writing check50 checks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#creating-a-git-repo">Creating a git repo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-a-check-and-running-it">Creating a check and running it</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple-yaml-checks">Simple YAML checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#developing-locally">Developing locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started-with-python-checks">Getting started with Python checks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#python-check-specification">Python check specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#python-check-examples">Python check examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-check50">Configuring check50</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#checks">checks:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#files">files:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dependencies">dependencies:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#internationalizing-checks">Internationalizing checks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="extension_writer.html">Writing check50 extensions</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">check50</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Writing check50 checks</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/check_writer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="writing-check50-checks">
+<span id="check-writer"></span><h1>Writing check50 checks<a class="headerlink" href="#writing-check50-checks" title="Permalink to this headline">¶</a></h1>
+<p>check50 checks live in a git repo on Github. check50 finds the git repo based on the slug that is passed to check50. For instance, consider the following execution of check50:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 cs50/problems/2018/x/hello
+</pre></div>
+</div>
+<p>check50 will look for an owner called <cite>cs50</cite>, a repo called <cite>problems</cite>, a branch called <cite>2018</cite> or <cite>2018/x</cite> and a problem called <cite>x/hello</cite> or <cite>hello</cite>. The slug is thus parsed like so:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 &lt;owner&gt;/&lt;repo&gt;/&lt;branch&gt;/&lt;problem&gt;
+</pre></div>
+</div>
+<section id="creating-a-git-repo">
+<h2>Creating a git repo<a class="headerlink" href="#creating-a-git-repo" title="Permalink to this headline">¶</a></h2>
+<p>To get you started, the first thing you need to do is <a href="https://github.com/join" target="_blank">register with Github</a>. Once you have done so, or if you already have an account with Github, <a href="https://github.com/new" target="_blank">create a new git repo</a>. Make sure to think of a good name for your repo, as this is what students will be typing. Also make sure your repo is set to public, it is initialised with a <cite>README</cite>, and finally add a Python <cite>.gitignore</cite>. Ultimately you should have something looking like this:</p>
+<img alt="_images/repo.png" src="_images/repo.png" />
+</section>
+<section id="creating-a-check-and-running-it">
+<h2>Creating a check and running it<a class="headerlink" href="#creating-a-check-and-running-it" title="Permalink to this headline">¶</a></h2>
+<p>Your new repo should live at <code class="docutils literal notranslate"><span class="pre">https://github.com/&lt;user&gt;/&lt;repo&gt;</span></code>, that is <code class="docutils literal notranslate"><span class="pre">https://github.com/cs50/example_checks</span></code> in our example. Once you have created your new repo, create a new file by clicking the <cite>Create new file</cite> button:</p>
+<img alt="_images/new_file.png" src="_images/new_file.png" />
+<p>Then continue by creating the following <cite>.cs50.yaml</cite> file. All indentation is done by 2 spaces, as per YAML syntax.</p>
+<img alt="_images/new_yaml.png" src="_images/new_yaml.png" />
+<p>Or in text, if you want to quickly copy-paste:</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="nt">hello world</span><span class="p">:</span>
+<span class="linenos">4</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 hello.py</span>
+<span class="linenos">5</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Hello, world!</span>
+<span class="linenos">6</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</div>
+<p>Note that you should create a directory like in the example above by typing: <cite>example/.cs50.yaml</cite>. Once you have populated the file with the code above. Scroll down the page and hit the commit button:</p>
+<img alt="_images/commit.png" src="_images/commit.png" />
+<p>That’s it! You know have a repo that check50 can use to check whether a python file called <cite>hello.py</cite> prints <code class="docutils literal notranslate"><span class="pre">Hello,</span> <span class="pre">world!</span></code> and exits with a <code class="docutils literal notranslate"><span class="pre">0</span></code> as exit code. To try it, simply execute:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 &lt;owner&gt;/&lt;repo&gt;/master/example --local
+</pre></div>
+</div>
+<p>Where you substitute <cite>&lt;owner&gt;</cite> for your own username, <cite>&lt;repo&gt;</cite> for the repo you’ve just created. Given that a file called <cite>hello.py</cite> is in your current working directory, and it actually prints <code class="docutils literal notranslate"><span class="pre">Hello,</span> <span class="pre">world!</span></code> when run, you should now see the following:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>:<span class="o">)</span> hello world
+</pre></div>
+</div>
+</section>
+<section id="simple-yaml-checks">
+<h2>Simple YAML checks<a class="headerlink" href="#simple-yaml-checks" title="Permalink to this headline">¶</a></h2>
+<p>To get you started, and to cover the basics of input/output checking, check50 lets you write simple checks in YAML syntax. Under the hood, check50 compiles these YAML checks to Python checks that check50 then runs.</p>
+<p>YAML checks in check50 all live in <cite>.cs50.yaml</cite> and start with a top-level key called <code class="docutils literal notranslate"><span class="pre">check50</span></code>, that specifies a <code class="docutils literal notranslate"><span class="pre">checks</span></code>. The <code class="docutils literal notranslate"><span class="pre">checks</span></code> record contains all checks, where the name of the check is the name of the YAML record. Like so:</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="nt">hello world</span><span class="p">:</span> <span class="c1"># define a check named hello world</span>
+<span class="linenos">4</span>      <span class="c1"># check code</span>
+<span class="linenos">5</span>    <span class="nt">foo</span><span class="p">:</span> <span class="c1"># define a check named foo</span>
+<span class="linenos">6</span>      <span class="c1"># check code</span>
+<span class="linenos">7</span>    <span class="nt">bar</span><span class="p">:</span> <span class="c1"># define a check named bar</span>
+<span class="linenos">8</span>      <span class="c1"># check code</span>
+</pre></div>
+</div>
+</div>
+<p>This code snippet defines three checks, named <code class="docutils literal notranslate"><span class="pre">hello</span> <span class="pre">world</span></code>, <code class="docutils literal notranslate"><span class="pre">foo</span></code> and <code class="docutils literal notranslate"><span class="pre">bar</span></code> respectively. These checks should contain a list of <code class="docutils literal notranslate"><span class="pre">run</span></code> records, that can each contain a combination of <code class="docutils literal notranslate"><span class="pre">stdin</span></code>, <code class="docutils literal notranslate"><span class="pre">stdout</span></code> and <code class="docutils literal notranslate"><span class="pre">exit</span></code>. See below:</p>
+<div class="literal-block-wrapper docutils container" id="id3">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id3" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos"> 2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos"> 3</span>    <span class="nt">hello world</span><span class="p">:</span>
+<span class="linenos"> 4</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 hello.py</span> <span class="c1"># run python3 hello.py</span>
+<span class="linenos"> 5</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Hello, world!</span> <span class="c1"># expect Hello, world! in stdout</span>
+<span class="linenos"> 6</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span> <span class="c1"># expect program to exit with exitcode 0</span>
+<span class="linenos"> 7</span>    <span class="nt">foo</span><span class="p">:</span>
+<span class="linenos"> 8</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 foo.py</span> <span class="c1"># run python3 foo.py</span>
+<span class="linenos"> 9</span>        <span class="nt">stdin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">baz</span> <span class="c1"># insert baz into stdin</span>
+<span class="linenos">10</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">baz</span> <span class="c1"># expect baz in stdout</span>
+<span class="linenos">11</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span> <span class="c1"># expect program to exit with exitcode 0</span>
+<span class="linenos">12</span>    <span class="nt">bar</span><span class="p">:</span>
+<span class="linenos">13</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 bar.py</span> <span class="c1"># run python3 bar.py</span>
+<span class="linenos">14</span>        <span class="nt">stdin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">baz</span> <span class="c1"># insert baz into stdin</span>
+<span class="linenos">15</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">bar baz</span> <span class="c1"># expect bar baz in stdout</span>
+<span class="linenos">16</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 bar.py</span> <span class="c1"># run python3 bar.py</span>
+<span class="linenos">17</span>        <span class="nt">stdin</span><span class="p">:</span>
+<span class="linenos">18</span>          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">baz</span> <span class="c1"># insert baz into stdin</span>
+<span class="linenos">19</span>          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">qux</span> <span class="c1"># insert qux into stdin</span>
+<span class="linenos">20</span>        <span class="nt">stdout</span><span class="p">:</span>
+<span class="linenos">21</span>          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar baz</span> <span class="c1"># first expect bar baz in stdout</span>
+<span class="linenos">22</span>          <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">bar qux</span> <span class="c1"># then expect bar qux in stdout</span>
+</pre></div>
+</div>
+</div>
+<p>The code snippet above again defines three checks: <cite>hello world</cite>, <cite>foo</cite> and <cite>bar</cite>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">hello</span> <span class="pre">world</span></code> check runs <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">hello.py</span></code> in the terminal, expects <code class="docutils literal notranslate"><span class="pre">Hello,</span> <span class="pre">world!</span></code> to be outputted in stdout, and then expects the program to exit with exitcode <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">foo</span></code> check runs <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">foo.py</span></code> in the terminal, inserts <code class="docutils literal notranslate"><span class="pre">baz</span></code> into stdin, expects <code class="docutils literal notranslate"><span class="pre">baz</span></code> to be outputted in stdout, and finally expects the program to exit with exitcode <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">bar</span></code> check runs two commands in order in the terminal. First <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">bar.py</span></code> gets run, <code class="docutils literal notranslate"><span class="pre">baz</span></code> gets put in stdin and <code class="docutils literal notranslate"><span class="pre">bar</span> <span class="pre">baz</span></code> is expected in stdout. There is no mention of <code class="docutils literal notranslate"><span class="pre">exit</span></code> here, so the exitcode is not checked. Secondly, <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">bar.py</span></code> gets run, <code class="docutils literal notranslate"><span class="pre">baz</span></code> and <code class="docutils literal notranslate"><span class="pre">qux</span></code> get put into stdin, and first <code class="docutils literal notranslate"><span class="pre">bar</span> <span class="pre">baz</span></code> is expected in stdout, then <code class="docutils literal notranslate"><span class="pre">bar</span> <span class="pre">qux</span></code>.</p>
+<p>We encourage you to play around with the example above by copying its code to your checks git repo. Then try to write a <cite>bar.py</cite> and <cite>foo.py</cite> that make you pass these tests.</p>
+<p>In case you want to check for multiline input, you can make use of YAML’s <code class="docutils literal notranslate"><span class="pre">|</span></code> operator like so:</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="nt">multiline hello world</span><span class="p">:</span>
+<span class="linenos">4</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 multi_hello.py</span>
+<span class="linenos">5</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="p p-Indicator">|</span> <span class="c1"># expect Hello\nWorld!\n in stdout</span>
+<span class="linenos">6</span>          <span class="no">Hello</span>
+<span class="linenos">7</span>          <span class="no">World!</span>
+<span class="linenos">8</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="developing-locally">
+<h2>Developing locally<a class="headerlink" href="#developing-locally" title="Permalink to this headline">¶</a></h2>
+<p>To write checks on your own machine, rather than on the Github webpage, you can clone the repo via:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/&lt;owner&gt;/&lt;repo&gt;
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">&lt;owner&gt;</span></code> is your Github username, and <code class="docutils literal notranslate"><span class="pre">&lt;repo&gt;</span></code> is the name of your checks repository. Head on over to the new directory that git just created, and open up <cite>.cs50.yaml</cite> with your favorite editor.</p>
+<p>To run the cloned checks locally, check50 comes with a <code class="docutils literal notranslate"><span class="pre">--dev</span></code> mode. That will let you target a local checks repo, rather than a github repo. So if your checks live in <code class="docutils literal notranslate"><span class="pre">/Users/cs50/Documents/example_checks</span></code>, you would execute check50 like so:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev /Users/cs50/Documents/example_checks/example
+</pre></div>
+</div>
+<p>This runs the <cite>example</cite> check from <code class="docutils literal notranslate"><span class="pre">/Users/cs50/Documents/example_checks</span></code>. You can also specify a relative path, so if your current working directory is <code class="docutils literal notranslate"><span class="pre">/Users/cs50/Documents/solutions</span></code>, you can execute check50 like so:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev ../example_checks/example
+</pre></div>
+</div>
+<p>Now you’re all set to develop new checks locally. Just remember to <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">add</span></code>, <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">commit</span></code> and <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">push</span></code> when you’re done writing checks. Quick refresher:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git add .cs50.yaml
+git commit -m <span class="s2">&quot;wrote some awesome new checks!&quot;</span>
+git push
+</pre></div>
+</div>
+</section>
+<section id="getting-started-with-python-checks">
+<h2>Getting started with Python checks<a class="headerlink" href="#getting-started-with-python-checks" title="Permalink to this headline">¶</a></h2>
+<p>If you need a little more than strict input / output testing, check50 lets you write checks in Python. A good starting point is the result of the compilation of the YAML checks. To get these, please make sure you have cloned the repo (via <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> ), and thus have the checks locally. First we need to run the .YAML checks once, so that check50 compiles the checks to Python. To do this execute:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev &lt;checks_dir&gt;/&lt;check&gt;
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">&lt;checks_dir&gt;</span></code> is the local git repo of your checks, and <code class="docutils literal notranslate"><span class="pre">&lt;check&gt;</span></code> is the directory in which <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code> lives. Alternatively you could navigate to this directory and simply call:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev .
+</pre></div>
+</div>
+<p>As a result you should now find a file called <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> in the check directory. This is the result of check50’s compilation from YAML to Python. For instance, if your <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code> contains the following:</p>
+<div class="literal-block-wrapper docutils container" id="id5">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id5" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="nt">hello world</span><span class="p">:</span>
+<span class="linenos">4</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 hello.py</span>
+<span class="linenos">5</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Hello, world!</span>
+<span class="linenos">6</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</div>
+<p>You should now find the following <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>:</p>
+<div class="literal-block-wrapper docutils container" id="id6">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id6" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">4</span><span class="k">def</span> <span class="nf">hello_world</span><span class="p">():</span>
+<span class="linenos">5</span>    <span class="sd">&quot;&quot;&quot;hello world&quot;&quot;&quot;</span>
+<span class="linenos">6</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;Hello, world!&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>check50 will by default ignore and overwrite what is in <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> for as long as there are checks in <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code>. To change this you have to edit <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code> to:</p>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">check50</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+</pre></div>
+</div>
+</div>
+<p>If the <code class="docutils literal notranslate"><span class="pre">checks</span></code> key is not specified (as is the case above), <code class="docutils literal notranslate"><span class="pre">check50</span></code> will look for Python checks written in a file called <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>. If you would like to write the Python checks in a file called <code class="docutils literal notranslate"><span class="pre">foo.py</span></code> instead, you could specify it like so:</p>
+<div class="literal-block-wrapper docutils container" id="id8">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id8" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">check50</span><span class="p">:</span>
+    <span class="nt">checks</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">foo.py</span>
+</pre></div>
+</div>
+</div>
+<p>To test whether everything is still in working order, run check50 again with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev &lt;checks_dir&gt;/&lt;check&gt;
+</pre></div>
+</div>
+<p>You should see the same results as the YAML checks gave you. Now that there are no YAML checks in <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code> and check50 knows where to look for Python checks, you can start writing Python checks. You can find documentation in <a class="reference internal" href="api.html#api"><span class="std std-ref">API docs</span></a>, and examples of Python checks below.</p>
+</section>
+<section id="python-check-specification">
+<h2>Python check specification<a class="headerlink" href="#python-check-specification" title="Permalink to this headline">¶</a></h2>
+<p>A Python check is made up as follows:</p>
+<div class="literal-block-wrapper docutils container" id="id9">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id9" title="Permalink to this code">¶</a></div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span> <span class="nn">check50</span> <span class="c1"># import the check50 module</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span> <span class="c1"># tag the function below as check50 check</span>
+<span class="linenos"> 4</span><span class="k">def</span> <span class="nf">exists</span><span class="p">():</span> <span class="c1"># the name of the check</span>
+<span class="linenos"> 5</span>    <span class="sd">&quot;&quot;&quot;description&quot;&quot;&quot;</span> <span class="c1"># this is what you will see when running check50</span>
+<span class="linenos"> 6</span>    <span class="n">check50</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;hello.py&quot;</span><span class="p">)</span> <span class="c1"># the actual check</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">exists</span><span class="p">)</span> <span class="c1"># only run this check if the exists check has passed</span>
+<span class="linenos"> 9</span><span class="k">def</span> <span class="nf">prints_hello</span><span class="p">():</span>
+<span class="linenos">10</span>    <span class="sd">&quot;&quot;&quot;prints &quot;hello, world\\n&quot; &quot;&quot;&quot;</span>
+<span class="linenos">11</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>check50 uses its check decorator to tag functions as checks. You can pass another check as argument to specify a dependency. Docstrings are used as check descriptions, this is what will ultimately be shown when running check50. The checks themselves are just Python code. check50 comes with a simple API to run programs, send input to stdin, and check or retrieve output from stdout. A check fails if a <code class="docutils literal notranslate"><span class="pre">check50.Failure</span></code> exception or an exception inheriting from <code class="docutils literal notranslate"><span class="pre">check50.Failure</span></code> like <code class="docutils literal notranslate"><span class="pre">check50.Mismatch</span></code> is thrown. This allows you to write your own custom check code like so:</p>
+<div class="literal-block-wrapper docutils container" id="id10">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id10" title="Permalink to this code">¶</a></div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos"> 4</span><span class="k">def</span> <span class="nf">prints_hello</span><span class="p">():</span>
+<span class="linenos"> 5</span>    <span class="sd">&quot;&quot;&quot;prints &quot;hello, world\\n&quot; &quot;&quot;&quot;</span>
+<span class="linenos"> 6</span>    <span class="kn">from</span> <span class="nn">re</span> <span class="kn">import</span> <span class="n">match</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span>    <span class="n">expected</span> <span class="o">=</span> <span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="linenos"> 9</span>    <span class="n">actual</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="linenos">10</span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">actual</span><span class="p">):</span>
+<span class="linenos">11</span>        <span class="n">help</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="linenos">12</span>        <span class="k">if</span> <span class="n">match</span><span class="p">(</span><span class="n">expected</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">actual</span><span class="p">):</span>
+<span class="linenos">13</span>            <span class="n">help</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;did you forget a newline (&#39;\n&#39;) at the end of your printf string?&quot;</span>
+<span class="linenos">14</span>        <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Mismatch</span><span class="p">(</span><span class="s2">&quot;hello, world</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">actual</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The above check breaks out of check50’s API by calling <code class="docutils literal notranslate"><span class="pre">stdout()</span></code> on line 9 with no args, effectively retrieving all output from stdout in a string. Then there is some plain Python code, matching the output through Python’s builtin regex module <code class="docutils literal notranslate"><span class="pre">re</span></code> against a regular expression with the expected outcome. If it doesn’t match, a help message is provided only if there is a newline missing at the end. This help message is provided through an optional argument <code class="docutils literal notranslate"><span class="pre">help</span></code> passed to check50’s <code class="docutils literal notranslate"><span class="pre">Mismatch</span></code> exception.</p>
+<p>You can share state between checks if you make them dependent on each other. By default file state is shared, allowing you to for instance test compilation in one check, and then depend on the result of the compilation in dependent checks.</p>
+<div class="literal-block-wrapper docutils container" id="id11">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id11" title="Permalink to this code">¶</a></div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos"> 2</span><span class="kn">import</span> <span class="nn">check50.c</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos"> 5</span><span class="k">def</span> <span class="nf">compiles</span><span class="p">():</span>
+<span class="linenos"> 6</span>    <span class="sd">&quot;&quot;&quot;hello.c compiles&quot;&quot;&quot;</span>
+<span class="linenos"> 7</span>    <span class="n">check50</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;hello.c&quot;</span><span class="p">)</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">compiles</span><span class="p">)</span>
+<span class="linenos">10</span><span class="k">def</span> <span class="nf">prints_hello</span><span class="p">():</span>
+<span class="linenos">11</span>    <span class="sd">&quot;&quot;&quot;prints &quot;hello, world\\n&quot; &quot;&quot;&quot;</span>
+<span class="linenos">12</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;./hello&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>You can also share Python state between checks by returning what you want to share from a check. It’s dependent can accept this by accepting an additional argument.</p>
+<div class="literal-block-wrapper docutils container" id="id12">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id12" title="Permalink to this code">¶</a></div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">4</span><span class="k">def</span> <span class="nf">foo</span><span class="p">():</span>
+<span class="linenos">5</span>    <span class="k">return</span> <span class="mi">1</span>
+<span class="linenos">6</span>
+<span class="linenos">7</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">foo</span><span class="p">)</span>
+<span class="linenos">8</span><span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+<span class="linenos">9</span>    <span class="nb">print</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="c1"># prints 1</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="python-check-examples">
+<h2>Python check examples<a class="headerlink" href="#python-check-examples" title="Permalink to this headline">¶</a></h2>
+<p>Below you will find examples of Python checks. Don’t forget to <a href="https://github.com/cs50/problems" target="_blank">checkout CS50's own checks</a> for more examples. You can try them yourself by copying them to <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> and running:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>check50 --dev &lt;checks_dir&gt;/&lt;check&gt;
+</pre></div>
+</div>
+<p>Check whether a file exists:</p>
+<div class="literal-block-wrapper docutils container" id="id13">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id13" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">4</span><span class="k">def</span> <span class="nf">exists</span><span class="p">():</span>
+<span class="linenos">5</span>    <span class="sd">&quot;&quot;&quot;hello.py exists&quot;&quot;&quot;</span>
+<span class="linenos">6</span>    <span class="n">check50</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;hello.py&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Check stdout for an exact string:</p>
+<div class="literal-block-wrapper docutils container" id="id14">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id14" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">exists</span><span class="p">)</span>
+<span class="linenos">2</span><span class="k">def</span> <span class="nf">prints_hello_world</span><span class="p">():</span>
+<span class="linenos">3</span>    <span class="sd">&quot;&quot;&quot;prints Hello, world!&quot;&quot;&quot;</span>
+<span class="linenos">4</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;Hello, world!&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Check stdout for a rough match:</p>
+<div class="literal-block-wrapper docutils container" id="id15">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id15" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">exists</span><span class="p">)</span>
+<span class="linenos">2</span><span class="k">def</span> <span class="nf">prints_hello</span><span class="p">():</span>
+<span class="linenos">3</span>    <span class="sd">&quot;&quot;&quot;prints &quot;hello, world\\n&quot; &quot;&quot;&quot;</span>
+<span class="linenos">4</span>    <span class="c1"># regex=True by default :)</span>
+<span class="linenos">5</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;[Hh]ello, world!?</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Put something in stdin, expect it in stdout:</p>
+<div class="literal-block-wrapper docutils container" id="id16">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id16" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">4</span><span class="k">def</span> <span class="nf">id</span><span class="p">():</span>
+<span class="linenos">5</span>    <span class="sd">&quot;&quot;&quot;id.py prints what you give it&quot;&quot;&quot;</span>
+<span class="linenos">6</span>    <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 hello.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Be helpful, check for common mistakes:</p>
+<div class="literal-block-wrapper docutils container" id="id17">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id17" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos"> 2</span><span class="kn">import</span> <span class="nn">re</span>
+<span class="linenos"> 3</span>
+<span class="linenos"> 4</span><span class="k">def</span> <span class="nf">coins</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+<span class="linenos"> 5</span>    <span class="c1"># regex that matches `num` not surrounded by any other numbers</span>
+<span class="linenos"> 6</span>    <span class="c1"># (so coins(2) won&#39;t match e.g. 123)</span>
+<span class="linenos"> 7</span>    <span class="k">return</span> <span class="sa">fr</span><span class="s2">&quot;(?&lt;!\d)</span><span class="si">{</span><span class="n">num</span><span class="si">}</span><span class="s2">(?!\d)&quot;</span>
+<span class="linenos"> 8</span>
+<span class="linenos"> 9</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">10</span><span class="k">def</span> <span class="nf">test420</span><span class="p">():</span>
+<span class="linenos">11</span>    <span class="sd">&quot;&quot;&quot;input of 4.2 yields output of 18&quot;&quot;&quot;</span>
+<span class="linenos">12</span>    <span class="n">expected</span> <span class="o">=</span> <span class="s2">&quot;18</span><span class="se">\n</span><span class="s2">&quot;</span>
+<span class="linenos">13</span>    <span class="n">actual</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 cash.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdin</span><span class="p">(</span><span class="s2">&quot;4.2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="linenos">14</span>    <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">coins</span><span class="p">(</span><span class="mi">18</span><span class="p">),</span> <span class="n">actual</span><span class="p">):</span>
+<span class="linenos">15</span>        <span class="n">help</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="linenos">16</span>        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">coins</span><span class="p">(</span><span class="mi">22</span><span class="p">),</span> <span class="n">actual</span><span class="p">):</span>
+<span class="linenos">17</span>            <span class="n">help</span> <span class="o">=</span> <span class="s2">&quot;did you forget to round your input to the nearest cent?&quot;</span>
+<span class="linenos">18</span>        <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Mismatch</span><span class="p">(</span><span class="n">expected</span><span class="p">,</span> <span class="n">actual</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">help</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Create your own assertions:</p>
+<div class="literal-block-wrapper docutils container" id="id18">
+<div class="code-block-caption"><span class="caption-text"><strong>__init__.py</strong></span><a class="headerlink" href="#id18" title="Permalink to this code">¶</a></div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span> <span class="nn">check50</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nd">@check50</span><span class="o">.</span><span class="n">check</span><span class="p">()</span>
+<span class="linenos">4</span><span class="k">def</span> <span class="nf">atleast_one_match</span><span class="p">()</span>
+<span class="linenos">5</span>    <span class="sd">&quot;&quot;&quot;matches either foo, bar or baz&quot;&quot;&quot;</span>
+<span class="linenos">6</span>    <span class="n">output</span> <span class="o">=</span> <span class="n">check50</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;python3 qux.py&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span><span class="p">()</span>
+<span class="linenos">7</span>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">answer</span> <span class="ow">in</span> <span class="n">output</span> <span class="k">for</span> <span class="n">answer</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="s2">&quot;baz&quot;</span><span class="p">]):</span>
+<span class="linenos">8</span>        <span class="k">raise</span> <span class="n">check50</span><span class="o">.</span><span class="n">Failure</span><span class="p">(</span><span class="s2">&quot;no match found&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="configuring-check50">
+<h2>Configuring check50<a class="headerlink" href="#configuring-check50" title="Permalink to this headline">¶</a></h2>
+<p>Check50, and other CS50 tools like submit50 and lab50, use a special configuration file called <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code>. Here is how you can configure check50 via <code class="docutils literal notranslate"><span class="pre">.cs50.yaml</span></code>.</p>
+<section id="checks">
+<h3>checks:<a class="headerlink" href="#checks" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">checks:</span></code> takes a filename specifying a file containing check50 Python checks, or a record of check50 YAML checks. If not specified, it will default to <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id19">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id19" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">checks.py</span>
+</pre></div>
+</div>
+</div>
+<p>Only specifies that this is a valid slug for check50. This configuration will allow you to run <code class="docutils literal notranslate"><span class="pre">check50</span> <span class="pre">&lt;slug&gt;</span></code>, by default <code class="docutils literal notranslate"><span class="pre">check50</span></code> will look for an <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> containing Python checks.</p>
+<div class="literal-block-wrapper docutils container" id="id20">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id20" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span> <span class="s">&quot;my_filename.py&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Specifies that this is a valid slug for check50, and has check50 look for <code class="docutils literal notranslate"><span class="pre">my_filename.py</span></code> instead of <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id21">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id21" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">checks</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="nt">hello world</span><span class="p">:</span>
+<span class="linenos">4</span>      <span class="p p-Indicator">-</span> <span class="nt">run</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">python3 hello.py</span>
+<span class="linenos">5</span>        <span class="nt">stdout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Hello, world!</span>
+<span class="linenos">6</span>        <span class="nt">exit</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+</div>
+<p>Specifies that this is a valid slug for check50, and has check50 compile and run the YAML check. For more on YAML checks in check50 see :ref:<code class="docutils literal notranslate"><span class="pre">check_writer</span></code>.</p>
+</section>
+<section id="files">
+<h3>files:<a class="headerlink" href="#files" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">files:</span></code> takes a list of files/patterns. Every item in the list must be tagged by either <code class="docutils literal notranslate"><span class="pre">!include</span></code>, <code class="docutils literal notranslate"><span class="pre">!exclude</span></code> or <code class="docutils literal notranslate"><span class="pre">!require</span></code>. All files matching a pattern tagged with <code class="docutils literal notranslate"><span class="pre">!include</span></code> are included and likewise for <code class="docutils literal notranslate"><span class="pre">!exclude</span></code>. <code class="docutils literal notranslate"><span class="pre">!require</span></code> is similar to <code class="docutils literal notranslate"><span class="pre">!include</span></code>, however it does not accept patterns, only filenames, and will cause <code class="docutils literal notranslate"><span class="pre">check50</span></code> to display an error if that file is missing. The list that is given to <code class="docutils literal notranslate"><span class="pre">files:</span></code> is processed top to bottom. Later items in <code class="docutils literal notranslate"><span class="pre">files:</span></code> win out over earlier items.</p>
+<p>The patterns that <code class="docutils literal notranslate"><span class="pre">!include</span></code> and <code class="docutils literal notranslate"><span class="pre">!exclude</span></code> accept are globbed, any matching files are added. check50 introduces one exception for convenience, similarly to how git treats .gitignore: If and only if a pattern does not contain a <code class="docutils literal notranslate"><span class="pre">/</span></code>, and starts with a <code class="docutils literal notranslate"><span class="pre">*</span></code>, it is considered recursive in such a way that <code class="docutils literal notranslate"><span class="pre">*.o</span></code> will exclude all files in any directory ending with <code class="docutils literal notranslate"><span class="pre">.o</span></code>. This special casing is just for convenience. Alternatively you could write <code class="docutils literal notranslate"><span class="pre">**/*.o</span></code> that is functionally identical to <code class="docutils literal notranslate"><span class="pre">*.o</span></code>, or write <code class="docutils literal notranslate"><span class="pre">./*.o</span></code> if you only want to exclude files ending with <code class="docutils literal notranslate"><span class="pre">.o</span></code> from the top-level directory.</p>
+<div class="literal-block-wrapper docutils container" id="id22">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id22" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*.pyc&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Excludes all files ending with <code class="docutils literal notranslate"><span class="pre">.pyc</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id23">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id23" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!include</span> <span class="s">&quot;*.py&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Exclude all files, but include all files ending with <code class="docutils literal notranslate"><span class="pre">.py</span></code>. Note that order is important here, if you would inverse the two lines it would read: include all files ending with <code class="docutils literal notranslate"><span class="pre">.py</span></code>, exclude everything. Effectively excluding everything!</p>
+<div class="literal-block-wrapper docutils container" id="id24">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id24" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!include</span> <span class="s">&quot;source/&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Exclude all files, but include all files in the source directory.</p>
+<div class="literal-block-wrapper docutils container" id="id25">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id25" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;build/&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;docs/&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Include everything, but exclude everything in the build and docs directories.</p>
+<div class="literal-block-wrapper docutils container" id="id26">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id26" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!include</span> <span class="s">&quot;source/&quot;</span>
+<span class="linenos">5</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*.pyc&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Exclude everything, include everything from the source directory, but exclude all files ending with <code class="docutils literal notranslate"><span class="pre">.pyc</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id27">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id27" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;source/**/*.pyc&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Include everything, but any files ending on <code class="docutils literal notranslate"><span class="pre">.pyc</span></code> within the source directory. The <code class="docutils literal notranslate"><span class="pre">**</span></code> here pattern matches any directory.</p>
+<div class="literal-block-wrapper docutils container" id="id28">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id28" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!require</span> <span class="s">&quot;foo.py&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!require</span> <span class="s">&quot;bar.c&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Require that both foo.py and bar.c are present and include them.</p>
+<div class="literal-block-wrapper docutils container" id="id29">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id29" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">files</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="kt">!exclude</span> <span class="s">&quot;*&quot;</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="kt">!include</span> <span class="s">&quot;*.py&quot;</span>
+<span class="linenos">5</span>    <span class="p p-Indicator">-</span> <span class="kt">!require</span> <span class="s">&quot;foo.py&quot;</span>
+<span class="linenos">6</span>    <span class="p p-Indicator">-</span> <span class="kt">!require</span> <span class="s">&quot;bar.c&quot;</span>
+</pre></div>
+</div>
+</div>
+<p>Exclude everything, include all files ending with <code class="docutils literal notranslate"><span class="pre">.py</span></code> and require (and include) both foo.py and bar.c. It is generally recommended to place any <code class="docutils literal notranslate"><span class="pre">!require``d</span> <span class="pre">files</span> <span class="pre">at</span> <span class="pre">the</span> <span class="pre">end</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">``files:</span></code>, this ensures they are always included.</p>
+</section>
+<section id="dependencies">
+<h3>dependencies:<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">dependencies:</span></code> is a list of <code class="docutils literal notranslate"><span class="pre">pip</span></code> installable dependencies that check50 will install.</p>
+<div class="literal-block-wrapper docutils container" id="id30">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id30" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">dependencies</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">pyyaml</span>
+<span class="linenos">4</span>    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">flask</span>
+</pre></div>
+</div>
+</div>
+<p>Has check50 install both <code class="docutils literal notranslate"><span class="pre">pyyaml</span></code> and <code class="docutils literal notranslate"><span class="pre">flask</span></code> via <code class="docutils literal notranslate"><span class="pre">pip</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id31">
+<div class="code-block-caption"><span class="caption-text"><strong>.cs50.yaml</strong></span><a class="headerlink" href="#id31" title="Permalink to this code">¶</a></div>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="nt">check50</span><span class="p">:</span>
+<span class="linenos">2</span>  <span class="nt">dependencies</span><span class="p">:</span>
+<span class="linenos">3</span>    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">git+https://github.com/cs50/submit50#egg=submit50</span>
+</pre></div>
+</div>
+</div>
+<p>Has check50 <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> submit50 from GitHub, especially useful for projects that are not hosted on PyPi. See <a class="reference external" href="https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support">https://pip.pypa.io/en/stable/reference/pip_install/#vcs-support</a> for more info on installing from a VCS.</p>
+</section>
+</section>
+<section id="internationalizing-checks">
+<h2>Internationalizing checks<a class="headerlink" href="#internationalizing-checks" title="Permalink to this headline">¶</a></h2>
+<p>TODO</p>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright .
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
