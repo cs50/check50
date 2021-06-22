@@ -5,6 +5,8 @@ import traceback
 import lib50
 import termcolor
 
+from contextlib import nullcontext
+
 from . import internal, __version__
 
 class Error(Exception):
