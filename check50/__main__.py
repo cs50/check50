@@ -22,6 +22,7 @@ import requests
 import termcolor
 
 from . import _exceptions, internal, renderer, __version__
+from .contextmanagers import nullcontext
 from .runner import CheckRunner
 
 LOGGER = logging.getLogger("check50")
@@ -51,13 +52,6 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record):
         msg = super().format(record)
         return msg if not self.use_color else termcolor.colored(msg, getattr(record, "color", self.COLORS.get(record.levelname)))
-
-
-@contextlib.contextmanager
-def nullcontext(entry_result=None):
-    """This is just contextlib.nullcontext but that function is only available in 3.7+."""
-    yield entry_result
-
 
 
 _exceptions.ExceptHook.initialize()
