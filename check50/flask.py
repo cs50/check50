@@ -123,7 +123,7 @@ class app:
             raise Failure(_("expected request to return HTML, but it returned {}").format(
                 self.response.mimetype))
 
-        # TODO: Remove once beautiful soup updates to accomodate python 3.7
+        # TODO: Remove once beautiful soup updates to accommodate python 3.7
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)
             content = BeautifulSoup(self.response.data, "html.parser")

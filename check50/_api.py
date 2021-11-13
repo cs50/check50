@@ -148,7 +148,7 @@ class run:
     :type env: dict
 
     By default, the command will be run using the same environment as ``check50``,
-    these mappings may be overriden via the ``env`` parameter::
+    these mappings may be overridden via the ``env`` parameter::
 
         check50.run("./foo").stdin("foo").stdout("bar").exit(0)
         check50.run("./foo", env={ "HOME": "/" }).stdin("foo").stdout("bar").exit(0)
@@ -475,7 +475,7 @@ def hidden(failure_rationale):
     :param failure_rationale: the rationale that will be displayed to the student if the check fails
     :type failure_rationale: str
 
-    Exaple usage::
+    Example usage::
 
         @check50.check()
         @check50.hidden("Your program isn't returning the expected result. Try running it on some sample inputs.")

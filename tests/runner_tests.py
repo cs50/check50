@@ -31,7 +31,7 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
 
         # Keep track of get_start_method
         # This function gets monkey patched to ensure run_check is aware of the multiprocessing context, 
-        # without needing to explicitely pass the context to run_check.
+        # without needing to explicitly pass the context to run_check.
         # The same behavior can't be achieved by multiprocessing.set_start_method as that can only run once per program
         # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
         self._get_start_method = multiprocessing.get_start_method()
