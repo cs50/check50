@@ -99,7 +99,7 @@ def check(dependency=None, timeout=60, max_log_lines=100):
     This is particularly useful when writing e.g., a ``compiles`` check that compiles a
     student's program (and checks that it compiled successfully). Any checks that run the
     student's program will logically depend on this check, and since they inherit the
-    resulting filesystem of the check, they will immidiately have access to the compiled
+    resulting filesystem of the check, they will immediately have access to the compiled
     program without needing to recompile.
 
     Example usage::
@@ -235,7 +235,7 @@ class CheckRunner:
 
 
     def dependencies_of(self, targets):
-        """Get all unique dependencies of the targetted checks (tartgets)."""
+        """Get all unique dependencies of the targeted checks (tartgets)."""
         inverse_graph = self._create_inverse_dependency_graph()
         deps = set()
         for target in targets:
@@ -283,7 +283,7 @@ class CheckRunner:
         self._cd_manager = lib50.cd(internal.run_root_dir)
         self._cd_manager.__enter__()
 
-        # TODO: Naming the module "checks" is arbitray. Better name?
+        # TODO: Naming the module "checks" is arbitrary. Better name?
         self.checks_spec = importlib.util.spec_from_file_location("checks", self.checks_path)
 
         # Clear check_names, import module, then save check_names. Not thread safe.
@@ -348,7 +348,7 @@ class run_check:
         in case multiprocessing is using spawn as its starting method. 
         """
 
-        # Attributes only need to be passed explicitely to child processes when using spawn
+        # Attributes only need to be passed explicitly to child processes when using spawn
         if multiprocessing.get_start_method() != "spawn":
            return
 

@@ -35,7 +35,7 @@ def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
 
         check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c11 -ggdb -lm -lcs50
 
-    In the same vein, the default CFLAGS may be overriden via keyword arguments::
+    In the same vein, the default CFLAGS may be overridden via keyword arguments::
 
         check50.c.compile("foo.c", "bar.c", std="c99", lm=False) # clang foo.c bar.c -o foo -std=c99 -ggdb
     """
