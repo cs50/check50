@@ -401,7 +401,7 @@ def main():
                             html_file.write(html)
 
                         if "microsoft-standard" in platform.uname().release:
-                            stream = os.popen(f"wslpath -w {html_file.name}")
+                            stream = os.popen(f"wslpath -m {html_file.name}")
                             wsl_path = stream.read().strip()
                             url = f"file://{wsl_path}"
                         else:
