@@ -19,7 +19,6 @@ import time
 
 import attr
 import lib50
-from matplotlib.pyplot import stem
 import requests
 import termcolor
 
