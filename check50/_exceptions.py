@@ -16,7 +16,7 @@ class Error(Exception):
 class RemoteCheckError(Error):
     """An exception for errors that happen in check50's remote operation."""
     def __init__(self, remote_json):
-        super().__init__("check50 ran into an error while running checks! Please contact sysadmins@cs50.harvard.edu!")
+        super().__init__("check50 ran into an error while running checks! Please visit our status page https://cs50.statuspage.io for more information.")
         self.payload = {"remote_json": remote_json}
 
 
@@ -47,8 +47,8 @@ class ExceptHook:
                 return
             else:
                 show_traceback = True
-                message = _("Sorry, something is wrong! check50 ran into an error.\n" \
-                            "Please let CS50 know by emailing the error above to sysadmins@cs50.harvard.edu.")
+                message = _("Sorry, something is wrong! check50 ran into an error, please try again.\n" \
+                            "If the problem persists, please visit our status page https://cs50.statuspage.io for more information.")
 
         # Output exception as json
         if "json" in self.outputs:
