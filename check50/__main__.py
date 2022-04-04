@@ -5,6 +5,7 @@ import gettext
 import importlib
 import inspect
 import itertools
+from json import JSONDecodeError
 import logging
 import os
 import site
@@ -138,22 +139,29 @@ def await_results(commit_hash, slug, pings=45, sleep=2):
     {pings} pings and waiting {sleep} seconds between pings.
     """
 
-    for _i in range(pings):
-        # Query for check results.
-        res = requests.get(f"https://submit.cs50.io/api/results/check50", params={"commit_hash": commit_hash, "slug": slug})
-        results = res.json()
+    try:
+        for _i in range(pings):
+            # Query for check results.
+            res = requests.get(f"https://submit.cs50.io/api/results/check50", params={"commit_hash": commit_hash, "slug": slug})
+            results = res.json()
 
-        if res.status_code not in [404, 200]:
-            raise _exceptions.RemoteCheckError(results)
+            if res.status_code not in [404, 200]:
+                raise _exceptions.RemoteCheckError(results)
 
-        if res.status_code == 200 and results["received_at"] is not None:
-            break
-        time.sleep(sleep)
-    else:
-        # Terminate if no response
+            if res.status_code == 200 and results["received_at"] is not None:
+                break
+            time.sleep(sleep)
+        else:
+            # Terminate if no response
+            raise _exceptions.Error(
+                _("check50 is taking longer than normal!\n"
+                "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
+
+    except JSONDecodeError:
+        # Invalid JSON object received from submit.cs50.io
         raise _exceptions.Error(
-            _("check50 is taking longer than normal!\n"
-              "See https://submit.cs50.io/check50/{} for more detail").format(commit_hash))
+            _("Sorry, something's wrong, please try again.\n"
+            "If the problem persists, please visit our status page https://cs50.statuspage.io for more information."))
 
     if not results["check50"]:
         raise _exceptions.RemoteCheckError(results)
