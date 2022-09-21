@@ -8,6 +8,7 @@ import itertools
 from json import JSONDecodeError
 import logging
 import os
+import platform
 import site
 from pathlib import Path
 import shutil
@@ -406,7 +407,13 @@ def main():
                         html = renderer.to_html(**results)
                         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as html_file:
                             html_file.write(html)
-                        url = f"file://{html_file.name}"
+
+                        if "microsoft-standard" in platform.uname().release:
+                            stream = os.popen(f"wslpath -m {html_file.name}")
+                            wsl_path = stream.read().strip()
+                            url = f"file://{wsl_path}"
+                        else:
+                            url = f"file://{html_file.name}"
                     else:
                         url = f"https://submit.cs50.io/check50/{tag_hash}"
 
