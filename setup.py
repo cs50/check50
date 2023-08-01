@@ -18,7 +18,7 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["attrs>=18", "beautifulsoup4>=0", "pexpect>=4.6", "lib50>=3,<4", "pyyaml<7", "requests>=2.19", "termcolor>=1.1", "jinja2>=2.10"],
+    install_requires=["attrs>=18", "beautifulsoup4>=0", "pexpect>=4.6", "lib50>=3,<4", "pyyaml>6,<7", "requests>=2.19", "termcolor>=1.1", "jinja2>=2.10"],
     extras_require = {
         "develop": ["sphinx", "sphinx-autobuild", "sphinx_rtd_theme"]
     },
