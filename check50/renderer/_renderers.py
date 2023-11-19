@@ -2,10 +2,11 @@ import json
 import pathlib
 
 import jinja2
-import pkg_resources
 import termcolor
 
-TEMPLATES = pathlib.Path(pkg_resources.resource_filename("check50.renderer", "templates"))
+from importlib.resources import files
+
+TEMPLATES = pathlib.Path(files("check50.renderer").joinpath("templates"))
 
 
 def to_html(slug, results, version):

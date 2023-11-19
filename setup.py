@@ -18,7 +18,7 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["attrs>=18", "beautifulsoup4>=0", "pexpect>=4.6", "lib50>=3,<4", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
+    install_requires=["attrs>=18", "beautifulsoup4>=0", "lib50>=3,<4", "packaging", "pexpect>=4.6", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
     extras_require = {
         "develop": ["sphinx", "sphinx-autobuild", "sphinx_rtd_theme"]
     },
@@ -30,6 +30,6 @@ setup(
         "console_scripts": ["check50=check50.__main__:main"]
     },
     url="https://github.com/cs50/check50",
-    version="3.3.9",
+    version="3.3.10",
     include_package_data=True
 )

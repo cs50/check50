@@ -1,29 +1,21 @@
 def _set_version():
     """Set check50 __version__"""
     global __version__
-    from pkg_resources import get_distribution, DistributionNotFound
+    from importlib.metadata import PackageNotFoundError, version
     import os
     # https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package
     try:
-        dist = get_distribution("check50")
-        # Normalize path for cross-OS compatibility.
-        dist_loc = os.path.normcase(dist.location)
-        here = os.path.normcase(__file__)
-        if not here.startswith(os.path.join(dist_loc, "check50")):
-            # This version is not installed, but another version is.
-            raise DistributionNotFound
-    except DistributionNotFound:
-        __version__ = "locally installed, no version information available"
-    else:
-        __version__ = dist.version
+        __version__ = version("check50")
+    except PackageNotFoundError:
+        __version__ = "UNKNOWN"
 
 
 def _setup_translation():
     import gettext
-    from pkg_resources import resource_filename
+    from importlib.resources import files
     global _translation
     _translation = gettext.translation(
-        "check50", resource_filename("check50", "locale"), fallback=True)
+        "check50", str(files("check50").joinpath("locale")), fallback=True)
     _translation.install()
 
 
