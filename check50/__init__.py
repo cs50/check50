@@ -15,7 +15,7 @@ def _setup_translation():
     from importlib.resources import files
     global _translation
     _translation = gettext.translation(
-        "check50", files("cli50").joinpath("locale"), fallback=True)
+        "check50", files("check50").joinpath("locale"), fallback=True)
     _translation.install()
 
 
