@@ -417,7 +417,7 @@ def main():
                     else:
                         url = f"https://submit.cs50.io/check50/{tag_hash}"
 
-                    termcolor.cprint(_("To see the results in your browser go to {}").format(url), "white", attrs=["bold"])
+                    termcolor.cprint(_("To see more detailed results go to {}").format(url), "white", attrs=["bold"])
 
     sys.exit(should_fail(results))
 
