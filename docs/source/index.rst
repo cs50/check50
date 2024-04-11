@@ -43,6 +43,12 @@ To install check50 under Linux / OS X:
 
     pip install check50
 
+Under Apple Silicon/ARM devices:
+
+.. code-block:: bash
+
+    pip install check50 --compile
+
 Under Windows, please |install_windows_sub|. Then install check50 within the subsystem.
 
 .. |install_windows_sub| raw:: html
