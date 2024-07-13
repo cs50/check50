@@ -31,11 +31,15 @@ First make sure you have Python 3.6 or higher installed. You can download Python
 
    <a href="https://www.python.org/downloads/" target="_blank">here</a>
 
-check50 has a dependency on git, please make sure to |install_git| if git is not already installed.
+check50 has a dependency on git and rustup, please make sure to |install_git| and |install_rustup| if not already installed.
 
 .. |install_git| raw:: html
 
    <a href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git" target="_blank">install git</a>
+
+.. |install_rustup| raw:: html
+
+   <a href="https://rustup.rs" target="_blank">install rustup</a>
 
 To install check50 under Linux / OS X:
 
