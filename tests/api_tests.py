@@ -21,7 +21,7 @@ class Base(unittest.TestCase):
         self.process = None
 
     def tearDown(self):
-        if self.process and self.process.process.isalive():
+        if self.process and self.process.isalive():
             self.process.kill()
         os.chdir(self.current_working_directory)
         self.working_directory.cleanup()
@@ -99,9 +99,9 @@ class TestRun(Base):
 class TestProcessKill(Base):
     def test_kill(self):
         self.runpy()
-        self.assertTrue(self.process.process.isalive())
+        self.assertTrue(self.process.isalive())
         self.process.kill()
-        self.assertFalse(self.process.process.isalive())
+        self.assertFalse(self.process.isalive())
 
 class TestProcessStdin(Base):
     def test_expect_prompt_no_prompt(self):
@@ -114,26 +114,26 @@ class TestProcessStdin(Base):
         self.write("x = input('foo')")
         self.runpy()
         self.process.stdin("bar")
-        self.assertTrue(self.process.process.isalive())
+        self.assertTrue(self.process.isalive())
 
     def test_no_prompt(self):
         self.write("x = input()\n")
         self.runpy()
         self.process.stdin("bar", prompt=False)
-        self.assertTrue(self.process.process.isalive())
+        self.assertTrue(self.process.isalive())
 
 class TestProcessStdout(Base):
     def test_no_out(self):
         self.runpy()
         out = self.process.stdout(timeout=1)
         self.assertEqual(out, "")
-        self.assertFalse(self.process.process.isalive())
+        self.assertFalse(self.process.isalive())
 
         self.write("print('foo')")
         self.runpy()
         out = self.process.stdout()
         self.assertEqual(out, "foo\n")
-        self.assertFalse(self.process.process.isalive())
+        self.assertFalse(self.process.isalive())
 
     def test_out(self):
         self.runpy()
@@ -282,7 +282,7 @@ class TestProcessKill(Base):
     def test_kill(self):
         self.runpy()
         self.process.kill()
-        self.assertFalse(self.process.process.isalive())
+        self.assertFalse(self.process.isalive())
 
 class TestProcessReject(Base):
     def test_reject(self):
