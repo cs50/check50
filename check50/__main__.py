@@ -345,6 +345,12 @@ def main():
         with lib50.ProgressBar("Checking") if "ansi" in args.output else nullcontext():
             # If developing, assume slug is a path to check_dir
             if args.dev:
+                # On Windows, the path is sometimes quoted. Resolving it as it is
+                # will give errors. Un-quote the path to a normal path string.
+                if os.name == "nt" and '"' in internal.slug:
+                    import oslex
+                    internal.slug = oslex.split(internal.slug)[0]
+
                 internal.check_dir = Path(internal.slug).expanduser().resolve()
                 if not internal.check_dir.is_dir():
                     raise _exceptions.Error(_("{} is not a directory").format(internal.check_dir))

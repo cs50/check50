@@ -3,7 +3,7 @@ import functools
 import numbers
 import os
 import re
-import shlex
+import oslex
 import shutil
 import signal
 import sys
@@ -164,7 +164,12 @@ class run:
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
         command = "bash -c {}".format(shlex.quote(command))
-        self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
+        if os.name == "nt" and command.startswith("python3"):
+            # Special logic for quoting Python interpreter path
+            # for Windows.
+            import oslex
+            python_path = shutil.which("python")
+            command = oslex.quote(python_path) + command[len("python3"):]
 
     def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """
