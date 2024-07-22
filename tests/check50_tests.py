@@ -1,11 +1,13 @@
 import unittest
 import json
 import pexpect
+from pexpect.popen_spawn import PopenSpawn
 import pathlib
 import shutil
 import subprocess
 import os
 import tempfile
+import oslex
 
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
@@ -36,171 +38,171 @@ class SimpleBase(Base):
 
 class TestExists(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exists")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "exists"))}")
         process.expect_exact(":(")
         process.expect_exact("foo.py exists")
         process.expect_exact("foo.py not found")
-        process.close(force=True)
+        process.wait()
 
     def test_with_file(self):
         open("foo.py", "w").close()
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exists")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "exists"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
-        process.close(force=True)
+        process.wait()
 
 
 class TestExitPy(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "exit_py"))}")
         process.expect_exact(":(")
         process.expect_exact("foo.py exists")
         process.expect_exact("foo.py not found")
         process.expect_exact(":|")
         process.expect_exact("foo.py exits properly")
         process.expect_exact("can't check until a frown turns upside down")
-        process.close(force=True)
+        process.wait()
 
     def test_with_correct_file(self):
         open("foo.py", "w").close()
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "exit_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":)")
         process.expect_exact("foo.py exits properly")
-        process.close(force=True)
+        process.wait()
 
     def test_with_incorrect_file(self):
         with open("foo.py", "w") as f:
             f.write("from sys import exit\nexit(1)")
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/exit_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "exit_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("foo.py exits properly")
         process.expect_exact("expected exit code 0, not 1")
-        process.close(force=True)
+        process.wait()
 
 
 class TestStdoutPy(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdout_py"))}")
         process.expect_exact(":(")
         process.expect_exact("foo.py exists")
         process.expect_exact("foo.py not found")
         process.expect_exact(":|")
         process.expect_exact("prints hello")
         process.expect_exact("can't check until a frown turns upside down")
-        process.close(force=True)
+        process.wait()
 
     def test_with_empty_file(self):
         open("foo.py", "w").close()
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdout_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello")
         process.expect_exact("expected \"hello\", not \"\"")
-        process.close(force=True)
+        process.wait()
 
 
     def test_with_correct_file(self):
         with open("foo.py", "w") as f:
             f.write('print("hello")')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdout_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":)")
         process.expect_exact("prints hello")
-        process.close(force=True)
+        process.wait()
 
 class TestStdoutTimeout(Base):
     def test_stdout_timeout(self):
         with open("foo.py", "w") as f:
             f.write("while True: pass")
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdout_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdout_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("check50 waited 1 seconds for the output of the program")
-        process.close(force=True)
+        process.wait()
 
 class TestStdinPy(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_py"))}")
         process.expect_exact(":(")
         process.expect_exact("foo.py exists")
         process.expect_exact("foo.py not found")
         process.expect_exact(":|")
         process.expect_exact("prints hello name")
         process.expect_exact("can't check until a frown turns upside down")
-        process.close(force=True)
+        process.wait()
 
     def test_with_empty_file(self):
         open("foo.py", "w").close()
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
         process.expect_exact("expected \"hello bar\", not \"\"")
-        process.close(force=True)
+        process.wait()
 
     def test_with_correct_file(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
-        process.close(force=True)
+        process.wait()
 
 
 class TestStdinPromptPy(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_prompt_py"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
-        process.close(force=True)
+        process.wait()
 
     def test_with_empty_file(self):
         open("foo.py", "w").close()
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_prompt_py"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
         process.expect_exact("expected prompt for input, found none")
-        process.close(force=True)
+        process.wait()
 
     def test_with_incorrect_file(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_prompt_py"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
         process.expect_exact("expected prompt for input, found none")
-        process.close(force=True)
+        process.wait()
 
     def test_with_correct_file(self):
         with open("foo.py", "w") as f:
             f.write('name = input("prompt")\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_prompt_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_prompt_py"))}")
         process.expect_exact(":)")
         process.expect_exact("prints hello name")
-        process.close(force=True)
+        process.wait()
 
 
 class TestStdinMultiline(Base):
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_multiline"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (non chaining)")
         process.expect_exact(":(")
@@ -209,12 +211,12 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (chaining) (order)")
-        process.close(force=True)
+        process.wait()
 
     def test_with_empty_file(self):
         open("foo.py", "w").close()
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_multiline"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (non chaining)")
         process.expect_exact(":(")
@@ -223,13 +225,13 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (chaining) (order)")
-        process.close(force=True)
+        process.wait()
 
     def test_with_incorrect_file(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_multiline"))}")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (non chaining)")
         process.expect_exact(":(")
@@ -239,13 +241,13 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":(")
         process.expect_exact("prints hello name (chaining) (order)")
-        process.close(force=True)
+        process.wait()
 
     def test_with_correct_file(self):
         with open("foo.py", "w") as f:
             f.write('for _ in range(2):\n    name = input("prompt")\n    print("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_multiline")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_multiline"))}")
         process.expect_exact(":)")
         process.expect_exact("prints hello name (non chaining)")
         process.expect_exact(":)")
@@ -254,14 +256,14 @@ class TestStdinMultiline(Base):
         process.expect_exact("prints hello name (chaining)")
         process.expect_exact(":)")
         process.expect_exact("prints hello name (chaining) (order)")
-        process.close(force=True)
+        process.wait()
 
 class TestStdinHumanReadable(Base):
     def test_without_human_readable_string(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact("checking that foo.py exists...")
@@ -270,13 +272,13 @@ class TestStdinHumanReadable(Base):
         process.expect_exact("running python3 foo.py...")
         process.expect_exact("sending input bar...")
         process.expect_exact("checking for output \"hello bar\"...")
-        process.close(force=True)
+        process.wait()
 
     def test_with_human_readable_string(self):
         with open("foo.py", "w") as f:
             f.write('name = input("prompt")')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/stdin_human_readable_py")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "stdin_human_readable_py"))}")
         process.expect_exact(":)")
         process.expect_exact("foo.py exists")
         process.expect_exact("checking that foo.py exists...")
@@ -284,52 +286,52 @@ class TestStdinHumanReadable(Base):
         process.expect_exact("takes input")
         process.expect_exact("running python3 foo.py...")
         process.expect_exact("sending input bbb...")
-        process.close(force=True)
+        process.wait()
 
 
 class TestCompileExit(SimpleBase):
     compiled_loc = CHECKS_DIRECTORY / "compile_exit" / "__init__.py"
 
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_exit"))}")
         process.expect_exact(":(")
         process.expect_exact("exit")
-        process.close(force=True)
+        process.wait()
 
     def test_with_correct_file(self):
         open("foo.py", "w").close()
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_exit")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_exit"))}")
         process.expect_exact(":)")
         process.expect_exact("exit")
-        process.close(force=True)
+        process.wait()
 
 
 class TestCompileStd(SimpleBase):
     compiled_loc = CHECKS_DIRECTORY / "compile_std" / "__init__.py"
 
     def test_no_file(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_std"))}")
         process.expect_exact(":(")
         process.expect_exact("std")
-        process.close(force=True)
+        process.wait()
 
     def test_with_incorrect_stdout(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint("hello", name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_std"))}")
         process.expect_exact(":)")
         process.expect_exact("std")
-        process.close(force=True)
+        process.wait()
 
     def test_correct(self):
         with open("foo.py", "w") as f:
             f.write('name = input()\nprint(name)')
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_std")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_std"))}")
         process.expect_exact(":)")
         process.expect_exact("std")
-        process.close(force=True)
+        process.wait()
 
 
 class TestCompilePrompt(SimpleBase):
@@ -339,44 +341,45 @@ class TestCompilePrompt(SimpleBase):
         with open("foo.py", "w"), open(self.compiled_loc, "w"):
             pass
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/compile_prompt")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "compile_prompt"))}")
         process.expect_exact("check50 will compile the YAML checks to __init__.py")
-        process.close(force=True)
+        process.sendline("n")
+        process.wait()
 
 
 class TestOutputModes(Base):
     def test_json_output(self):
-        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/output")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json {oslex.quote(str(CHECKS_DIRECTORY / "output"))}").wait()
         with open("foo.json", "r") as f:
             json_out = json.load(f)
             self.assertEqual(json_out["results"][0]["name"], "exists")
 
     def test_ansi_output(self):
-        process = pexpect.spawn(f"check50 --dev -o ansi -- {CHECKS_DIRECTORY}/output")
+        process = PopenSpawn(f"check50 --dev -o ansi -- {oslex.quote(str(CHECKS_DIRECTORY / "output"))}")
         process.expect_exact(":(")
-        process.close(force=True)
+        process.wait()
 
     def test_html_output(self):
-        process = pexpect.spawn(f"check50 --dev -o html -- {CHECKS_DIRECTORY}/output")
+        process = PopenSpawn(f"check50 --dev -o html -- {oslex.quote(str(CHECKS_DIRECTORY / "output"))}")
         process.expect_exact("file://")
-        process.close(force=True)
+        process.wait()
 
     def test_multiple_outputs(self):
-        process = pexpect.spawn(f"check50 --dev -o html ansi -- {CHECKS_DIRECTORY}/output")
+        process = PopenSpawn(f"check50 --dev -o html ansi -- {oslex.quote(str(CHECKS_DIRECTORY / "output"))}")
         process.expect_exact("file://")
         process.expect_exact(":(")
-        process.close(force=True)
+        process.wait()
 
     def test_default(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/output")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "output"))}")
         process.expect_exact(":(")
         process.expect_exact("file://")
-        process.close(force=True)
+        process.wait()
 
 
 class TestHiddenCheck(Base):
     def test_hidden_check(self):
-        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/hidden")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json {oslex.quote(str(CHECKS_DIRECTORY / "hidden"))}").wait()
         expected = [{'name': 'check', 'description': "check", 'passed': False, 'log': [], 'cause': {"rationale": "foo", "help": None}, 'data': {}, 'dependency': None}]
         with open("foo.json", "r") as f:
             self.assertEqual(json.load(f)["results"], expected)
@@ -384,7 +387,7 @@ class TestHiddenCheck(Base):
 
 class TestPayloadCheck(Base):
     def test_payload_check(self):
-        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/payload")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json {oslex.quote(str(CHECKS_DIRECTORY / "payload"))}").wait()
         with open("foo.json", "r") as f:
             error = json.load(f)["error"]
         self.assertEqual(error["type"], "MissingFilesError")
@@ -396,7 +399,7 @@ class TestTarget(Base):
     def test_target(self):
         open("foo.py", "w").close()
 
-        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 -- {CHECKS_DIRECTORY}/target")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json --target exists1 -- {oslex.quote(str(CHECKS_DIRECTORY / "target"))}").wait()
         with open("foo.json", "r") as f:
             output = json.load(f)
 
@@ -407,7 +410,7 @@ class TestTarget(Base):
     def test_target_with_dependency(self):
         open("foo.py", "w").close()
 
-        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists3 -- {CHECKS_DIRECTORY}/target")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json --target exists3 -- {oslex.quote(str(CHECKS_DIRECTORY / "target"))}").wait()
         with open("foo.json", "r") as f:
             output = json.load(f)
 
@@ -419,7 +422,7 @@ class TestTarget(Base):
     def test_two_targets(self):
         open("foo.py", "w").close()
 
-        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists1 exists2 -- {CHECKS_DIRECTORY}/target")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json --target exists1 exists2 -- {oslex.quote(str(CHECKS_DIRECTORY / "target"))}").wait()
         with open("foo.json", "r") as f:
             output = json.load(f)
 
@@ -431,7 +434,7 @@ class TestTarget(Base):
     def test_target_failing_dependency(self):
         open("foo.py", "w").close()
 
-        pexpect.run(f"check50 --dev -o json --output-file foo.json --target exists5 -- {CHECKS_DIRECTORY}/target")
+        PopenSpawn(f"check50 --dev -o json --output-file foo.json --target exists5 -- {oslex.quote(str(CHECKS_DIRECTORY / "target"))}").wait()
         with open("foo.json", "r") as f:
             output = json.load(f)
 
@@ -443,17 +446,20 @@ class TestTarget(Base):
 class TestRemoteException(Base):
     def test_no_traceback(self):
         # Check that bar (part of traceback) is not shown
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "remote_exception_no_traceback"))}")
         self.assertRaises(pexpect.exceptions.EOF, lambda: process.expect("bar"))
+        process.wait()
 
         # Check that foo (the message) is shown
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_no_traceback")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "remote_exception_no_traceback"))}")
         process.expect("foo")
+        process.wait()
 
     def test_traceback(self):
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/remote_exception_traceback")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "remote_exception_traceback"))}")
         process.expect("bar")
         process.expect("foo")
+        process.wait()
 
 
 class TestInternalDirectories(Base):
@@ -461,35 +467,33 @@ class TestInternalDirectories(Base):
         with open("foo.py", "w") as f:
             f.write(os.getcwd())
 
-        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/internal_directories")
+        process = PopenSpawn(f"check50 --dev {oslex.quote(str(CHECKS_DIRECTORY / "internal_directories"))}")
         process.expect_exact(":)")
+        process.wait()
 
 
 class TestExitCode(Base):
     def test_error_result_exit_code(self):
         process = subprocess.run(
-            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/error"],
+            ["check50", "--dev", f"{oslex.quote(str(CHECKS_DIRECTORY / "exit_code" / "error"))}"],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=2
+            stderr=subprocess.DEVNULL
         )
         self.assertEqual(process.returncode, 1)
 
     def test_failed_check_exit_code(self):
         process = subprocess.run(
-            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/failure"],
+            ["check50", "--dev", f"{oslex.quote(str(CHECKS_DIRECTORY / "exit_code" / "failure"))}"],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=2
+            stderr=subprocess.DEVNULL
         )
         self.assertEqual(process.returncode, 1)
 
     def test_successful_exit(self):
         process = subprocess.run(
-            ["check50", "--dev", f"{CHECKS_DIRECTORY}/exit_code/success"],
+            ["check50", "--dev", f"{oslex.quote(str(CHECKS_DIRECTORY / "exit_code" / "success"))}"],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=2
+            stderr=subprocess.DEVNULL
         )
         self.assertEqual(process.returncode, 0)
 
