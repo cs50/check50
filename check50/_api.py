@@ -163,7 +163,9 @@ class run:
 
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
-        command = "bash -c {}".format(shlex.quote(command))
+        if shutil.which("bash"):
+            command = "bash -c {}".format(command)
+
         if os.name == "nt" and command.startswith("python3"):
             # Special logic for quoting Python interpreter path
             # for Windows.
