@@ -8,4 +8,4 @@ def exists():
 @check50.check(exists)
 def takes_input():
     """takes input"""
-    check50.run("python3 foo.py").stdin("aaa", prompt=False, str_line="bbb")
+    check50.run("python3 foo.py").stdin("aaa", prompt=False, str_line="bbb").exit()

@@ -59,7 +59,7 @@ def _compile_check(name, check):
     if check_name[0].isdigit():
         check_name = f"_{check_name}"
 
-    if not re.match("\w+", check_name):
+    if not re.match(r"\w+", check_name):
         raise CompileError(
                 _("{} is not a valid name for a check; check names should consist only of alphanumeric characters, underscores, and spaces").format(name))
 
@@ -79,6 +79,16 @@ def _compile_check(name, check):
         for command_name in COMMANDS:
             if command_name in run:
                 line.append(COMMANDS[command_name](run[command_name]))
+
+        # In order for every check to completely leave their temporary working
+        # directories set up in `check50.run`(which uses PopenSpawn) before
+        # the entire script completes, there must be an additional `.exit()`
+        # at the end of the check50 commands chain.
+        # This will ensure that the calling context will not be exited until
+        # the child processes complete their cleanup.
+        if run["exit"] == None:
+            line.append(".exit()")
+
         out.append("".join(line))
 
     return "\n".join(out)
