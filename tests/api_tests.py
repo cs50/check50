@@ -11,6 +11,7 @@ import check50.internal
 
 class Base(unittest.TestCase):
     def setUp(self):
+        self.current_working_directory = os.getcwd()
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
 
@@ -22,6 +23,7 @@ class Base(unittest.TestCase):
     def tearDown(self):
         if self.process and self.process.process.isalive():
             self.process.kill()
+        os.chdir(self.current_working_directory)
         self.working_directory.cleanup()
 
     def write(self, source):

@@ -26,6 +26,7 @@ else:
 
 class TestMultiprocessingStartMethods(unittest.TestCase):
     def setUp(self):
+        self.current_working_directory = os.getcwd()
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
 
@@ -37,6 +38,7 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         self._get_start_method = multiprocessing.get_start_method()
 
     def tearDown(self):
+        os.chdir(self.current_working_directory)
         self.working_directory.cleanup()
         multiprocessing.get_start_method = self._get_start_method
 

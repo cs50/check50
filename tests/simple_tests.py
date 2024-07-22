@@ -11,10 +11,12 @@ class Base(unittest.TestCase):
     config_file = ".check50.yaml"
 
     def setUp(self):
+        self.current_working_directory = os.getcwd()
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
 
     def tearDown(self):
+        os.chdir(self.current_working_directory)
         self.working_directory.cleanup()
 
     def write(self, source):
