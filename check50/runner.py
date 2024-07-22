@@ -72,16 +72,17 @@ def _timeout(seconds):
             print("do_stuff timed out")
     """
 
+    from threading import Timer
+
     def _handle_timeout(*args):
         raise Timeout(seconds)
 
-    signal.signal(signal.SIGALRM, _handle_timeout)
-    signal.alarm(seconds)
+    timer = Timer(seconds, _handle_timeout)
     try:
+        timer.start()
         yield
     finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        timer.cancel()
 
 
 def check(dependency=None, timeout=60, max_log_lines=100):
