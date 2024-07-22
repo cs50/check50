@@ -312,11 +312,11 @@ class CheckRunner:
 
 
     def __exit__(self, type, value, tb):
-        # Destroy the temporary directory for the checks
-        self._working_area_manager.__exit__(type, value, tb)
-
         # cd back to the directory check50 was called from
         self._cd_manager.__exit__(type, value, tb)
+
+        # Destroy the temporary directory for the checks
+        self._working_area_manager.__exit__(type, value, tb)
 
 
 class run_check:
