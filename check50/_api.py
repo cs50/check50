@@ -10,6 +10,7 @@ import sys
 import time
 
 import pexpect
+from pexpect.popen_spawn import PopenSpawn
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal, regex
@@ -173,6 +174,8 @@ class run:
             python_path = shutil.which("python")
             command = oslex.quote(python_path) + command[len("python3"):]
 
+        self.process = PopenSpawn(command, encoding="utf-8", env=full_env)
+
     def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """
         Send line to stdin, optionally expect a prompt.
@@ -203,6 +206,11 @@ class run:
             try:
                 self.process.expect(".+", timeout=timeout)
             except (TIMEOUT, EOF):
+                # This terminates the process whose prompt is expected.
+                # As there would be a timeout or EOF, the testing should
+                # be stopped and marked as not complete.
+                self.kill()
+
                 raise Failure(_("expected prompt for input, found none"))
             except UnicodeDecodeError:
                 raise Failure(_("output not valid ASCII text"))
@@ -289,8 +297,14 @@ class run:
             result = self.process.before + self.process.buffer
             if self.process.after != EOF:
                 result += self.process.after
+
             raise Mismatch(str_output, result.replace("\r\n", "\n"))
         except TIMEOUT:
+            # This terminates the process whose output is to be matched.
+            # As there is a timeout, the testing should be stopped and
+            # marked as not complete.
+            self.kill()
+
             if show_timeout:
                 raise Missing(str_output, self.process.before,
                               help=_("check50 waited {} seconds for the output of the program").format(timeout))
@@ -364,7 +378,9 @@ class run:
 
         Child will first be sent a ``SIGHUP``, followed by a ``SIGINT`` and
         finally a ``SIGKILL`` if it ignores the first two."""
-        self.process.close(force=True)
+        if self.isalive():
+            self.process.proc.kill()
+            self.process.proc.wait()
         return self
 
     def _wait(self, timeout=5):
@@ -380,8 +396,11 @@ class run:
         if self.process.signalstatus == signal.SIGSEGV:
             raise Failure(_("failed to execute program due to segmentation fault"))
 
-        self.exitcode = self.process.exitstatus
+        self.exitcode = self.process.proc.returncode
         return self
+
+    def isalive(self):
+        return self.process.proc.poll() == None
 
 
 class Failure(Exception):
