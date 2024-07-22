@@ -31,7 +31,7 @@ class Base(unittest.TestCase):
             f.write(source)
 
     def runpy(self):
-        self.process = check50.run(f"python3 ./{self.filename}")
+        self.process = check50.run(f"python3 {self.filename}")
 
 class TestInclude(Base):
     def setUp(self):
@@ -93,7 +93,7 @@ class TestImportChecks(Base):
 
 class TestRun(Base):
     def test_returns_process(self):
-        self.process = check50.run("python3 ./{self.filename}")
+        self.process = check50.run(f"python3 {self.filename}")
 
 
 class TestProcessKill(Base):
@@ -109,6 +109,10 @@ class TestProcessStdin(Base):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.stdin("bar")
+        # The previous `.stdin("bar")` call will not actually send
+        # any input as an exception is raised. Hence we
+        self.process.stdin("just exit the script when test is over", prompt=False)
+        self.process.exit()
 
     def test_expect_prompt(self):
         self.write("x = input('foo')")
@@ -117,7 +121,9 @@ class TestProcessStdin(Base):
         self.assertTrue(self.process.isalive())
 
     def test_no_prompt(self):
-        self.write("x = input()\n")
+        # `time.sleep` will ensure that the script still runs
+        # after the input is sent to the prompt.
+        self.write("x = input()\nimport time\ntime.sleep(3)\n")
         self.runpy()
         self.process.stdin("bar", prompt=False)
         self.assertTrue(self.process.isalive())
@@ -139,7 +145,9 @@ class TestProcessStdout(Base):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.stdout("foo")
-        self.assertFalse(self.process.process.isalive())
+        # Wait until exit. No need to check if process is dead.
+        # Timeout will fire after 5 seconds if necessary.
+        self.process.exit()
 
         self.write("print('foo')")
         self.runpy()
@@ -163,7 +171,9 @@ class TestProcessStdout(Base):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.stdout(".o.", regex=False)
-        self.assertFalse(self.process.process.isalive())
+        # Wait until exit. No need to check if process is dead.
+        # Timeout will fire after 5 seconds if necessary.
+        self.process.exit()
 
     def test_int(self):
         self.write("print(123)")
@@ -266,7 +276,9 @@ class TestProcessExit(Base):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.exit(0)
-        self.process.kill()
+        # Wait until exit. No need to check if process is dead.
+        # Timeout will fire after 5 seconds if necessary.
+        self.process.exit()
 
         self.write("sys.exit(1)")
         self.runpy()
