@@ -15,49 +15,63 @@ VALGRIND_INSTALLED = bool(shutil.which("valgrind"))
 CHECKS_DIRECTORY = pathlib.Path(__file__).absolute().parent / "checks"
 
 class Base(unittest.TestCase):
+    starting_dir = os.getcwd()
+
     def setUp(self):
         if not CLANG_INSTALLED:
             raise unittest.SkipTest("clang not installed")
-        if not VALGRIND_INSTALLED:
-            raise unittest.SkipTest("valgrind not installed")
+
+        # ensures each test starts from same cwd;
+        # 'chdir' would otherwise persist between tests
+        os.chdir(self.starting_dir)
+
+        # write c test files to temp directory
+        test_files = {}
+        os.chdir("test_files")
+        for file in os.listdir():
+            with open(file) as f:
+                test_files[file] = f.read()
 
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
+
+        for file in test_files:
+            with open(file, "w") as f:
+                f.write(test_files[file])
 
     def tearDown(self):
         self.working_directory.cleanup()
 
 class TestCompile(Base):
     def test_compile_incorrect(self):
-        open("blank.c", "w").close()
-
         with self.assertRaises(check50.Failure):
             check50.c.compile("blank.c")
 
     def test_compile_hello_world(self):
-        with open("hello.c", "w") as f:
-            src =   '#include <stdio.h>\n'\
-                    'int main() {\n'\
-                    '    printf("hello, world!\\n");\n'\
-                    '}'
-            f.write(src)
-
         check50.c.compile("hello.c")
-
         self.assertTrue(os.path.isfile("hello"))
+
+class TestRun(Base):
+    def test_stdout_hello_world(self):
+        check50.c.compile("hello.c")
         check50.run("./hello").stdout("hello, world!", regex=False)
+
+    def test_stdin_cash(self):
+        check50.c.compile("cash.c", lcs50=True)
+        check50.run("./cash").stdin("42", prompt=True).stdout("5").exit()
 
 class TestValgrind(Base):
     def setUp(self):
         super().setUp()
+
+        # valgrind installation check moved to here from Base()
+        if not VALGRIND_INSTALLED:
+            raise unittest.SkipTest("valgrind not installed")
         if not (sys.platform == "linux" or sys.platform == "linux2"):
             raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
 
     def test_no_leak(self):
         check50.internal.check_running = True
-        with open("foo.c", "w") as f:
-            src = 'int main() {}'
-            f.write(src)
 
         check50.c.compile("foo.c")
         with check50.internal.register:
@@ -66,13 +80,6 @@ class TestValgrind(Base):
 
     def test_leak(self):
         check50.internal.check_running = True
-        with open("leak.c", "w") as f:
-            src =   '#include <stdlib.h>\n'\
-                    'void leak() {malloc(sizeof(int));}\n'\
-                    'int main() {\n'\
-                    '    leak();\n'\
-                    '}'
-            f.write(src)
 
         check50.c.compile("leak.c")
         with self.assertRaises(check50.Failure):

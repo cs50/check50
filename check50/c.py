@@ -55,7 +55,8 @@ def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
 
     out_flag = f" -o {exe_name} " if exe_name is not None else " "
 
-    process = run(f"{cc} {files}{out_flag}{flags}")
+    proc_str = f"{cc} {files}{out_flag}{flags}"
+    process = run(proc_str)
 
     # Strip out ANSI codes
     stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout())

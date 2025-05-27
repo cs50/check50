@@ -161,10 +161,16 @@ class run:
         full_env = os.environ.copy()
         full_env.update(env)
 
+        # load in env into bash manually via export commands
+        bash_command = ""
+        for key in full_env:
+            bash_command += "export {}={} && ".format(shlex.quote(key), shlex.quote(full_env[key]))
+        bash_command += command
+
         # Workaround for OSX pexpect bug http://pexpect.readthedocs.io/en/stable/commonissues.html#truncated-output-just-before-child-exits
         # Workaround from https://github.com/pexpect/pexpect/issues/373
-        command = "bash -c {}".format(shlex.quote(command))
-        self.process = pexpect.spawn(command, encoding="utf-8", echo=False, env=full_env)
+        command = "bash -c {}".format(shlex.quote(bash_command))
+        self.process = pexpect.spawn(command, encoding="utf-8", echo=False)
 
     def stdin(self, line, str_line=None, prompt=True, timeout=3):
         """

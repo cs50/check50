@@ -7,16 +7,16 @@ def decimal(number):
 
     In case of a positive number::
 
-        (?<![\d\-])number(?!(\.?\d))
+        (?<![\\d\\-])number(?!(\\.?\\d))
 
     In case of a negative number::
 
-        number(?!(\.?\d))
+        number(?!(\\.?\\d))
 
-    :code:`(?<![\d\-])` = negative lookbehind, \
+    :code:`(?<![\\d\\-])` = negative lookbehind, \
         asserts that there are no digits and no - in front of the number.
 
-    :code:`(?!(\.?\d))` = negative lookahead, \
+    :code:`(?!(\\.?\\d))` = negative lookahead, \
         asserts that there are no digits and no additional . followed by digits after the number.
 
     :param number: the number to match in the regex
