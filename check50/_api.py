@@ -505,11 +505,9 @@ def _raw(s):
     if s == EOF:
         return "EOF"
 
-    s = repr(str(s))
-    if s.startswith("'") and s.endswith("'"):
-        s = f'"{s[1:-1]}"'
-    if len(s) > 15:
-        s = s[:15] + "...\""  # Truncate if too long
+    s = f'"{repr(str(s))[1:-1]}"'
+    # if len(s) > 15:
+    #     s = s[:15] + "...\""  # Truncate if too long
     return s
 
 
