@@ -463,7 +463,7 @@ class Mismatch(Failure):
         if actual == EOF:
             actual = "EOF"
 
-        self.payload.update({"expected": expected, "actual": actual})
+        self.payload.update({"expected": repr(expected), "actual": repr(actual)})
 
 
 def hidden(failure_rationale):
