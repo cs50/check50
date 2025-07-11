@@ -75,37 +75,20 @@
                           {% if check.cause and "actual" in check.cause and "expected" in check.cause %}
                               <br/>
                               <div class="row">
+                                  {% set expected = check.cause.expected | join('\n') if check.cause.expected is not string else check.cause.expected %}
                                   <div class="col-md-6">
                                       <b>Expected Output:</b>
-                                      <br/>
-                                      <div style="background-color:black; color:white;">
-                                      <samp>
-                                          {% autoescape false %}
-                                              {% if check.cause.expected is not string %}
-                                                  {% set expected = check.cause.expected | join('\n') | e %}
-                                              {% else %}
-                                                  {% set expected = check.cause.expected | e %}
-                                              {% endif %}
-                                              {{ expected | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
-                                          {% endautoescape %}
-                                      </samp>
-                                      </div>
+                                      <pre style="background-color:black; color:white; padding:10px;">
+                                          {{ expected }}
+                                      </pre>
                                   </div>
+                                  
+                                  {% set actual = check.cause.actual | join('\n') if check.cause.actual is not string else check.cause.actual %}
                                   <div class="col-md-6">
                                       <b>Actual Output:</b>
-                                      <br/>
-                                      <div style="background-color:black; color:white;">
-                                      <samp>
-                                          {% autoescape false %}
-                                              {% if check.cause.actual is not string %}
-                                                  {% set actual = check.cause.actual | join('\n') | e %}
-                                              {% else %}
-                                                  {% set actual = check.cause.actual | e %}
-                                              {% endif %}
-                                              {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
-                                          {% endautoescape %}
-                                      </samp>
-                                      </div>
+                                      <pre style="background-color:black; color:white; padding:10px;">
+                                          {{ actual }}
+                                      </pre>
                                   </div>
                               </div>
                           {% endif %}
