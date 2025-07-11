@@ -27,12 +27,12 @@
                           <p>
                               <b>Cause</b><br/>
                               {% autoescape false %}
-                                  {{ check.cause.rationale | e | replace(" ", "&nbsp;") }}
+                                  {{ check.cause.rationale | replace(" ", "&nbsp;") }}
                               {% endautoescape %}
                               <br/>
                               {% autoescape false %}
                                   {% if check.cause.help %}
-                                      {{ check.cause.help | e | replace(" ", "&nbsp;") }}
+                                      {{ check.cause.help | replace(" ", "&nbsp;") }}
                                       <br/>
                                   {% endif %}
                               {% endautoescape %}
@@ -82,9 +82,9 @@
                                       <samp>
                                           {% autoescape false %}
                                               {% if check.cause.expected is not string %}
-                                                  {% set expected = check.cause.expected | join('\n') | e %}
+                                                  {% set expected = check.cause.expected | join('\n') %}
                                               {% else %}
-                                                  {% set expected = check.cause.expected | e %}
+                                                  {% set expected = check.cause.expected %}
                                               {% endif %}
                                               {{ expected | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
@@ -98,9 +98,9 @@
                                       <samp>
                                           {% autoescape false %}
                                               {% if check.cause.actual is not string %}
-                                                  {% set actual = check.cause.actual | join('\n') | e %}
+                                                  {% set actual = check.cause.actual | join('\n') %}
                                               {% else %}
-                                                  {% set actual = check.cause.actual | e %}
+                                                  {% set actual = check.cause.actual %}
                                               {% endif %}
                                               {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
@@ -121,7 +121,7 @@
                                       <div style="background-color:black; color:#90ee90;">
                                       <samp>
                                           {% autoescape false %}
-                                              {% set item = check.cause.missing_item | e %}
+                                              {% set item = check.cause.missing_item %}
                                               {{ item | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
                                       </samp>
@@ -133,7 +133,7 @@
                                       <div style="background-color:black; color:white;">
                                       <samp>
                                           {% autoescape false %}
-                                              {% set collection = check.cause.collection | e %}
+                                              {% set collection = check.cause.collection %}
                                               {{ collection | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
                                           {% endautoescape %}
                                       </samp>
