@@ -45,7 +45,7 @@ def _fmt_special_chars(txt, color):
         is_last = i == len(txt) - 1
 
         if not char.isprintable() and char not in ws_to_html:
-            # Most special characters, excluding those in ws_to_html, are highlighted
+            # Most special invisible characters, excluding those in ws_to_html, are highlighted
             fmtted_txt.append(highlight_char(char, color))
         elif char in ws_to_html:
             # If there's a trailing whitespace character, we highlight it
