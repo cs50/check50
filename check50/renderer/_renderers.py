@@ -1,6 +1,5 @@
 import json
 import pathlib
-import html
 
 import jinja2
 import termcolor
