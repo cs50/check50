@@ -8,7 +8,6 @@ from importlib.resources import files
 
 TEMPLATES = pathlib.Path(files("check50.renderer").joinpath("templates"))
 
-
 def to_html(slug, results, version):
     with open(TEMPLATES / "results.html") as f:
         content = f.read()
