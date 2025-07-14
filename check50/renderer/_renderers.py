@@ -1,6 +1,6 @@
 import json
 import pathlib
-import re
+# import re
 
 import jinja2
 import termcolor
@@ -37,10 +37,12 @@ def to_ansi(slug, results, version, _log=False):
                 lines += (f"    {line.rstrip()}" for line in result["cause"]["error"]["traceback"])
         else:
             lines.append(termcolor.colored(f":( {result['description']}", "red"))
+            # if result["cause"].get("rationale") is not None:
+            #     match = re.match(r'expected (".+?"), not (".+?")', result["cause"].get("rationale"))
+            #     lines.append(termcolor.colored(f"    expected: {match.group(1)}", "red"))
+            #     lines.append(termcolor.colored(f"    actual:   {match.group(2)}", "red"))
             if result["cause"].get("rationale") is not None:
-                match = re.match(r'expected (".+?"), not (".+?")', result["cause"].get("rationale"))
-                lines.append(termcolor.colored(f"    expected: {match.group(1)}", "red"))
-                lines.append(termcolor.colored(f"    actual:   {match.group(2)}", "red"))
+                lines.append(termcolor.colored(f"    {result['cause']['rationale']}", "red"))
             if result["cause"].get("help") is not None:
                 lines.append(termcolor.colored(f"    {result['cause']['help']}", "red"))
 
