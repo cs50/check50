@@ -457,14 +457,14 @@ class Mismatch(Failure):
     def __init__(self, expected, actual, help=None):
         expected, actual = _truncate(expected, actual), _truncate(actual, expected)
 
-        rationale = _("expected {}, not {}").format(
-            _raw(expected),
-            _raw(actual)
-        )
-        # rationale = _("expected: {}\n    actual:   {}").format(
+        # rationale = _("expected {}, not {}").format(
         #     _raw(expected),
         #     _raw(actual)
         # )
+        rationale = _("expected: {}\n    actual:   {}").format(
+            _raw(expected),
+            _raw(actual)
+        )
 
         super().__init__(rationale=rationale, help=help)
 
@@ -507,7 +507,11 @@ def hidden(failure_rationale):
     return decorator
 
 def _truncate(s, other, max_len=10):
-    """Truncate string s around its first difference with other"""
+
+    if isinstance(s, list):
+        s = "\n".join(s)
+    if isinstance(other, list):
+        other = "\n".join(other)
 
     # find the index of first difference
     limit = min(len(s), len(other))
