@@ -1,5 +1,6 @@
 import json
 import pathlib
+import html
 
 import jinja2
 import termcolor
@@ -14,10 +15,55 @@ def to_html(slug, results, version):
         content = f.read()
 
     template = jinja2.Template(
-        content, autoescape=jinja2.select_autoescape(enabled_extensions=("html",)))
-    html = template.render(slug=slug, results=results, version=version)
+        content, autoescape=jinja2.select_autoescape(enabled_extensions=("html",))
+    )
+
+    html = template.render(
+        slug=slug,
+        results=results,
+        version=version,
+        fmt_special_chars=_fmt_special_chars,
+        color="rgba(161, 161, 161, 0.5)"
+    )
 
     return html
+
+def _fmt_special_chars(txt, color):
+    """Converts a plaintext string into a string of HTML elements that highlights special chars."""
+    def highlight_char(char, color):
+        """Highlights and escapes a char."""
+        return f"<span style='background-color:{color}; cursor: help;' title='This is an invisible or trailing special character.'>{repr(char)[1:-1]}</span>"
+
+    # We'd like to interpret whitespace (ws) as HTML in only these specific cases:
+    ws_to_html = {
+        "\n": "<br/>",
+        " ": "&nbsp;",
+    }
+    fmtted_txt = []
+
+    for i, char in enumerate(txt):
+        is_last = i == len(txt) - 1
+
+        if not char.isprintable() and char not in ws_to_html:
+            # Most special characters, excluding those in ws_to_html, are highlighted
+            fmtted_txt.append(highlight_char(char, color))
+        elif char in ws_to_html:
+            # If there's a trailing whitespace character, we highlight it
+            if is_last:
+                # Spaces aren't normally highlightable, so we convert to nbsp.
+                if char == ' ':
+                    char = ws_to_html[char]
+
+                fmtted_txt.append(highlight_char(char, color))
+            else:
+                # Certain special chars are interpreted in HTML, without escaping or highlighting
+                fmtted_txt.append(ws_to_html[char])
+        else:
+            # Non-special characters are unchanged
+            fmtted_txt.append(char)
+
+    # Return the text as a string of plaintext + html elements
+    return ''.join(fmtted_txt)
 
 
 def to_json(slug, results, version):
@@ -45,4 +91,6 @@ def to_ansi(slug, results, version, _log=False):
         if _log:
             lines += (f"    {line}" for line in result["log"])
     return "\n".join(lines)
+
+
 
