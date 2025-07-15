@@ -1,5 +1,6 @@
 import json
 import pathlib
+import random
 
 import jinja2
 import termcolor
@@ -44,5 +45,15 @@ def to_ansi(slug, results, version, _log=False):
 
         if _log:
             lines += (f"    {line}" for line in result["log"])
+
+    if not all(result["passed"] for result in results):
+        if random.random() < 0.20:
+            message = random.choice([
+                "~~~~~ You can do it! ~~~~~",
+                "~~~~~ Keep it up! ~~~~~",
+                "~~~~~ You're getting there! ~~~~~"
+            ])
+            lines.append(termcolor.colored(message, "magenta"))
+
     return "\n".join(lines)
 
