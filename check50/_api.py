@@ -473,6 +473,18 @@ class Mismatch(Failure):
         self.payload.update({"expected": expected, "actual": actual})
 
 
+class Config:
+    def __init__(self):
+        self.truncate_len = 10
+
+config = Config()
+
+def configure(truncate_len=None):
+    if truncate_len:
+        if not isinstance(truncate_len, int) or truncate_len < 1:
+            raise ValueError("truncate length must be a positive integer")
+        config.truncate_len = truncate_len
+
 def hidden(failure_rationale):
     """
     Decorator that marks a check as a 'hidden' check. This will suppress the log
@@ -502,7 +514,8 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
-def _truncate(s, other, max_len=10):
+def _truncate(s, other):
+    truncate_len = config.truncate_len
 
     if isinstance(s, list):
         s = "\n".join(s)
@@ -518,8 +531,8 @@ def _truncate(s, other, max_len=10):
             break
 
     # center around diff
-    start = max(i - (max_len // 2), 0)
-    end = min(start + max_len, len(s))
+    start = max(i - (truncate_len // 2), 0)
+    end = min(start + truncate_len, len(s))
 
     snippet = s[start:end]
 

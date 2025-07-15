@@ -33,7 +33,8 @@ from ._api import (
     run,
     log, _log,
     hidden,
-    Failure, Mismatch, Missing
+    Failure, Mismatch, Missing, Config,
+    configure
 )
 
 
@@ -42,4 +43,5 @@ from .runner import check
 from pexpect import EOF
 
 __all__ = ["import_checks", "data", "exists", "hash", "include", "regex",
-           "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF"]
+           "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF",
+           "Config", "configure"]
