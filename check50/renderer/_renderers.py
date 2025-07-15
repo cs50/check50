@@ -22,7 +22,7 @@ def to_html(slug, results, version):
         results=results,
         version=version,
         fmt_special_chars=_fmt_special_chars,
-        color="rgba(161, 161, 161, 0.5)"
+        color="808080" # RGB (128, 128, 128)
     )
 
     return html
@@ -90,6 +90,4 @@ def to_ansi(slug, results, version, _log=False):
         if _log:
             lines += (f"    {line}" for line in result["log"])
     return "\n".join(lines)
-
-
 
