@@ -474,16 +474,35 @@ class Mismatch(Failure):
 
 
 class Config:
+    """
+    Configuration for check50 behavior.
+
+    This class stores user-defined configuration options (currently only
+    truncation length) that influence check50’s output formatting.
+    """
     def __init__(self):
         self.truncate_len = 10
+        self.dynamic_truncate = True
 
 config = Config()
 
 def configure(truncate_len=None):
+    """
+    Configure check50 behavior.
+
+    By default, check50 truncates strings around their first point of difference.
+    However, if the user specifies a custom `truncate_len` via `check50.configure`,
+    then string outputs will be sliced from the beginning instead.
+
+    Example usage::
+        import check50
+        check50.configure(truncate_len=15)
+    """
     if truncate_len:
         if not isinstance(truncate_len, int) or truncate_len < 1:
-            raise ValueError("truncate length must be a positive integer")
+            raise ValueError("truncation length must be a positive integer")
         config.truncate_len = truncate_len
+        config.dynamic_truncate = False
 
 def hidden(failure_rationale):
     """
@@ -515,12 +534,15 @@ def hidden(failure_rationale):
     return decorator
 
 def _truncate(s, other):
-    truncate_len = config.truncate_len
-
     if isinstance(s, list):
         s = "\n".join(s)
     if isinstance(other, list):
         other = "\n".join(other)
+
+    if config.dynamic_truncate is False:
+        if len(s) > config.truncate_len:
+            s = s[:config.truncate_len] + "..."
+        return s
 
     # find the index of first difference
     limit = min(len(s), len(other))
@@ -531,8 +553,8 @@ def _truncate(s, other):
             break
 
     # center around diff
-    start = max(i - (truncate_len // 2), 0)
-    end = min(start + truncate_len, len(s))
+    start = max(i - (config.truncate_len // 2), 0)
+    end = min(start + config.truncate_len, len(s))
 
     snippet = s[start:end]
 
