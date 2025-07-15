@@ -541,7 +541,6 @@ def _raw(s):
         return "EOF"
 
     s = f'"{repr(str(s))[1:-1]}"'
-
     return s
 
 
