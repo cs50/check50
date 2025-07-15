@@ -457,10 +457,6 @@ class Mismatch(Failure):
     def __init__(self, expected, actual, help=None):
         expected, actual = _truncate(expected, actual), _truncate(actual, expected)
 
-        # rationale = _("expected {}, not {}").format(
-        #     _raw(expected),
-        #     _raw(actual)
-        # )
         rationale = _("expected: {}\n    actual:   {}").format(
             _raw(expected),
             _raw(actual)
