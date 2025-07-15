@@ -50,7 +50,7 @@ def to_ansi(slug, results, version, _log=False):
             lines += (f"    {line}" for line in result["log"])
 
     if not all(result["passed"] for result in results) and num_passed > total_tests // 2:
-        if random.random() < 1.0:
+        if random.random() < 0.20:
             message = random.choice([
                 "~~~~~ You can do it! ~~~~~",
                 "~~~~~ Keep it up! ~~~~~",
