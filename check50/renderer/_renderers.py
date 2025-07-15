@@ -23,7 +23,7 @@ def to_html(slug, results, version):
         results=results,
         version=version,
         fmt_special_chars=_fmt_special_chars,
-        color="808080" # RGB (128, 128, 128)
+        color="#808080" # RGB (128, 128, 128)
     )
 
     return html
