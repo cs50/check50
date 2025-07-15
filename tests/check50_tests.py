@@ -100,7 +100,8 @@ class TestStdoutPy(Base):
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello")
-        process.expect_exact("expected \"hello\", not \"\"")
+        process.expect_exact("expected: \"hello\"")
+        process.expect_exact("actual:   \"\"")
         process.close(force=True)
 
 
@@ -146,7 +147,8 @@ class TestStdinPy(Base):
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
-        process.expect_exact("expected \"hello bar\", not \"\"")
+        process.expect_exact("expected: \"hello bar\"")
+        process.expect_exact("actual:   \"\"")
         process.close(force=True)
 
     def test_with_correct_file(self):

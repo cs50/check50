@@ -455,7 +455,14 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
+        expected, actual = _truncate(expected, actual), _truncate(actual, expected)
+
+        rationale = _("expected: {}\n    actual:   {}").format(
+            _raw(expected),
+            _raw(actual)
+        )
+
+        super().__init__(rationale=rationale, help=help)
 
         if expected == EOF:
             expected = "EOF"
@@ -495,6 +502,34 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
+def _truncate(s, other, max_len=10):
+
+    if isinstance(s, list):
+        s = "\n".join(s)
+    if isinstance(other, list):
+        other = "\n".join(other)
+
+    # find the index of first difference
+    limit = min(len(s), len(other))
+    i = limit
+    for index in range(limit):
+        if s[index] != other[index]:
+            i = index
+            break
+
+    # center around diff
+    start = max(i - (max_len // 2), 0)
+    end = min(start + max_len, len(s))
+
+    snippet = s[start:end]
+
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(s):
+        snippet = snippet + "..."
+
+    return snippet
+
 
 def _raw(s):
     """Get raw representation of s, truncating if too long."""
@@ -506,8 +541,6 @@ def _raw(s):
         return "EOF"
 
     s = f'"{repr(str(s))[1:-1]}"'
-    if len(s) > 15:
-        s = s[:15] + "...\""  # Truncate if too long
     return s
 
 
