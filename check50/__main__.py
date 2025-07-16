@@ -23,7 +23,7 @@ import lib50
 import requests
 import termcolor
 
-from . import _exceptions, internal, renderer, __version__
+from . import _exceptions, internal, renderer, assertions, __version__
 from .contextmanagers import nullcontext
 from .runner import CheckRunner
 
@@ -370,6 +370,9 @@ def main():
                 install_dependencies(config["dependencies"])
 
             checks_file = (internal.check_dir / config["checks"]).resolve()
+
+            # Rewrite all assert statements to check50_assert
+            assertions.rewrite(str(checks_file))
 
             # Have lib50 decide which files to include
             included_files = lib50.files(config.get("files"))[0]

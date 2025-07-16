@@ -36,7 +36,6 @@ from ._api import (
     Failure, Mismatch, Missing
 )
 
-
 from . import regex
 from .runner import check
 from pexpect import EOF
