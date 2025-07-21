@@ -1,51 +1,45 @@
 from check50 import Failure, Missing, Mismatch
 import ast
 
-def check50_assert(cond: bool, src: str):
+def check50_assert(cond, src, msg_or_exc=None):
     """
     Asserts a conditional statement. If the condition evaluates to True, 
-    nothing happens. Otherwise, the condition will raise a check50 exception. 
-    Used in rewriting check files. Evaluates subconditions in order and raises 
-    the first exception it sees. The specific exception raised depends on the
-    type of conditional statement (see also `classify_ast`.)
+    nothing happens. Otherwise, it will look for a message or exception that
+    follows the condition (seperated by a comma). If the msg_or_exc is not
+    a string, an exception, or not provided, then the additional argument is
+    silently ignored, raising a check50.Failure. 
+
+    Used for rewriting check files.
+
+    Example usage:
+    ```
+    assert x in y, check50.Missing(x, y)
+    ```
+    will be converted to
+    ```
+    check50_assert(x in y, "x in y", check50.Missing(x, y))
+    ```
 
     :param cond: The conditional statement.
     :type cond: bool
     :param src: The source code string of the conditional expression \
                 (e.g., 'x in y'), extracted from the AST.
     :type src: str
-    
-    :raises check50.Missing, check50.Mismatch, or check50.Failure: if the condition fails
+    :param msg_or_exc: The message or exception following the conditional in \
+                        the assertion statement.
+    :type msg_or_exc: str, BaseException, optional
+
+    :raises check50.Failure: if msg_or_exc is a string, if msg_or_exc is not 
+                             included, or if both msg_or_exc is not a string and
+                             not an exception
+    :raises msg_or_exc: if msg_or_exc is an exception
     """
     if cond:
         return
-
-    expr = ast.parse(src, mode="eval").body
-    exc  = classify_ast(expr) # the exception that should be raised
-    raise exc(f"Assertion failed: {src}")
-        
-def classify_ast(expr):
-    """
-    Classifies an AST expression to return an exception based on the operator.
-
-    For instance, if the expression was read as "x not in [1,2,3]", the
-    function would return a check50.Missing error.
-
-    :param expr: The AST expression.
-    :type expr: ast.expr
-
-    :raises check50.Missing: if the comparison operator is one of: \
-                             (ast.In, ast.NotIn)
-    :raises check50.Mismatch: if the comparison operator is one of: \
-                              (ast.Eq, ast.NotEq, ast.Gt, ast.Lt, ast.GtE, \
-                              ast.LtE)
-    :raises check50.Failure: if not a comparison, or otherwise
-    """
-    if isinstance(expr, ast.Compare):
-        for op in expr.ops:
-            if isinstance(op, (ast.In, ast.NotIn)):
-                return Missing
-            elif isinstance(op, (ast.Eq, ast.NotEq, ast.Gt, ast.Lt, ast.GtE, ast.LtE)):
-                return Mismatch
-        
-    return Failure
+    
+    if isinstance(msg_or_exc, str):
+        raise Failure(msg_or_exc)
+    elif isinstance(msg_or_exc, BaseException):
+        raise msg_or_exc
+    else:
+        raise Failure(f"Assertion failure: {src}")

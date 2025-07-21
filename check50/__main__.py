@@ -369,9 +369,15 @@ def main():
             if not args.no_install_dependencies:
                 install_dependencies(config["dependencies"])
 
-            checks_file = (internal.check_dir / config["checks"]).resolve()
+            # Store the original checks file and leave as is
+            original_checks_file = (internal.check_dir / config["checks"]).resolve()
+           
+            # Create a temporary copy of the checks file
+            with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
+                checks_file = Path(tmp.name)
+                shutil.copyfile(original_checks_file, checks_file)
 
-            # Rewrite all assert statements to check50_assert
+            # Rewrite all assert statements in the copied checks file to check50_assert
             assertions.rewrite(str(checks_file))
 
             # Have lib50 decide which files to include

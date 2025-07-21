@@ -43,9 +43,10 @@ class _AssertionRewriter(ast.NodeTransformer):
     Helper class to to wrap the conditions being tested by assert with a
     function called `check50_assert`.
     """
-    def _visit_Assert(self, node):
+    
+    def visit_Assert(self, node):
         """
-        An overwrite of the AST module's _visit_Assert to inject our code in
+        An overwrite of the AST module's visit_Assert to inject our code in
         place of the default assertion logic.
 
         :param node: An AST node.
@@ -56,8 +57,9 @@ class _AssertionRewriter(ast.NodeTransformer):
             value=ast.Call(
                 func=ast.Name(id="check50_assert", ctx=ast.Load()),
                 args=[
-                    node.test, 
-                    ast.Constant(value=ast.unparse(node.test))
+                    node.test,
+                    ast.Constant(value=ast.unparse(node.test)),
+                    node.msg if node.msg is not None else ast.Constant(value=None)
                 ],
                 keywords=[]
             )
