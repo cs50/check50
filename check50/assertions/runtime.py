@@ -18,7 +18,7 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
         Exceptions from the check50 library are preferred, since they will be
         handled gracefully and integrated into the check output. Native Python
         exceptions are technically supported, but check50 will immediately
-        terminate on the users's end if the assertion fails.
+        terminate on the user's end if the assertion fails.
 
     Example usage:
         ```
