@@ -25,12 +25,13 @@ _setup_translation()
 
 from ._api import (
     import_checks,
-    data,
+    data, _data,
     exists,
     hash,
     include,
     run,
-    log,
+    log, _log,
+    hidden,
     Failure, Mismatch, Missing
 )
 
