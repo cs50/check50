@@ -32,6 +32,7 @@ LOGGER = logging.getLogger("check50")
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
+
 class LogLevel(enum.IntEnum):
     DEBUG = logging.DEBUG
     INFO = logging.INFO
