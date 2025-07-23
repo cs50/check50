@@ -2,12 +2,10 @@ import hashlib
 import functools
 import numbers
 import os
-import re
 import shlex
 import shutil
 import signal
 import sys
-import time
 
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
@@ -240,7 +238,9 @@ class run:
         :type show_timeout: bool
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
                                   process outputs matches it
-        :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
+        :raises check50.Missing: if the process times out
+        :raises check50.Failure: if the process outputs invalid UTF-8 text or \
+                                 otherwise fails to verify output
 
         Example usage::
 
@@ -576,7 +576,6 @@ def _raw(s):
         return "EOF"
 
     s = f'"{repr(str(s))[1:-1]}"'
-
     return s
 
 

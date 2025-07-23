@@ -1,7 +1,6 @@
 import unittest
 import os
 import yaml
-import pathlib
 import tempfile
 
 from check50 import _simple
