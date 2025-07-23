@@ -455,7 +455,10 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        expected, actual = _truncate(expected, actual), _truncate(actual, expected)
+        def _safe_truncate(x, y):
+            return _truncate(x, y) if x != EOF and x != TIMEOUT else x
+
+        expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
 
         rationale = _("expected: {}\n    actual:   {}").format(
             _raw(expected),
@@ -497,14 +500,9 @@ def hidden(failure_rationale):
     return decorator
 
 def _truncate(s, other, max_len=10):
-
     def normalize(obj):
         if isinstance(obj, list):
             return "\n".join(map(str, obj))
-        elif obj == EOF:
-            return "EOF"
-        elif obj == TIMEOUT:
-            return "TIMEOUT"
         else:
             return str(obj)
 
@@ -540,6 +538,8 @@ def _raw(s):
 
     if s == EOF:
         return "EOF"
+    elif s == TIMEOUT:
+        return "TIMEOUT"
 
     s = f'"{repr(str(s))[1:-1]}"'
     return s
