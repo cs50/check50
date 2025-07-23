@@ -1,6 +1,6 @@
 from check50 import Failure, Missing, Mismatch
 
-def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, right=None):
+def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
     Asserts a conditional statement. If the condition evaluates to True,
     nothing happens. Otherwise, it will look for a message or exception that
@@ -43,6 +43,8 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     :type left: Any
     :param right: The right side of the conditional, if applicable
     :type right: Any
+    :param context: A collection of the conditional's variable names and values.
+    :type context: dict
 
     :raises msg_or_exc: If msg_or_exc is an exception.
     :raises check50.Mismatch: If no exception is provided and cond_type is "eq".
@@ -53,13 +55,22 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     if cond:
         return
 
+    context_str = None
+    if context and isinstance(context, dict):
+        context_str = ", ".join(f"{k} = {repr(v)}" for k, v in (context or {}).items())
+
     if isinstance(msg_or_exc, str):
         raise Failure(msg_or_exc)
     elif isinstance(msg_or_exc, BaseException):
         raise msg_or_exc
     elif cond_type == 'eq' and left and right:
-        raise Mismatch(left, right)
+        help_msg = f"checked: {src}"
+        help_msg += f"\n    where {context_str}" if context_str else ""
+        raise Mismatch(right, left, help=help_msg)
     elif cond_type == 'in' and left and right:
-        raise Missing(left, right)
+        help_msg = f"checked: {src}"
+        help_msg += f"\n    where {context_str}" if context_str else ""
+        raise Missing(left, right, help=help_msg)
     else:
-        raise Failure(f"assertion failed: {src}")
+        help_msg = f"\n    where {context_str}" if context_str else ""
+        raise Failure(f"check did not pass: {src}" + help_msg)

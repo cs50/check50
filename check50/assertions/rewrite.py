@@ -66,6 +66,16 @@ class _AssertionRewriter(ast.NodeTransformer):
                 ast.keyword(arg="right", value=right)
             ])
 
+        # Extract variable names and build context={"var": var, ...}
+        var_names    = self._extract_names(node.test)
+        context_dict = self._make_context_dict(var_names)
+
+        if var_names and context_dict.keys:
+            keywords.append(ast.keyword(
+                arg="context",
+                value=context_dict
+            ))
+
         return ast.Expr(
             value=ast.Call(
                 # Create a function called check50_assert
@@ -83,6 +93,7 @@ class _AssertionRewriter(ast.NodeTransformer):
                 keywords=keywords
             )
         )
+
 
     def _identify_comparison_type(self, test_node):
         """
@@ -103,3 +114,33 @@ class _AssertionRewriter(ast.NodeTransformer):
 
         return "unknown"
 
+    def _extract_names(self, expr):
+        """
+        Returns a set of the names of every variable in a given AST expression.
+
+        :param expr: An AST expression.
+        :type expr: ast.AST
+        """
+        class NameExtractor(ast.NodeVisitor):
+            def __init__(self):
+                self.names = set()
+
+            def visit_Name(self, node):
+                self.names.add(node.id)
+
+        extractor = NameExtractor()
+        extractor.visit(expr)
+        return extractor.names
+
+    def _make_context_dict(self, name_set):
+        """
+        Returns an AST dictionary in which the keys are the names of variables
+        and the values are the value from each respective variable.
+
+        :param name_set: A set of known names of variables.
+        :type name_set: set[str]
+        """
+        return ast.Dict(
+            keys=[ast.Constant(value=name) for name in name_set],
+            values=[ast.Name(id=name, ctx=ast.Load()) for name in name_set]
+        )
