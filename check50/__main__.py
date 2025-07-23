@@ -3,16 +3,12 @@ import contextlib
 import enum
 import gettext
 import importlib
-import inspect
-import itertools
 from json import JSONDecodeError
 import logging
 import os
 import platform
 import site
 from pathlib import Path
-import shutil
-import signal
 import subprocess
 import sys
 import tempfile

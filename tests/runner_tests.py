@@ -5,7 +5,6 @@ import importlib
 import multiprocessing
 import os
 import pathlib
-import pexpect
 import sys
 import tempfile
 import unittest
