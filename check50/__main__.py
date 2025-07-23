@@ -7,6 +7,7 @@ from json import JSONDecodeError
 import logging
 import os
 import platform
+import shutil
 import site
 from pathlib import Path
 import subprocess
