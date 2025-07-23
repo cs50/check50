@@ -25,11 +25,11 @@ setup(
     keywords=["check", "check50"],
     name="check50",
     packages=["check50", "check50.renderer"],
-    python_requires=">= 3.6",
+    python_requires=">= 3.8",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
     },
     url="https://github.com/cs50/check50",
-    version="3.3.12",
+    version="3.4.0",
     include_package_data=True
 )
