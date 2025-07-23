@@ -17,6 +17,8 @@ def _setup_translation():
         "check50", str(files("check50").joinpath("locale")), fallback=True)
     _translation.install()
 
+
+
 # Encapsulated inside a function so their local variables/imports aren't seen by autocompleters
 _set_version()
 _setup_translation()
