@@ -2,7 +2,6 @@ import unittest
 import json
 import pexpect
 import pathlib
-import shutil
 import subprocess
 import os
 import tempfile

@@ -1,8 +1,6 @@
 import unittest
 import os
 import pathlib
-import shutil
-import sys
 import tempfile
 
 import check50
