@@ -4,10 +4,6 @@ Additional check50 internals exposed to extension writers in addition to the sta
 
 from pathlib import Path
 import importlib
-import json
-import sys
-import termcolor
-import traceback
 
 import lib50
 

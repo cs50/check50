@@ -1,9 +1,7 @@
-import pexpect
 import unittest
 import sys
 import shutil
 import os
-import functools
 import tempfile
 import pathlib
 import check50
