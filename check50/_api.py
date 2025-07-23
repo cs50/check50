@@ -464,12 +464,6 @@ class Mismatch(Failure):
 
         super().__init__(rationale=rationale, help=help)
 
-        if expected == EOF:
-            expected = "EOF"
-
-        if actual == EOF:
-            actual = "EOF"
-
         self.payload.update({"expected": expected, "actual": actual})
 
 
@@ -504,8 +498,17 @@ def hidden(failure_rationale):
 
 def _truncate(s, other, max_len=10):
 
-    s = "\n".join(s) if isinstance(s, list) else str(s)
-    other = "\n".join(other) if isinstance(other, list) else str(other)
+    def normalize(obj):
+        if isinstance(obj, list):
+            return "\n".join(map(str, obj))
+        elif obj == EOF:
+            return "EOF"
+        elif obj == TIMEOUT:
+            return "TIMEOUT"
+        else:
+            return str(obj)
+
+    s, other = normalize(s), normalize(other)
 
     # find the index of first difference
     limit = min(len(s), len(other))
@@ -530,7 +533,7 @@ def _truncate(s, other, max_len=10):
 
 
 def _raw(s):
-    """Get raw representation of s, truncating if too long."""
+    """Get raw representation of s."""
 
     if isinstance(s, list):
         s = "\n".join(_raw(item) for item in s)
