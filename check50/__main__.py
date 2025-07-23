@@ -344,8 +344,8 @@ def main():
     args = parser.parse_args()
 
     # Check for newer version of check50
-    check_version()
-
+    if not args.dev and not args.offline and not args.local:
+        check_version()
 
     internal.slug = args.slug
 
