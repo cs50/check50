@@ -27,7 +27,7 @@ _setup_translation()
 import sys
 if hasattr(sys, 'ps1') or sys.flags.interactive:
     import warnings
-    warnings.warn(_("check50 is not intended for use in interactive mode."
+    warnings.warn(_("check50 is not intended for use in interactive mode. "
                     "Some behavior may not function as expected."))
 
 from ._api import (
