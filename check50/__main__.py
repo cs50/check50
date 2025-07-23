@@ -20,6 +20,7 @@ import time
 
 import attr
 import lib50
+import packaging
 import requests
 import termcolor
 
@@ -275,6 +276,23 @@ class LoggerWriter:
         pass
 
 
+def check_version(package_name=__package__, timeout=1):
+    """Check for newer version of the package on PyPI"""    
+    if not __version__:
+        return
+    
+    try:
+        current = packaging.version.parse(__version__)
+        latest = max(requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=timeout).json()["releases"], key=packaging.version.parse)
+        latest = packaging.version.parse(latest)
+        if latest > current:
+            termcolor.cprint(f"A newer version of {package_name} is available. Run pip3 install --upgrade {package_name} to upgrade.", "magenta")
+    except requests.ConnectionError:
+        pass
+    except Exception as e:
+        termcolor.cprint(f"Version check failed: {e}", "red")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="check50", formatter_class=argparse.RawTextHelpFormatter)
 
@@ -325,6 +343,10 @@ def main():
     parser.add_argument("--logout", action=LogoutAction)
 
     args = parser.parse_args()
+
+    # Check for newer version of check50
+    if not args.dev and not args.offline and not args.local:
+        check_version()
 
     internal.slug = args.slug
 
