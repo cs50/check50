@@ -1,5 +1,4 @@
 import argparse
-import atexit
 import contextlib
 import enum
 import gettext
@@ -17,7 +16,6 @@ import signal
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 
 import attr
@@ -33,17 +31,6 @@ from .runner import CheckRunner
 LOGGER = logging.getLogger("check50")
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
-
-# Global variable to store version check message
-_version_message = None
-
-def _print_version_message():
-    """Print version check result on program exit."""
-    if _version_message:
-        termcolor.cprint(_version_message[0], _version_message[1])
-
-# Register exit handler to print version message
-atexit.register(_print_version_message)
 
 class LogLevel(enum.IntEnum):
     DEBUG = logging.DEBUG
@@ -288,23 +275,21 @@ class LoggerWriter:
         pass
 
 
-def check_version():
-    """Check for newer version of check50 in background thread."""
-    global _version_message
-    
+def check_version(package_name=__package__, timeout=1):
+    """Check for newer version of the package on PyPI"""    
     if not __version__:
         return
     
     try:
         current = packaging.version.parse(__version__)
-        latest = max(requests.get("https://pypi.org/pypi/check50/json", timeout=30).json()["releases"], key=packaging.version.parse)
+        latest = max(requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=timeout).json()["releases"], key=packaging.version.parse)
         latest = packaging.version.parse(latest)
         if latest > current:
-            _version_message = ("A newer version of check50 is available. Run pip3 install --upgrade check50 to upgrade.", "magenta")
-    except requests.ConnectionError:  # don't error if running offline
+            termcolor.cprint(f"A newer version of {package_name} is available. Run pip3 install --upgrade {package_name} to upgrade.", "magenta")
+    except requests.ConnectionError:
         pass
     except Exception as e:
-        _version_message = (f"Version check failed: {e}", "red")
+        termcolor.cprint(f"Version check failed: {e}", "red")
 
 
 def main():
@@ -358,9 +343,8 @@ def main():
 
     args = parser.parse_args()
 
-    # Check for newer version of check50 in background thread
-    version_thread = threading.Thread(target=check_version, daemon=True)
-    version_thread.start()
+    # Check for newer version of check50
+    check_version()
 
 
     internal.slug = args.slug
