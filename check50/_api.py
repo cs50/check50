@@ -504,10 +504,8 @@ def hidden(failure_rationale):
 
 def _truncate(s, other, max_len=10):
 
-    if isinstance(s, list):
-        s = "\n".join(s)
-    if isinstance(other, list):
-        other = "\n".join(other)
+    s = "\n".join(s) if isinstance(s, list) else str(s)
+    other = "\n".join(other) if isinstance(other, list) else str(other)
 
     # find the index of first difference
     limit = min(len(s), len(other))
