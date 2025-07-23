@@ -2,7 +2,6 @@ def _set_version():
     """Set check50 __version__"""
     global __version__
     from importlib.metadata import PackageNotFoundError, version
-    import os
     # https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package
     try:
         __version__ = version("check50")
@@ -26,13 +25,12 @@ _setup_translation()
 
 from ._api import (
     import_checks,
-    data, _data,
+    data,
     exists,
     hash,
     include,
     run,
-    log, _log,
-    hidden,
+    log,
     Failure, Mismatch, Missing
 )
 

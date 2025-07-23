@@ -2,12 +2,10 @@ import hashlib
 import functools
 import numbers
 import os
-import re
 import shlex
 import shutil
 import signal
 import sys
-import time
 
 import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
