@@ -456,7 +456,7 @@ class Mismatch(Failure):
 
     def __init__(self, expected, actual, help=None):
         def _safe_truncate(x, y):
-            return _truncate(x, y) if x != EOF and x != TIMEOUT else x
+            return _truncate(x, y) if x not in (EOF, TIMEOUT) else x
 
         expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
 
