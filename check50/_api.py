@@ -455,7 +455,10 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        expected, actual = _truncate(expected, actual), _truncate(actual, expected)
+        def _safe_truncate(x, y):
+            return _truncate(x, y) if x not in (EOF, TIMEOUT) else x
+
+        expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
 
         rationale = _("expected: {}\n    actual:   {}").format(
             _raw(expected),
@@ -463,12 +466,6 @@ class Mismatch(Failure):
         )
 
         super().__init__(rationale=rationale, help=help)
-
-        if expected == EOF:
-            expected = "EOF"
-
-        if actual == EOF:
-            actual = "EOF"
 
         self.payload.update({"expected": expected, "actual": actual})
 
@@ -503,11 +500,13 @@ def hidden(failure_rationale):
     return decorator
 
 def _truncate(s, other, max_len=10):
+    def normalize(obj):
+        if isinstance(obj, list):
+            return "\n".join(map(str, obj))
+        else:
+            return str(obj)
 
-    if isinstance(s, list):
-        s = "\n".join(s)
-    if isinstance(other, list):
-        other = "\n".join(other)
+    s, other = normalize(s), normalize(other)
 
     # find the index of first difference
     limit = min(len(s), len(other))
@@ -532,13 +531,15 @@ def _truncate(s, other, max_len=10):
 
 
 def _raw(s):
-    """Get raw representation of s, truncating if too long."""
+    """Get raw representation of s."""
 
     if isinstance(s, list):
         s = "\n".join(_raw(item) for item in s)
 
     if s == EOF:
         return "EOF"
+    elif s == TIMEOUT:
+        return "TIMEOUT"
 
     s = f'"{repr(str(s))[1:-1]}"'
     return s
