@@ -56,16 +56,6 @@ class _AssertionRewriter(ast.NodeTransformer):
 
         keywords = [ast.keyword(arg="cond_type", value=ast.Constant(value=cond_type))]
 
-        # Grab the values from the left and right side of the conditional
-        # (used in check50.Missing and check50.Mismatch)
-        if isinstance(node.test, ast.Compare) and node.test.comparators:
-            left = node.test.left
-            right = node.test.comparators[0]
-            keywords.extend([
-                ast.keyword(arg="left", value=left),
-                ast.keyword(arg="right", value=right)
-            ])
-
         # Extract variable names and build context={"var": var, ...}
         var_names    = self._extract_names(node.test)
         context_dict = self._make_context_dict(var_names)
@@ -75,6 +65,21 @@ class _AssertionRewriter(ast.NodeTransformer):
                 arg="context",
                 value=context_dict
             ))
+
+        # Set the left and right side of the conditional as strings for later
+        # evaluation (used when raising check50.Missing and check50.Mismatch)
+        if isinstance(node.test, ast.Compare) and node.test.comparators:
+            left_node = node.test.left
+            right_node = node.test.comparators[0]
+
+            left_str = ast.unparse(left_node)
+            right_str = ast.unparse(right_node)
+
+            keywords.extend([
+                ast.keyword(arg="left", value=ast.Constant(value=left_str)),
+                ast.keyword(arg="right", value=ast.Constant(value=right_str))
+            ])
+
 
         return ast.Expr(
             value=ast.Call(
@@ -87,7 +92,7 @@ class _AssertionRewriter(ast.NodeTransformer):
                     # The string form of the condition
                     ast.Constant(value=ast.unparse(node.test)),
                     # The additional msg or exception that the user provided
-                    node.msg if node.msg is not None else ast.Constant(value=None)
+                    node.msg or ast.Constant(value=None)
                 ],
                 # And these named parameters:
                 keywords=keywords
@@ -116,7 +121,9 @@ class _AssertionRewriter(ast.NodeTransformer):
 
     def _extract_names(self, expr):
         """
-        Returns a set of the names of every variable in a given AST expression.
+        Returns a set of the names of every variable, function
+        (including the modules or classes they're located under), and function
+        argument in a given AST expression.
 
         :param expr: An AST expression.
         :type expr: ast.AST
@@ -124,9 +131,80 @@ class _AssertionRewriter(ast.NodeTransformer):
         class NameExtractor(ast.NodeVisitor):
             def __init__(self):
                 self.names = set()
+                self._in_func_chain = False # flag to track nested Calls and Names
+
+            def visit_Call(self, node):
+                # Temporarily store whether we're already in a chain
+                already_in_chain = self._in_func_chain
+
+                # If already_in_chain is False, we're at the top-most level of
+                # the Call node. Without this guard, callable classes/modules
+                # will also be included in the output. For instance,
+                # check50.run('./test') AND check50.run('./test').stdout() will
+                # be included.
+                if not already_in_chain:
+                    # Grab the entire dotted function name
+                    full_name = self._get_full_func_name(node)
+                    self.names.add(full_name)
+
+                # As we travel down the function's subtree, denote this flag as True
+                self._in_func_chain = True
+                self.visit(node.func)
+                self._in_func_chain = already_in_chain # Restore state
+
+                # Now visit the arguments of this function
+                for arg in node.args:
+                    self.visit(arg)
+                for kw in node.keywords:
+                    self.visit(kw)
 
             def visit_Name(self, node):
-                self.names.add(node.id)
+                if not self._in_func_chain: # ignore Names of modules
+                    self.names.add(node.id)
+
+            def _get_full_func_name(self, node):
+                """
+                Grab the entire function name, including the module or class
+                in which the function was located, as well as the function
+                arguments.
+
+                For instance, this function would return
+                ```
+                    "check50.run('./test').stdout()"
+                ```
+                as opposed to
+                ```
+                    "stdout"
+                ```
+                """
+                def format_args(call_node):
+                    # Positional arguments
+                    args = [ast.unparse(arg) for arg in call_node.args]
+                    # Keyword arguments
+                    kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call_node.keywords]
+                    all_args = args + kwargs
+                    return f"({', '.join(all_args)})"
+
+                parts = []
+                # Apply the same operations for even nested function calls.
+                while isinstance(node, ast.Call):
+                    func = node.func
+                    arg_string = format_args(node)
+
+                    # Attributes inside of Calls signify a `.` attribute was used
+                    if isinstance(func, ast.Attribute):
+                        parts.append(func.attr + arg_string)
+                        node = func.value  # step into next node in chain
+                    elif isinstance(func, ast.Name):
+                        parts.append(func.id + arg_string)
+                        return ".".join(reversed(parts))
+                    else:
+                        return f"[DEBUG] failed to grab func name: {ast.unparse(func)}"
+
+                if isinstance(node, ast.Name):
+                    parts.append(node.id)
+
+                return ".".join(reversed(parts))
 
         extractor = NameExtractor()
         extractor.visit(expr)
@@ -140,7 +218,13 @@ class _AssertionRewriter(ast.NodeTransformer):
         :param name_set: A set of known names of variables.
         :type name_set: set[str]
         """
-        return ast.Dict(
-            keys=[ast.Constant(value=name) for name in name_set],
-            values=[ast.Name(id=name, ctx=ast.Load()) for name in name_set]
-        )
+        keys, values = [], []
+        for name in name_set:
+            keys.append(ast.Constant(value=name))
+            # Defer evaluation of the values until later, since we don't have
+            # access to function results at this point
+            values.append(ast.Constant(value=None))
+
+        return ast.Dict(keys=keys, values=values)
+
+

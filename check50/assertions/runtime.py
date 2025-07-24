@@ -40,10 +40,10 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     :param cond_type: The type of conditional, one of {"eq", "in", "unknown"}
     :type cond_type: str
     :param left: The left side of the conditional, if applicable
-    :type left: Any
+    :type left: str | None
     :param right: The right side of the conditional, if applicable
-    :type right: Any
-    :param context: A collection of the conditional's variable names and values.
+    :type right: str | None
+    :param context: A collection of the conditional's variable names as keys.
     :type context: dict
 
     :raises msg_or_exc: If msg_or_exc is an exception.
@@ -56,7 +56,21 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
         return
 
     context_str = None
-    if context and isinstance(context, dict):
+    if context or (left and right):
+        # Add `left` and `right` to `context` so that they can be evaluated in
+        # the same pass as the other variables
+        if left and right:
+            context[left] = None
+            context[right] = None
+        # Evaluate context
+        import inspect
+        for expr_str in context:
+            try:
+                caller_frame = inspect.currentframe().f_back
+                context[expr_str] = eval(expr_str, caller_frame.f_globals, caller_frame.f_locals)
+            except Exception as e:
+                context[expr_str] = f"[error evaluating: {e}]"
+
         context_str = ", ".join(f"{k} = {repr(v)}" for k, v in (context or {}).items())
 
     if isinstance(msg_or_exc, str):
@@ -66,11 +80,11 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     elif cond_type == 'eq' and left and right:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
-        raise Mismatch(right, left, help=help_msg)
+        raise Mismatch(context[right], context[left], help=help_msg)
     elif cond_type == 'in' and left and right:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
-        raise Missing(left, right, help=help_msg)
+        raise Missing(context[left], context[right], help=help_msg)
     else:
         help_msg = f"\n    where {context_str}" if context_str else ""
         raise Failure(f"check did not pass: {src}" + help_msg)
