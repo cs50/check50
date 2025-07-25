@@ -97,7 +97,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         raise Missing(left, right, help=help_msg)
     else:
         help_msg = f"\n    where {context_str}" if context_str else ""
-        raise Failure(f"check did not pass: {src} {context}" + help_msg)
+        raise Failure(f"check did not pass: {src}" + help_msg)
 
 def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
     """
