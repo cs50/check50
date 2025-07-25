@@ -1,6 +1,6 @@
 from check50 import Failure, Missing, Mismatch
 
-def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
+def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
     Asserts a conditional statement. If the condition evaluates to True,
     nothing happens. Otherwise, it will look for a message or exception that
@@ -29,8 +29,6 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
         check50_assert(x in y, "x in y", None, "in", x, y)
         ```
 
-    :param cond: The evaluated conditional statement.
-    :type cond: bool
     :param src: The source code string of the conditional expression \
                 (e.g., 'x in y'), extracted from the AST.
     :type src: str
@@ -52,27 +50,39 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     :raises check50.Failure: If msg_or_exc is a string, or if cond_type is \
                              unrecognized.
     """
-    if cond:
-        return
-
+    # Evaluate all variables and functions within the context dict and generate
+    # a string of these values
     context_str = None
     if context or (left and right):
-        # Add `left` and `right` to `context` so that they can be evaluated in
-        # the same pass as the other variables
-        if left and right:
-            context[left] = None
-            context[right] = None
-        # Evaluate context
         import inspect
         for expr_str in context:
             try:
+                # Grab the global and local variables as of now
                 caller_frame = inspect.currentframe().f_back
                 context[expr_str] = eval(expr_str, caller_frame.f_globals, caller_frame.f_locals)
             except Exception as e:
                 context[expr_str] = f"[error evaluating: {e}]"
 
+        # produces a string like "var1 = ..., var2 = ..., foo() = ..."
         context_str = ", ".join(f"{k} = {repr(v)}" for k, v in (context or {}).items())
 
+    # Since we've memoized the functions and variables once, now try and
+    # evaluate the conditional by substituting the function calls/vars with
+    # their results
+    eval_src, eval_context = substitute_expressions(src, context)
+    cond = eval(eval_src, {}, eval_context)
+
+    # Finally, quit if the condition evaluated to True.
+    if cond:
+        return
+
+    # If `right` or `left` were evaluatable objects, their actual value will be stored in `context`.
+    # Otherwise, they're still just literals.
+    right = context.get(right) or right
+    left  = context.get(left) or left
+
+    # Since the condition didn't evaluate to True, now, we can raise special
+    # exceptions.
     if isinstance(msg_or_exc, str):
         raise Failure(msg_or_exc)
     elif isinstance(msg_or_exc, BaseException):
@@ -80,11 +90,42 @@ def check50_assert(cond, src, msg_or_exc=None, cond_type="unknown", left=None, r
     elif cond_type == 'eq' and left and right:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
-        raise Mismatch(context[right], context[left], help=help_msg)
+        raise Mismatch(right, left, help=help_msg)
     elif cond_type == 'in' and left and right:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
-        raise Missing(context[left], context[right], help=help_msg)
+        raise Missing(left, right, help=help_msg)
     else:
         help_msg = f"\n    where {context_str}" if context_str else ""
-        raise Failure(f"check did not pass: {src}" + help_msg)
+        raise Failure(f"check did not pass: {src} {context}" + help_msg)
+
+def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
+    """
+    Rewrites `src` by replacing each key in `context` with a placeholder variable name,
+    and builds a new context dict where those names map to pre-evaluated values.
+
+    For instance, given a `src`:
+    ```
+    check50.run('pwd').stdout() == actual
+    ```
+    it will create a new `eval_src` as
+    ```
+    __expr0 == __expr1
+    ```
+    and use the given context to define these variables:
+    ```
+    eval_context = {
+        '__expr0': context['check50.run('pwd').stdout()'],
+        '__expr1': context['actual']
+    }
+    ```
+    """
+    new_src = src
+    new_context = {}
+
+    for i, expr in enumerate(sorted(context.keys(), key=len, reverse=True)):
+        placeholder = f"__expr{i}"
+        new_src = new_src.replace(expr, placeholder)
+        new_context[placeholder] = context[expr]
+
+    return new_src, new_context

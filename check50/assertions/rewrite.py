@@ -54,6 +54,7 @@ class _AssertionRewriter(ast.NodeTransformer):
         self.generic_visit(node)
         cond_type = self._identify_comparison_type(node.test)
 
+        # Begin adding a named parameter that determines the type of condition
         keywords = [ast.keyword(arg="cond_type", value=ast.Constant(value=cond_type))]
 
         # Extract variable names and build context={"var": var, ...}
@@ -75,11 +76,19 @@ class _AssertionRewriter(ast.NodeTransformer):
             left_str = ast.unparse(left_node)
             right_str = ast.unparse(right_node)
 
+            # Only add to context if not literal constants
+            if not isinstance(left_node, ast.Constant):
+                context_dict.keys.append(ast.Constant(value=left_str))
+                context_dict.values.append(ast.Constant(value=None))
+            if not isinstance(right_node, ast.Constant):
+                context_dict.keys.append(ast.Constant(value=right_str))
+                context_dict.values.append(ast.Constant(value=None))
+
+
             keywords.extend([
                 ast.keyword(arg="left", value=ast.Constant(value=left_str)),
                 ast.keyword(arg="right", value=ast.Constant(value=right_str))
             ])
-
 
         return ast.Expr(
             value=ast.Call(
@@ -87,8 +96,6 @@ class _AssertionRewriter(ast.NodeTransformer):
                 func=ast.Name(id="check50_assert", ctx=ast.Load()),
                 # Give it these postional arguments:
                 args=[
-                    # The condition
-                    node.test,
                     # The string form of the condition
                     ast.Constant(value=ast.unparse(node.test)),
                     # The additional msg or exception that the user provided
@@ -150,7 +157,7 @@ class _AssertionRewriter(ast.NodeTransformer):
                 # As we travel down the function's subtree, denote this flag as True
                 self._in_func_chain = True
                 self.visit(node.func)
-                self._in_func_chain = already_in_chain # Restore state
+                self._in_func_chain = already_in_chain # Restore previous state
 
                 # Now visit the arguments of this function
                 for arg in node.args:
@@ -159,8 +166,9 @@ class _AssertionRewriter(ast.NodeTransformer):
                     self.visit(kw)
 
             def visit_Name(self, node):
-                if not self._in_func_chain: # ignore Names of modules
+                if not self._in_func_chain: # ignore Names of modules/libraries
                     self.names.add(node.id)
+                # self.names.add(node.id)
 
             def _get_full_func_name(self, node):
                 """
