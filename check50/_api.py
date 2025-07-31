@@ -508,7 +508,7 @@ def _truncate(s, other):
 
     s, other = normalize(s), normalize(other)
 
-    if config.dynamic_truncate is False:
+    if not config.dynamic_truncate:
         if len(s) > config.truncate_len:
             s = s[:config.truncate_len] + "..."
         return s
