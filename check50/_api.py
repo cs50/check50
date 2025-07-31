@@ -470,6 +470,7 @@ class Mismatch(Failure):
 
         self.payload.update({"expected": expected, "actual": actual})
 
+
 def hidden(failure_rationale):
     """
     Decorator that marks a check as a 'hidden' check. This will suppress the log
