@@ -11,6 +11,7 @@ class Config:
     configuration needs to be validated before the user can modify it, add your
     validation into the `_validators` dictionary.
     """
+
     def __init__(self):
         self.truncate_len = 10
         self.dynamic_truncate = True
@@ -20,6 +21,8 @@ class Config:
         self._validators = {
             "truncate_len": (lambda val: isinstance(val, int) and val >= 1,
                              "truncate_len must be a positive integer"),
+            "dynamic_truncate": (lambda val: isinstance(val, bool),
+                                 "dynamic_truncate must be a boolean")
         }
 
         # Dynamically generates setter functions based on variable names and
@@ -27,17 +30,9 @@ class Config:
         self._generate_setters()
 
     def _generate_setters(self):
-        def create_method(name, func):
-            setattr(self.__class__, name, func)
-
-        def make_toggle(attr):
-            """Factory for making functions like `toggle_<attr_name>()`"""
-            def toggler(self):
-                setattr(self, attr, not getattr(self, attr))
-            return toggler
-
         def make_setter(attr):
             """Factory for making functions like `set_<attr_name>(arg)`"""
+
             def setter(self, value):
                 # Get the entry in the dict of validators.
                 # Check to see if the value passes the validator, and if it
@@ -59,19 +54,16 @@ class Config:
                 setattr(self, attr, value)
             return setter
 
-        for attribute_name in dir(self):
+        # Iterate through the names of every instantiated variable
+        for attribute_name in self.__dict__:
             if attribute_name.startswith('_'):
-                continue # skip "private" attributes (denoted with a prefix `_`)
+                continue  # skip "private" attributes (denoted with a prefix `_`)
             value = getattr(self, attribute_name)
             if callable(value):
-                continue # skip functions/methods
+                continue  # skip functions/methods
 
-            # For variables with the default boolean type, make a setter that
-            # starts with `toggle_`. Otherwise, have it start with `set_`.
-            if isinstance(value, bool):
-                create_method(f"toggle_{attribute_name}", make_toggle(attribute_name))
-            else:
-                create_method(f"set_{attribute_name}", make_setter(attribute_name))
+            # Create a class method with the given name and function
+            setattr(self.__class__, f"set_{attribute_name}", make_setter(attribute_name))
 
 
 config = Config()
