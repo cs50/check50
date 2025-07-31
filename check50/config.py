@@ -21,7 +21,7 @@ class Config:
         self._validators = {
             "truncate_len": (lambda val: isinstance(val, int) and val >= 1,
                              "truncate_len must be a positive integer"),
-            "dynamic_truncate": (lambda val: isinstance(val, bool),
+            "dynamic_truncate": (lambda val: isinstance(val, bool) or val in (0, 1),
                                  "dynamic_truncate must be a boolean")
         }
 
