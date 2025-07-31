@@ -11,6 +11,7 @@ import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal, regex
+from .config import config
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -499,7 +500,7 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
-def _truncate(s, other, max_len=10):
+def _truncate(s, other):
     def normalize(obj):
         if isinstance(obj, list):
             return "\n".join(map(str, obj))
@@ -507,6 +508,11 @@ def _truncate(s, other, max_len=10):
             return str(obj)
 
     s, other = normalize(s), normalize(other)
+
+    if not config.dynamic_truncate:
+        if len(s) > config.truncate_len:
+            s = s[:config.truncate_len] + "..."
+        return s
 
     # find the index of first difference
     limit = min(len(s), len(other))
@@ -517,8 +523,8 @@ def _truncate(s, other, max_len=10):
             break
 
     # center around diff
-    start = max(i - (max_len // 2), 0)
-    end = min(start + max_len, len(s))
+    start = max(i - (config.truncate_len // 2), 0)
+    end = min(start + config.truncate_len, len(s))
 
     snippet = s[start:end]
 
