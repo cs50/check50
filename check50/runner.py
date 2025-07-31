@@ -121,6 +121,7 @@ def check(dependency=None, timeout=60, max_log_lines=100):
 
     """
     def decorator(check):
+
         # Modules are evaluated from the top of the file down, so _check_names will
         # contain the names of the checks in the order in which they are declared
         _check_names.append(check.__name__)
