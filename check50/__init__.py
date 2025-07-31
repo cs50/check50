@@ -41,7 +41,7 @@ from ._api import (
     run,
     log, _log,
     hidden,
-    Failure, Mismatch, Missing,
+    Failure, Mismatch, Missing
 )
 
 
