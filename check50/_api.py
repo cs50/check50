@@ -11,6 +11,7 @@ import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal, regex
+from .config import config
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -469,38 +470,6 @@ class Mismatch(Failure):
 
         self.payload.update({"expected": expected, "actual": actual})
 
-
-class Config:
-    """
-    Configuration for check50 behavior.
-
-    This class stores user-defined configuration options (currently only
-    truncation length) that influence check50’s output formatting.
-    """
-    def __init__(self):
-        self.truncate_len = 10
-        self.dynamic_truncate = True
-
-config = Config()
-
-def configure(truncate_len=None):
-    """
-    Configure check50 behavior.
-
-    By default, check50 truncates strings around their first point of difference.
-    However, if the user specifies a custom `truncate_len` via `check50.configure`,
-    then string outputs will be sliced from the beginning instead.
-
-    Example usage::
-        import check50
-        check50.configure(truncate_len=15)
-    """
-    if truncate_len:
-        if not isinstance(truncate_len, int) or truncate_len < 1:
-            raise ValueError("truncation length must be a positive integer")
-        config.truncate_len = truncate_len
-        config.dynamic_truncate = False
-
 def hidden(failure_rationale):
     """
     Decorator that marks a check as a 'hidden' check. This will suppress the log
@@ -530,7 +499,7 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
-def _truncate(s, other, max_len=10):
+def _truncate(s, other):
     def normalize(obj):
         if isinstance(obj, list):
             return "\n".join(map(str, obj))

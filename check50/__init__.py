@@ -41,15 +41,15 @@ from ._api import (
     run,
     log, _log,
     hidden,
-    Failure, Mismatch, Missing, Config,
-    configure
+    Failure, Mismatch, Missing,
 )
 
 
 from . import regex
 from .runner import check
+from .config import config
 from pexpect import EOF
 
 __all__ = ["import_checks", "data", "exists", "hash", "include", "regex",
            "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF",
-           "Config", "configure"]
+           "config"]
