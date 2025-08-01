@@ -190,9 +190,7 @@ class _AssertionRewriter(ast.NodeTransformer):
                     self.visit(kw)
 
             def visit_Name(self, node):
-                if not self._in_func_chain: # ignore Names of modules/libraries
-                    self.names.add(node.id)
-                # self.names.add(node.id)
+                self.names.add(node.id)
 
             def _get_full_func_name(self, node):
                 """

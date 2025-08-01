@@ -1,6 +1,10 @@
 from check50 import Failure, Missing, Mismatch
 import re
 import inspect
+import tokenize
+import types, builtins
+from io import StringIO
+
 
 def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
@@ -67,13 +71,27 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
             except Exception as e:
                 context[expr_str] = f"[error evaluating: {e}]"
 
-        # produces a string like "var1 = ..., var2 = ..., foo() = ..."
-        context_str = ", ".join(f"{k} = {repr(v)}" for k, v in (context or {}).items())
+        # filter out modules, functions, and built-ins
+        def is_irrelevant_value(v):
+            return isinstance(v, (types.ModuleType, types.FunctionType, types.BuiltinFunctionType))
 
+        def is_builtin_name(name):
+            return name in dir(builtins)
+
+        filtered_context = {
+            k: v for k, v in context.items()
+            if not is_irrelevant_value(v) and not is_builtin_name(k.split("(")[0])
+        }
+
+        # produces a string like "var1 = ..., var2 = ..., foo() = ..."
+        context_str = ", ".join(f"{k} = {repr(v)}" for k, v in filtered_context.items())
+    else:
+        filtered_context = {}
+        
     # Since we've memoized the functions and variables once, now try and
     # evaluate the conditional by substituting the function calls/vars with
     # their results
-    eval_src, eval_context = substitute_expressions(src, context)
+    eval_src, eval_context = substitute_expressions(src, filtered_context)
 
     # Merge globals with expression context for evaluation
     eval_globals = caller_globals.copy()
@@ -129,18 +147,23 @@ def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
     }
     ```
     """
-    new_src = src
+    tokens = tokenize.generate_tokens(StringIO(src).readline)
+
+    new_tokens = []
     new_context = {}
+    placeholder_map = {}
+    counter = 0
 
-    for i, expr in enumerate(sorted(context.keys(), key=len, reverse=True)):
-        placeholder = f"__expr{i}"
+    for tok_type, tok_string, start, end, line in tokens:
+        if tok_string in context:
+            if tok_string not in placeholder_map:
+                placeholder = f"__expr{counter}"
+                placeholder_map[tok_string] = placeholder
+                new_context[placeholder] = context[tok_string]
+                counter += 1
+            new_tokens.append((tok_type, placeholder))
+        else:
+            new_tokens.append((tok_type, tok_string))
 
-        # Use regex to replace only full matches of expr
-        # Escape expr if it has special characters (like function calls)
-        pattern = re.escape(expr)
-        new_src, count = re.subn(rf'\b{pattern}\b', placeholder, new_src)
-
-        if count > 0:
-            new_context[placeholder] = context[expr]
-
-    return new_src, new_context
+    eval_src = tokenize.untokenize(new_tokens)
+    return eval_src, new_context
