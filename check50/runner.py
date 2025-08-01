@@ -13,7 +13,6 @@ import signal
 import sys
 import tempfile
 import traceback
-import ast
 
 import attr
 import lib50
