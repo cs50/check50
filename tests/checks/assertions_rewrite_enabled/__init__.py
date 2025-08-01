@@ -25,7 +25,7 @@ def foo():
         pass
 
     try:
-        assert stdout in "Flat is better than nested." check50.Mismatch("Flat is better than nested.", stdout)
+        assert stdout in "Flat is better than nested.", check50.Mismatch("Flat is better than nested.", stdout)
     except check50.Mismatch:
         pass
 
