@@ -274,10 +274,10 @@ class LoggerWriter:
 
 
 def check_version(package_name=__package__, timeout=1):
-    """Check for newer version of the package on PyPI"""    
+    """Check for newer version of the package on PyPI"""
     if not __version__:
         return
-    
+
     try:
         current = packaging.version.parse(__version__)
         latest = max(requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=timeout).json()["releases"], key=packaging.version.parse)
@@ -390,14 +390,19 @@ def main():
 
             # Store the original checks file and leave as is
             original_checks_file = (internal.check_dir / config["checks"]).resolve()
-           
-            # Create a temporary copy of the checks file
-            with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
-                checks_file = Path(tmp.name)
-                shutil.copyfile(original_checks_file, checks_file)
 
-            # Rewrite all assert statements in the copied checks file to check50_assert
-            assertions.rewrite(str(checks_file))
+            # If the user has enabled the rewrite feature
+            if assertions.rewrite_enabled(str(original_checks_file)):
+                # Create a temporary copy of the checks file
+                with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
+                    checks_file = Path(tmp.name)
+                    shutil.copyfile(original_checks_file, checks_file)
+
+                # Rewrite all assert statements in the copied checks file to check50_assert
+                assertions.rewrite(str(checks_file))
+            else:
+                # Don't rewrite any assert statements and continue
+                checks_file = original_checks_file
 
             # Have lib50 decide which files to include
             included_files = lib50.files(config.get("files"))[0]

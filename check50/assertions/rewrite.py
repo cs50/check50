@@ -1,4 +1,5 @@
 import ast
+import re
 
 def rewrite(path: str):
     """
@@ -37,6 +38,29 @@ def rewrite(path: str):
     # Write to the file
     with open(path, 'w') as f:
         f.write(modified_source)
+
+def rewrite_enabled(path: str):
+    """
+    Checks if the first line of the file contains a comment of the form:
+
+    ```
+    # ENABLE_CHECK50_ASSERT = 1
+    ```
+
+    Ignores whitespace.
+
+    :param path: The path to the file you wish to check.
+    :type path: str
+    """
+    pattern = re.compile(
+        r"^#\s*ENABLE_CHECK50_ASSERT\s*=\s*(1|True)$",
+        re.IGNORECASE
+    )
+
+    with open(path, 'r') as f:
+        first_line = f.readline().strip()
+        return bool(pattern.match(first_line))
+
 
 class _AssertionRewriter(ast.NodeTransformer):
     """
