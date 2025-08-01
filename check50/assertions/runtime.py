@@ -1,4 +1,6 @@
 from check50 import Failure, Missing, Mismatch
+import re
+import inspect
 
 def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
@@ -50,16 +52,18 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     :raises check50.Failure: If msg_or_exc is a string, or if cond_type is \
                              unrecognized.
     """
+    # Grab the global and local variables as of now
+    caller_frame = inspect.currentframe().f_back
+    caller_globals = caller_frame.f_globals
+    caller_locals = caller_frame.f_locals
+
     # Evaluate all variables and functions within the context dict and generate
     # a string of these values
     context_str = None
     if context or (left and right):
-        import inspect
         for expr_str in context:
             try:
-                # Grab the global and local variables as of now
-                caller_frame = inspect.currentframe().f_back
-                context[expr_str] = eval(expr_str, caller_frame.f_globals, caller_frame.f_locals)
+                context[expr_str] = eval(expr_str, caller_globals, caller_locals)
             except Exception as e:
                 context[expr_str] = f"[error evaluating: {e}]"
 
@@ -70,7 +74,12 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     # evaluate the conditional by substituting the function calls/vars with
     # their results
     eval_src, eval_context = substitute_expressions(src, context)
-    cond = eval(eval_src, {}, eval_context)
+
+    # Merge globals with expression context for evaluation
+    eval_globals = caller_globals.copy()
+    eval_globals.update(eval_context)
+
+    cond = eval(eval_src, eval_globals, eval_context)
 
     # Finally, quit if the condition evaluated to True.
     if cond:
@@ -125,7 +134,13 @@ def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
 
     for i, expr in enumerate(sorted(context.keys(), key=len, reverse=True)):
         placeholder = f"__expr{i}"
-        new_src = new_src.replace(expr, placeholder)
-        new_context[placeholder] = context[expr]
+
+        # Use regex to replace only full matches of expr
+        # Escape expr if it has special characters (like function calls)
+        pattern = re.escape(expr)
+        new_src, count = re.subn(rf'\b{pattern}\b', placeholder, new_src)
+
+        if count > 0:
+            new_context[placeholder] = context[expr]
 
     return new_src, new_context
