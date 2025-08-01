@@ -493,5 +493,15 @@ class TestExitCode(Base):
         self.assertEqual(process.returncode, 0)
 
 
+class TestAssertionsRewrite(Base):
+    def test_assertions_rewrite_enabled(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_enabled")
+        process.expect_exact(":)")
+    
+    def test_assertions_rewrite_disabled(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_disabled")
+        process.expect_exact(":)")
+
+
 if __name__ == "__main__":
     unittest.main()
