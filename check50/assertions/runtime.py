@@ -1,5 +1,4 @@
 from check50 import Failure, Missing, Mismatch
-import re
 import inspect
 import tokenize
 import types, builtins
@@ -56,6 +55,9 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     :raises check50.Failure: If msg_or_exc is a string, or if cond_type is \
                              unrecognized.
     """
+    if context is None:
+        context = {}
+
     # Grab the global and local variables as of now
     caller_frame = inspect.currentframe().f_back
     caller_globals = caller_frame.f_globals
@@ -71,7 +73,9 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
             except Exception as e:
                 context[expr_str] = f"[error evaluating: {e}]"
 
-        # filter out modules, functions, and built-ins
+        # filter out modules, functions, and built-ins, which is needed to avoid
+        # overwriting function definitions in evaluaton and avoid useless string
+        # output
         def is_irrelevant_value(v):
             return isinstance(v, (types.ModuleType, types.FunctionType, types.BuiltinFunctionType))
 
@@ -87,7 +91,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         context_str = ", ".join(f"{k} = {repr(v)}" for k, v in filtered_context.items())
     else:
         filtered_context = {}
-        
+
     # Since we've memoized the functions and variables once, now try and
     # evaluate the conditional by substituting the function calls/vars with
     # their results
@@ -147,11 +151,12 @@ def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
     }
     ```
     """
+    # Parse the src into a stream of tokens
     tokens = tokenize.generate_tokens(StringIO(src).readline)
 
     new_tokens = []
     new_context = {}
-    placeholder_map = {}
+    placeholder_map = {} # used for duplicates in src (i.e. x == x => __expr0 == __expr0)
     counter = 0
 
     for tok_type, tok_string, start, end, line in tokens:
@@ -161,8 +166,13 @@ def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
                 placeholder_map[tok_string] = placeholder
                 new_context[placeholder] = context[tok_string]
                 counter += 1
+            else:
+                # Avoid creating a new __expr{i} variable if it has already been seen
+                placeholder = placeholder_map[tok_string]
             new_tokens.append((tok_type, placeholder))
         else:
+            # Anything not found in the context dictionary is placed here,
+            # including keywords, whitespace, operators, etc.
             new_tokens.append((tok_type, tok_string))
 
     eval_src = tokenize.untokenize(new_tokens)

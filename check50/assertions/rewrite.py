@@ -47,7 +47,7 @@ def rewrite_enabled(path: str):
     # ENABLE_CHECK50_ASSERT = 1
     ```
 
-    Ignores whitespace.
+    Ignores whitespace and case.
 
     :param path: The path to the file you wish to check.
     :type path: str
