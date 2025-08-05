@@ -27,6 +27,8 @@ from .runner import CheckRunner
 
 LOGGER = logging.getLogger("check50")
 
+gettext.install("check50", str(importlib.resources.files("check50").joinpath("locale")))
+
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
 
