@@ -259,6 +259,20 @@ def process_args(args):
     if args.ansi_log and "ansi" not in seen_output:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
 
+    if args.https or args.ssh:
+        if args.offline:
+            LOGGER.warning(_("Using either --https and --ssh will have no effect when running offline"))
+            args.auth_method = None
+        elif args.https and args.ssh:
+            LOGGER.warning(_("--https and --ssh have no effect when used together"))
+            args.auth_method = None
+        elif args.https:
+            args.auth_method = "https"
+        else:
+            args.auth_method = "ssh"
+    else:
+        args.auth_method = None
+
 
 class LoggerWriter:
     def __init__(self, logger, level):
@@ -334,6 +348,18 @@ def main():
     parser.add_argument("--no-install-dependencies",
                         action="store_true",
                         help=_("do not install dependencies (only works with --local)"))
+    parser.add_argument("--assertion-rewrite",
+                        action="store",
+                        nargs="?",
+                        const="enabled",
+                        choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
+                        help=_("enable or disable assertion rewriting; overrides ENABLE_CHECK50_ASSERT flag in the checks file"))
+    parser.add_argument("--https",
+                        action="store_true",
+                        help=_("force authentication via HTTPS"))
+    parser.add_argument("--ssh",
+                        action="store_true",
+                        help=_("force authentication via SSH"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -355,7 +381,7 @@ def main():
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
+        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True}, auth_method=args.auth_method)[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, internal.slug)
 
@@ -392,7 +418,13 @@ def main():
             original_checks_file = (internal.check_dir / config["checks"]).resolve()
 
             # If the user has enabled the rewrite feature
-            if assertions.rewrite_enabled(str(original_checks_file)):
+            assertion_rewrite_enabled = False
+            if args.assertion_rewrite is not None:
+                assertion_rewrite_enabled = args.assertion_rewrite.lower() in ("true", "1", "enabled", "on")
+            else:
+                assertion_rewrite_enabled = assertions.rewrite_enabled(str(original_checks_file))
+
+            if assertion_rewrite_enabled:
                 # Create a temporary copy of the checks file
                 with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
                     checks_file = Path(tmp.name)
