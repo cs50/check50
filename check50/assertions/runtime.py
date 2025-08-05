@@ -101,7 +101,11 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     eval_globals = caller_globals.copy()
     eval_globals.update(eval_context)
 
-    cond = eval(eval_src, eval_globals, eval_context)
+    # Merge locals with expression context for evaluation
+    eval_locals = caller_locals.copy()
+    eval_locals.update(eval_context)
+
+    cond = eval(eval_src, eval_globals, eval_locals)
 
     # Finally, quit if the condition evaluated to True.
     if cond:
