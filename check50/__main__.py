@@ -334,6 +334,12 @@ def main():
     parser.add_argument("--no-install-dependencies",
                         action="store_true",
                         help=_("do not install dependencies (only works with --local)"))
+    parser.add_argument("--assertion-rewrite",
+                        action="store",
+                        nargs="?",
+                        const="enabled",
+                        choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
+                        help=_("enable or disable assertion rewriting; overrides ENABLE_CHECK50_ASSERT flag in the checks file"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -392,7 +398,13 @@ def main():
             original_checks_file = (internal.check_dir / config["checks"]).resolve()
 
             # If the user has enabled the rewrite feature
-            if assertions.rewrite_enabled(str(original_checks_file)):
+            assertion_rewrite_enabled = False
+            if args.assertion_rewrite is not None:
+                assertion_rewrite_enabled = args.assertion_rewrite.lower() in ("true", "1", "enabled", "on")
+            else:
+                assertion_rewrite_enabled = assertions.rewrite_enabled(str(original_checks_file))
+
+            if assertion_rewrite_enabled:
                 # Create a temporary copy of the checks file
                 with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
                     checks_file = Path(tmp.name)
