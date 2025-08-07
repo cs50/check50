@@ -468,7 +468,7 @@ class Mismatch(Failure):
 
         super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"expected": expected, "actual": actual})
+        self.payload.update({"expected": _raw(expected), "actual": _raw(actual)})
 
 
 def hidden(failure_rationale):
