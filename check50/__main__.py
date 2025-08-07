@@ -14,7 +14,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import traceback
 
 import attr
 import lib50
@@ -382,19 +381,7 @@ def main():
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        try:
-            commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True}, auth_method=args.auth_method)[1]
-        except lib50.ConnectionError:
-            LOGGER.debug(traceback.format_exc())
-            if not os.environ.get("CODESPACES"):
-                raise _exceptions.Error(_(
-                    "check50 failed to authenticate your Github account. Please make sure you are connected to the internet and try again."
-                ))
-        except Exception as e:
-            LOGGER.debug(traceback.format_exc())
-            raise _exceptions.Error(_("Sorry, something's wrong, please try again.\n"
-                                     "If the problem persists, please visit our status page https://cs50.statuspage.io for more information.")) from e
-
+        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, internal.slug)
 
