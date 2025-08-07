@@ -385,8 +385,8 @@ def main():
         try:
             commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True}, auth_method=args.auth_method)[1]
         except lib50.ConnectionError:
-            LOGGER.debug(traceback.format_exc()
-            if  not os.environ.get("CODESPACES"):
+            LOGGER.debug(traceback.format_exc())
+            if not os.environ.get("CODESPACES"):
                 raise _exceptions.Error(_(
                     "check50 failed to authenticate your Github account. Please make sure you are connected to the internet and try again."
                 ))
