@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
 import attr
 import lib50
@@ -259,6 +260,20 @@ def process_args(args):
     if args.ansi_log and "ansi" not in seen_output:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
 
+    if args.https or args.ssh:
+        if args.offline:
+            LOGGER.warning(_("Using either --https and --ssh will have no effect when running offline"))
+            args.auth_method = None
+        elif args.https and args.ssh:
+            LOGGER.warning(_("--https and --ssh have no effect when used together"))
+            args.auth_method = None
+        elif args.https:
+            args.auth_method = "https"
+        else:
+            args.auth_method = "ssh"
+    else:
+        args.auth_method = None
+
 
 class LoggerWriter:
     def __init__(self, logger, level):
@@ -340,6 +355,12 @@ def main():
                         const="enabled",
                         choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
                         help=_("enable or disable assertion rewriting; overrides ENABLE_CHECK50_ASSERT flag in the checks file"))
+    parser.add_argument("--https",
+                        action="store_true",
+                        help=_("force authentication via HTTPS"))
+    parser.add_argument("--ssh",
+                        action="store_true",
+                        help=_("force authentication via SSH"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -361,7 +382,19 @@ def main():
 
     # If remote, push files to GitHub and await results
     if not args.local:
-        commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True})[1]
+        try:
+            commit_hash = lib50.push("check50", internal.slug, internal.CONFIG_LOADER, data={"check50": True}, auth_method=args.auth_method)[1]
+        except lib50.ConnectionError:
+            LOGGER.debug(traceback.format_exc())
+            if not os.environ.get("CODESPACES"):
+                raise _exceptions.Error(_(
+                    "check50 failed to authenticate your Github account. Please make sure you are connected to the internet and try again."
+                ))
+        except Exception as e:
+            LOGGER.debug(traceback.format_exc())
+            raise _exceptions.Error(_("Sorry, something's wrong, please try again.\n"
+                                     "If the problem persists, please visit our status page https://cs50.statuspage.io for more information.")) from e
+
         with lib50.ProgressBar("Waiting for results") if "ansi" in args.output else nullcontext():
             tag_hash, results = await_results(commit_hash, internal.slug)
 
