@@ -425,6 +425,8 @@ class Missing(Failure):
     """
 
     def __init__(self, missing_item, collection, help=None):
+        if isinstance(collection, list):
+            collection = _process_list(collection, _raw)
         super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
 
         if missing_item == EOF:
@@ -500,10 +502,49 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
+def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
+    """
+    Applies a function `processor` to every element of a list.
+
+    `flatten` has 3 choices:
+        - `none`: Apply `processor` to every element of a list without flattening (e.g. `['1', '2', '[3]']`).
+        - `shallow`: Flatten by one level only and apply `processor` (e.g. `'1\\n2\\n[3]'`).
+        - `deep`: Recursively flatten and apply `processor` (e.g. `'1\\n2\\n3'`).
+
+    Example usage:
+        if isinstance(obj, list):
+            return _process_list(obj, _raw, joined_by=" ")
+
+    :param lst: A list to be modified.
+    :type lst: list
+    :param processor: The function that processes each item.
+    :type processor: callable
+    :param flatten: The level of flattening to apply. One of "none", "shallow", or "deep".
+    :type flatten: str
+    :param joined_by: If `flatten` is one of "shallow" or "deep", uses this string to join the elements of the list.
+    :param joined_by: str
+    :rtype: list | str
+    """
+    match flatten:
+        case "shallow":
+            return joined_by.join(processor(item) for item in lst)
+        case "deep":
+            def _flatten_deep(x):
+                for item in x:
+                    if isinstance(item, list):
+                        yield from _flatten_deep(item)
+                    else:
+                        yield item
+
+            return joined_by.join(processor(item) for item in _flatten_deep(lst))
+        case _:
+            # for "none" and every other case
+            return [processor(item) for item in lst]
+
 def _truncate(s, other):
     def normalize(obj):
         if isinstance(obj, list):
-            return "\n".join(map(str, obj))
+            return _process_list(obj, str)
         else:
             return str(obj)
 
@@ -538,10 +579,6 @@ def _truncate(s, other):
 
 def _raw(s):
     """Get raw representation of s."""
-
-    if isinstance(s, list):
-        s = "\n".join(_raw(item) for item in s)
-
     if s == EOF:
         return "EOF"
     elif s == TIMEOUT:
