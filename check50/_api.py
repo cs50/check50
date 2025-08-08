@@ -563,9 +563,15 @@ def _truncate(s, other):
             i = index
             break
 
-    # center around diff
-    start = max(i - (config.truncate_len // 2), 0)
-    end = min(start + config.truncate_len, len(s))
+    # If the diff is within the first config.truncate_len characters,
+    # start from the beginning (no need for "..." at the start)
+    if i < config.truncate_len:
+        start = 0
+        end = min(config.truncate_len, len(s))
+    else:
+        # center around diff for differences further into the string
+        start = max(i - (config.truncate_len // 2), 0)
+        end = min(start + config.truncate_len, len(s))
 
     snippet = s[start:end]
 

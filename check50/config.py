@@ -13,7 +13,7 @@ class Config:
     """
 
     def __init__(self):
-        self.truncate_len = 10
+        self.truncate_len = 30
         self.dynamic_truncate = True
 
         # Create boolean validators for your variables here (if needed):
