@@ -1,6 +1,7 @@
 import collections
 from contextlib import contextmanager
 import concurrent.futures as futures
+import dataclasses
 import functools
 import inspect
 import importlib
@@ -13,8 +14,8 @@ import signal
 import sys
 import tempfile
 import traceback
+import typing
 
-import attr
 import lib50
 
 from . import internal, _exceptions, __version__
@@ -23,16 +24,16 @@ from ._api import log, Failure, _copy, _log, _data
 _check_names = []
 
 
-@attr.s(slots=True)
+@dataclasses.dataclass
 class CheckResult:
     """Record returned by each check"""
-    name = attr.ib()
-    description = attr.ib()
-    passed = attr.ib(default=None)
-    log = attr.ib(default=attr.Factory(list))
-    cause = attr.ib(default=None)
-    data = attr.ib(default=attr.Factory(dict))
-    dependency = attr.ib(default=None)
+    name: str
+    description: str
+    passed: typing.Optional[bool] = None
+    log: typing.List[str] = dataclasses.field(default_factory=list)
+    cause: typing.Optional[typing.Dict] = None
+    data: typing.Dict = dataclasses.field(default_factory=dict)
+    dependency: typing.Optional[str] = None
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
@@ -48,8 +49,7 @@ class CheckResult:
     def from_dict(cls, d):
         """Create a CheckResult given a dict. Dict must contain at least the fields in the CheckResult.
         Throws a KeyError if not."""
-        return cls(**{field.name: d[field.name] for field in attr.fields(cls)})
-
+        return cls(**{field.name: d[field.name] for field in dataclasses.fields(cls)})
 
 
 class Timeout(Failure):
