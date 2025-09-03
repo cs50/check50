@@ -14,7 +14,6 @@ import signal
 import sys
 import tempfile
 import traceback
-import typing
 
 import lib50
 
@@ -24,16 +23,16 @@ from ._api import log, Failure, _copy, _log, _data
 _check_names = []
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class CheckResult:
     """Record returned by each check"""
     name: str
     description: str
-    passed: typing.Optional[bool] = None
-    log: typing.List[str] = dataclasses.field(default_factory=list)
-    cause: typing.Optional[typing.Dict] = None
-    data: typing.Dict = dataclasses.field(default_factory=dict)
-    dependency: typing.Optional[str] = None
+    passed: bool | None = None
+    log: list[str] = dataclasses.field(default_factory=list)
+    cause: dict | None = None
+    data: dict = dataclasses.field(default_factory=dict)
+    dependency: str | None = None
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):

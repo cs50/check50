@@ -25,7 +25,7 @@ setup(
     keywords=["check", "check50"],
     name="check50",
     packages=["check50", "check50.renderer", "check50.assertions"],
-    python_requires=">= 3.8",
+    python_requires=">= 3.10",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
     },
