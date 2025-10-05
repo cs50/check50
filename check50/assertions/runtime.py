@@ -135,7 +135,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     # Raise check50-specific/user-passed exceptions.
     if isinstance(msg_or_exc, str):
         raise Failure(msg_or_exc)
-    elif isinstance(msg_or_exc, type) and issubclass(msg_or_exc, BaseException):
+    elif isinstance(msg_or_exc, BaseException):
         raise msg_or_exc
     elif cond_type == 'eq' and left is not None and right is not None:
         help_msg = f"checked: {src}"
