@@ -18,14 +18,14 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["attrs>=18", "beautifulsoup4>=0", "lib50>=3,<4", "packaging", "pexpect>=4.6", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
+    install_requires=["beautifulsoup4>=0", "lib50>=3,<4", "packaging", "pexpect>=4.6", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
     extras_require = {
         "develop": ["sphinx", "sphinx-autobuild", "sphinx_rtd_theme"]
     },
     keywords=["check", "check50"],
     name="check50",
     packages=["check50", "check50.renderer", "check50.assertions"],
-    python_requires=">= 3.8",
+    python_requires=">= 3.10",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
     },
