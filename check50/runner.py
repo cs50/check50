@@ -343,13 +343,8 @@ class run_check:
     def _store_attributes(self):
         """"
         Store all values from the attributes from run_check.CROSS_PROCESS_ATTRIBUTES on this object,
-        in case multiprocessing is using spawn as its starting method. 
+        to ensure they are available in child processes regardless of the multiprocessing start method.
         """
-
-        # Attributes only need to be passed explicitly to child processes when using spawn
-        if multiprocessing.get_start_method() != "spawn":
-           return
-
         self._attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
         
         # Replace all unpickle-able values with nothing, assuming they've been set externally,
@@ -358,7 +353,7 @@ class run_check:
         for i, value in enumerate(self._attribute_values):
             try:
                 pickle.dumps(value)
-            except (pickle.PicklingError, AttributeError):
+            except (pickle.PicklingError, AttributeError, TypeError):
                 self._attribute_values[i] = None
                 
         self._attribute_values = tuple(self._attribute_values)
@@ -373,7 +368,9 @@ class run_check:
            return
 
         for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
-            self._set_attribute(name, val)
+            # Skip None values - these were unpicklable and should be set by module import
+            if val is not None:
+                self._set_attribute(name, val)
 
 
     @staticmethod
