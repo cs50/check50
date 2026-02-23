@@ -427,12 +427,15 @@ class Missing(Failure):
     def __init__(self, missing_item, collection, help=None):
         if isinstance(collection, list):
             collection = _process_list(collection, _raw)
-        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+
+        truncated_collection = _truncate(collection, missing_item, preserve_sentinels=True)
+
+        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(truncated_collection)), help=help)
 
         if missing_item == EOF:
             missing_item = "EOF"
 
-        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
+        self.payload.update({"missing_item": str(missing_item), "collection": str(truncated_collection)})
 
 
 class Mismatch(Failure):
@@ -458,10 +461,8 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        def _safe_truncate(x, y):
-            return _truncate(x, y) if x not in (EOF, TIMEOUT) else x
-
-        expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
+        expected, actual = (_truncate(expected, actual, preserve_sentinels=True),
+                           _truncate(actual, expected, preserve_sentinels=True))
 
         rationale = _("expected: {}\n    actual:   {}").format(
             _raw(expected),
@@ -541,12 +542,32 @@ def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
             # for "none" and every other case
             return [processor(item) for item in lst]
 
-def _truncate(s, other):
+def _truncate(s, other, preserve_sentinels=False):
+    """
+    Truncates a string `s` to at most `config.truncate_len` characters, adding
+    "..." to the end, beginning, or both if truncation occurs. If 
+    `config.dynamic_truncate` is True, truncation will look for the first index
+    at which `s` and `other` differ and center the truncated string around that
+    index. If `preserve_sentinels` is True, truncation will not be applied to 
+    `s` if it is equal to the sentinels `EOF` or `TIMEOUT`. If `s` is a list,
+    we process it with `_process_list`, using its default arguments.
+
+    :param s: The string to be truncated
+    :type s: str | list | EOF | TIMEOUT
+    :param other: The string to compare `s` to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT
+    :param preserve_sentinels: Whether to preserve `EOF` and `TIMEOUT`.
+    :type preserve_sentinels: bool
+    :rtype: str | EOF | TIMEOUT
+    """
     def normalize(obj):
         if isinstance(obj, list):
             return _process_list(obj, str)
         else:
             return str(obj)
+    
+    if s in (EOF, TIMEOUT) and preserve_sentinels:
+        return s
 
     s, other = normalize(s), normalize(other)
 
