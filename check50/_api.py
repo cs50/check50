@@ -428,7 +428,7 @@ class Missing(Failure):
         if isinstance(collection, list):
             collection = _process_list(collection, _raw)
 
-        truncated_collection = _truncate(collection, missing_item, preserve_sentinels=True)
+        truncated_collection = _truncate(collection, missing_item)
 
         super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(truncated_collection)), help=help)
 
@@ -461,8 +461,7 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        expected, actual = (_truncate(expected, actual, preserve_sentinels=True),
-                           _truncate(actual, expected, preserve_sentinels=True))
+        expected, actual = _truncate(expected, actual), _truncate(actual, expected)
 
         rationale = _("expected: {}\n    actual:   {}").format(
             _raw(expected),
@@ -542,7 +541,7 @@ def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
             # for "none" and every other case
             return [processor(item) for item in lst]
 
-def _truncate(s, other, preserve_sentinels=False):
+def _truncate(s, other, preserve_sentinels=True):
     """
     Truncates a string `s` to at most `config.truncate_len` characters, adding
     "..." to the end, beginning, or both if truncation occurs. If 
