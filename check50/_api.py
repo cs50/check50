@@ -435,7 +435,7 @@ class Missing(Failure):
         if missing_item == EOF:
             missing_item = "EOF"
 
-        self.payload.update({"missing_item": str(missing_item), "collection": str(truncated_collection)})
+        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
 
 
 class Mismatch(Failure):
