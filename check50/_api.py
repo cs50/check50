@@ -425,12 +425,10 @@ class Missing(Failure):
     """
 
     def __init__(self, missing_item, collection, help=None):
-        if isinstance(collection, list):
-            collection = _process_list(collection, _raw)
-
+        missing_item, collection = _raw(missing_item), _raw(collection)
         truncated_collection = _truncate(collection, missing_item)
 
-        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(truncated_collection)), help=help)
+        super().__init__(rationale=_("Did not find {} in {}").format(missing_item, truncated_collection), help=help)
 
         if missing_item == EOF:
             missing_item = "EOF"
@@ -461,16 +459,17 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
+        expected, actual = _raw(expected), _raw(actual)
         expected, actual = _truncate(expected, actual), _truncate(actual, expected)
 
         rationale = _("expected: {}\n    actual:   {}").format(
-            _raw(expected),
-            _raw(actual)
+            expected,
+            actual
         )
 
         super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"expected": _raw(expected), "actual": _raw(actual)})
+        self.payload.update({"expected": expected, "actual": actual})
 
 
 def hidden(failure_rationale):
@@ -609,9 +608,10 @@ def _raw(s):
         return "EOF"
     elif s == TIMEOUT:
         return "TIMEOUT"
-
-    s = f'"{repr(str(s))[1:-1]}"'
-    return s
+    elif isinstance(s, list):
+        return "[{}]".format(", ".join(_raw(item) for item in s))
+    
+    return repr(s)
 
 
 def _copy(src, dst):
