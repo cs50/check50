@@ -347,7 +347,7 @@ class run_check:
         """
 
         # Attributes only need to be passed explicitly to child processes when using spawn
-        if multiprocessing.get_start_method() != "spawn":
+        if multiprocessing.get_start_method() == "fork":
            return
 
         self._attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
