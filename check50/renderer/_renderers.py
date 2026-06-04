@@ -29,6 +29,14 @@ def to_ansi(slug, results, version, _log=False):
     for result in results:
         if result["passed"]:
             lines.append(termcolor.colored(f":) {result['description']}", "green"))
+            
+            msg = f":) {result['description']}"
+            
+            if result.get("data") and "performance50" in result["data"]:
+                perf = result["data"]["performance50"]
+                msg += f" ({perf['time_ms']}ms) ({perf['memory_kb']}KB)"
+
+            lines.append(termcolor.colored(msg, "green"))
         elif result["passed"] is None:
             lines.append(termcolor.colored(f":| {result['description']}", "yellow"))
             lines.append(termcolor.colored(f"    {result['cause'].get('rationale') or _('check skipped')}", "yellow"))
