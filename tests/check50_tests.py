@@ -99,7 +99,8 @@ class TestStdoutPy(Base):
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello")
-        process.expect_exact("expected \"hello\", not \"\"")
+        process.expect_exact("expected: \"hello\"")
+        process.expect_exact("actual:   \"\"")
         process.close(force=True)
 
 
@@ -145,7 +146,8 @@ class TestStdinPy(Base):
         process.expect_exact("foo.py exists")
         process.expect_exact(":(")
         process.expect_exact("prints hello name")
-        process.expect_exact("expected \"hello bar\", not \"\"")
+        process.expect_exact("expected: \"hello bar\"")
+        process.expect_exact("actual:   \"\"")
         process.close(force=True)
 
     def test_with_correct_file(self):
@@ -489,6 +491,16 @@ class TestExitCode(Base):
             timeout=2
         )
         self.assertEqual(process.returncode, 0)
+
+
+class TestAssertionsRewrite(Base):
+    def test_assertions_rewrite_enabled(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_enabled")
+        process.expect_exact(":)")
+    
+    def test_assertions_rewrite_disabled(self):
+        process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_disabled")
+        process.expect_exact(":)")
 
 
 if __name__ == "__main__":
