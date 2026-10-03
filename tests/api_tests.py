@@ -294,5 +294,109 @@ class TestProcessReject(Base):
         with self.assertRaises(check50.Failure):
             self.process.reject()
 
+class TestMismatch(unittest.TestCase):
+    """Test Mismatch exception class for proper JSON serialization."""
+    
+    def test_json_serialization_with_strings(self):
+        """Test that regular strings are properly escaped for JSON."""
+        import json
+        
+        test_cases = [
+            # Regular strings
+            ("hello", "world"),
+            # Strings with quotes
+            ('Hello "World"', 'Goodbye "World"'),
+            # Strings with newlines
+            ("First\nSecond", "First\nDifferent"),
+            # Strings with backslashes
+            ("Path\\to\\file", "Path\\to\\other"),
+            # JSON-like strings
+            ('{"key": "value"}', '{"key": "different"}'),
+            # Mixed special characters
+            ('Line with \\ and " and \n', 'Another \\ line " with \n'),
+        ]
+        
+        for expected, actual in test_cases:
+            with self.subTest(expected=expected, actual=actual):
+                mismatch = check50.Mismatch(expected, actual)
+                
+                # Ensure payload can be serialized to JSON
+                json_str = json.dumps(mismatch.payload)
+                
+                # Ensure it can be parsed back
+                parsed = json.loads(json_str)
+                
+                # Verify expected fields are present
+                self.assertIn('rationale', parsed)
+                self.assertIn('expected', parsed)
+                self.assertIn('actual', parsed)
+                self.assertIsNone(parsed.get('help'))
+    
+    def test_json_serialization_with_special_values(self):
+        """Test that special values like EOF and class types are handled."""
+        import json
+        from pexpect.exceptions import EOF, TIMEOUT
+        
+        test_cases = [
+            # EOF and TIMEOUT constants
+            (check50.EOF, "some output"),
+            ("some input", check50.EOF),
+            (check50.EOF, check50.EOF),
+            # Class types (simulating the error case)
+            (EOF, "output"),
+            ("input", EOF),
+            (EOF, TIMEOUT),
+        ]
+        
+        for expected, actual in test_cases:
+            with self.subTest(expected=expected, actual=actual):
+                mismatch = check50.Mismatch(expected, actual)
+                
+                # Ensure payload can be serialized to JSON
+                json_str = json.dumps(mismatch.payload)
+                
+                # Ensure it can be parsed back
+                parsed = json.loads(json_str)
+                
+                # Verify expected fields are present and are strings
+                self.assertIn('rationale', parsed)
+                self.assertIn('expected', parsed)
+                self.assertIn('actual', parsed)
+                
+                # Ensure values in payload are strings, not class types
+                self.assertIsInstance(parsed['expected'], str)
+                self.assertIsInstance(parsed['actual'], str)
+    
+    def test_mismatch_with_help(self):
+        """Test that help messages are included in the payload."""
+        import json
+        
+        mismatch = check50.Mismatch("expected", "actual", help="Did you forget something?")
+        
+        # Ensure payload can be serialized to JSON
+        json_str = json.dumps(mismatch.payload)
+        parsed = json.loads(json_str)
+        
+        # Verify help is in the payload
+        self.assertEqual(parsed['help'], "Did you forget something?")
+    
+    def test_mismatch_with_truncation(self):
+        """Test that long strings are truncated properly."""
+        import json
+        
+        # Create very long strings that will be truncated
+        long_expected = "a" * 1000
+        long_actual = "b" * 1000
+        
+        mismatch = check50.Mismatch(long_expected, long_actual)
+        
+        # Ensure payload can be serialized to JSON
+        json_str = json.dumps(mismatch.payload)
+        parsed = json.loads(json_str)
+        
+        # Verify truncation occurred (should have ellipsis)
+        self.assertIn("...", parsed['expected'])
+        self.assertIn("...", parsed['actual'])
+
 if __name__ == '__main__':
     unittest.main()

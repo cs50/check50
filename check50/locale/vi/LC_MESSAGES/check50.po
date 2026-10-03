@@ -1,0 +1,431 @@
+# Vietnamese translations for check50.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the check50 project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: check50 4.0.0.dev0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-08-05 15:34-0400\n"
+"PO-Revision-Date: 2025-08-05 15:34-0400\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: vi\n"
+"Language-Team: vi <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: check50/__init__.py:32
+msgid ""
+"check50 is not intended for use in interactive mode. Some behavior may "
+"not function as expected."
+msgstr ""
+"check50 không thể sử dụng bằng chế độ tương tác, có thể "
+"không hoạt động như mong đợi."
+
+
+#: check50/__main__.py:82
+msgid "failed to install dependencies"
+msgstr "không cài đặt dependencies được"
+
+#: check50/__main__.py:158
+#, python-brace-format
+msgid ""
+"check50 is taking longer than normal!\n"
+"See https://submit.cs50.io/check50/{} for more detail"
+msgstr ""
+"check50 đang chạy lâu hơn bình thường.\n"
+"Xem https://submit.cs50.io/check50/{} để biết thêm thông tin"
+
+#: check50/__main__.py:164
+msgid ""
+"Sorry, something's wrong, please try again.\n"
+"If the problem persists, please visit our status page "
+"https://cs50.statuspage.io for more information."
+msgstr ""
+"Rất tiếc, có gì xảy ra, vui lòng thử lại. Nếu vấn đề này còn tiếp nữa, "
+"vui lòng xem https://cs50.statuspage.io để biết thêm thông tin."
+
+#: check50/__main__.py:185
+msgid "logout of check50"
+msgstr "đăng xuất khỏi check50"
+
+#: check50/__main__.py:192
+msgid "failed to logout"
+msgstr "không đăng xuất được"
+
+#: check50/__main__.py:194
+msgid "logged out successfully"
+msgstr "đăng xuất thành công"
+
+#: check50/__main__.py:200
+#, python-brace-format
+msgid "Could not find checks for {}."
+msgstr "Không tìm thấy checks cho {}."
+
+#: check50/__main__.py:204
+msgid " Did you mean:"
+msgstr " Ý bạn là:"
+
+#: check50/__main__.py:207
+msgid ""
+"\n"
+"Do refer back to the problem specification if unsure."
+msgstr ""
+"\n"
+"Vui lòng xem lại hướng dẫn của bài tập này nếu không chắc chắn."
+
+#: check50/__main__.py:210
+msgid ""
+"\n"
+"If you are confident the slug is correct and you have an internet "
+"connection, try running without --offline."
+msgstr ""
+"\n"
+"Nếu bạn chắc chắn slug này đúng và bạn đã kết nối internet, "
+"hãy thử chạy mà không dùng --offline."
+
+#: check50/__main__.py:249
+#, python-brace-format
+msgid "You should always use --local when using: {}"
+msgstr "Bạn nên luôn sử dụng --local khi dùng: {}"
+
+#: check50/__main__.py:255
+#, python-brace-format
+msgid "Duplicate output format specified: {}"
+msgstr "Định dạng đầu ra bị trùng lập: {}"
+
+#: check50/__main__.py:262
+msgid "--ansi-log has no effect when ansi is not among the output formats"
+msgstr "--ansi-log không có tác dụng nếu ansi không nằm trong các định dạng đầu ra"
+
+#: check50/__main__.py:298
+msgid "prescribed identifier of work to check"
+msgstr ""
+
+#: check50/__main__.py:301
+msgid ""
+"run check50 in development mode (implies --offline, and --log-level "
+"info).\n"
+"causes slug to be interpreted as a literal path to a checks package."
+msgstr ""
+"chạy check50 ở chế độ phát triển (nghĩa là dùng --offline và --log-level info).\n"
+"slug sẽ được hiểu như đường dẫn tới checks package."
+
+#: check50/__main__.py:305
+msgid ""
+"run checks completely offline (implies --local, --no-download-checks and "
+"--no-install-dependencies)"
+msgstr ""
+"chạy kiểm tra hoàn toàn offline (có cả --local, --no-download-checks và --no-install-dependencies)"
+
+#: check50/__main__.py:308
+msgid "run checks locally instead of uploading to cs50"
+msgstr "chạy kiểm tra ở máy cục bộ thay vì tải lên cs50"
+
+#: check50/__main__.py:314
+msgid "format of check results"
+msgstr "định dạng kết quả kiểm tra"
+
+#: check50/__main__.py:318
+msgid "target specific checks to run"
+msgstr "chỉ định kiểm tra cụ thể để chạy"
+
+#: check50/__main__.py:322
+msgid "file to write output to"
+msgstr "tập tin để ghi kết quả đầu ra"
+
+#: check50/__main__.py:327
+msgid ""
+"warning: displays usage warnings.\n"
+"info: adds all commands run, any locally installed dependencies and print"
+" messages.\n"
+"debug: adds the output of all commands run."
+msgstr ""
+"warning: hiển thị cảnh báo sử dụng.\n"
+"info: thêm tất cả lệnh đã chạy, các dependency cài cục bộ và các thông báo print.\n"
+"debug: thêm toàn bộ đầu ra của mọi lệnh đã chạy."
+
+#: check50/__main__.py:332
+msgid "display log in ansi output mode"
+msgstr "hiển thị log ở chế độ đầu ra ansi"
+
+#: check50/__main__.py:335
+msgid ""
+"do not download checks, but use previously downloaded checks instead "
+"(only works with --local)"
+msgstr "không tải checks mới, sử dụng gói đã tải trước đó (chỉ hoạt động với --local)"
+
+#: check50/__main__.py:338
+msgid "do not install dependencies (only works with --local)"
+msgstr "không cài đặt dependencies (chỉ hoạt động với --local)"
+
+#: check50/__main__.py:371
+#, python-brace-format
+msgid "{} is not a directory"
+msgstr "{} không phải là thư mục"
+
+#: check50/__main__.py:377
+msgid ""
+"check50 could not retrieve checks from GitHub. Try running check50 again "
+"with --offline."
+msgstr "check50 không thể lấy checks từ GitHub. Vui lòng thử lại với --offline."
+
+#: check50/__main__.py:455
+#, python-brace-format
+msgid "To see more detailed results go to {}"
+msgstr "Để xem kết quả chi tiết hơn, hãy truy cập {}"
+
+#: check50/_api.py:81
+#, python-brace-format
+msgid "hashing {}..."
+msgstr "đang hash {}..."
+
+#: check50/_api.py:104
+#, python-brace-format
+msgid "checking that {} exists..."
+msgstr "đang kiểm tra {} tồn tại..."
+
+#: check50/_api.py:106 check50/_exceptions.py:42
+#, python-brace-format
+msgid "{} not found"
+msgstr "không tìm thấy {}"
+
+#: check50/_api.py:158
+#, python-brace-format
+msgid "running {}..."
+msgstr "đang chạy {}..."
+
+#: check50/_api.py:192
+#, python-brace-format
+msgid "sending input {}..."
+msgstr "đang gửi đầu vào {}..."
+
+#: check50/_api.py:198
+msgid "expected prompt for input, found none"
+msgstr "dự kiến chương trình sẽ hỏi nhập dữ liệu, nhưng không có gì hiển thị"
+
+#: check50/_api.py:200 check50/_api.py:293 check50/_api.py:370
+msgid "output not valid ASCII text"
+msgstr "đầu ra không hợp lệ (không phải văn bản ASCII)"
+
+#: check50/_api.py:275
+msgid "checking for EOF..."
+msgstr "đang kiểm tra EOF..."
+
+#: check50/_api.py:278
+#, python-brace-format
+msgid "checking for output \"{}\"..."
+msgstr "đang kiểm tra đầu ra \"{}\"..."
+
+#: check50/_api.py:290
+#, python-brace-format
+msgid "check50 waited {} seconds for the output of the program"
+msgstr "check50 đã đợi {} giây để nhận đầu ra từ chương trình"
+
+#: check50/_api.py:295
+msgid "check50 could not verify output"
+msgstr "check50 không thể xác thực đầu ra"
+
+#: check50/_api.py:312
+msgid "checking that input was rejected..."
+msgstr "đang kiểm tra dữ liệu nhập bị từ chối..."
+
+#: check50/_api.py:319
+msgid "expected program to reject input, but it did not"
+msgstr "chương trình cần phải từ chối đầu vào này, nhưng lại không từ chối"
+
+#: check50/_api.py:351
+#, python-brace-format
+msgid "checking that program exited with status {}..."
+msgstr "đang kiểm tra chương trình thoát với mã trạng thái {}..."
+
+#: check50/_api.py:353
+#, python-brace-format
+msgid "expected exit code {}, not {}"
+msgstr "dự kiến mã thoát là {}, không phải {}"
+
+#: check50/_api.py:368
+msgid "timed out while waiting for program to exit"
+msgstr "hết thời gian chờ chương trình thoát"
+
+#: check50/_api.py:375
+msgid "failed to execute program due to segmentation fault"
+msgstr "không thể chạy chương trình do lỗi segmentation fault"
+
+#: check50/_api.py:428
+#, python-brace-format
+msgid "Did not find {} in {}"
+msgstr "Không tìm thấy {} trong {}"
+
+#: check50/_api.py:464
+#, python-brace-format
+msgid ""
+"expected: {}\n"
+"    actual:   {}"
+msgstr ""
+"dự kiến: {}\n"
+"    thực tế:   {}"
+
+#: check50/_exceptions.py:50
+msgid ""
+"Sorry, something is wrong! check50 ran into an error, please try again.\n"
+"If the problem persists, please visit our status page "
+"https://cs50.statuspage.io for more information."
+msgstr ""
+"Rất tiếc, có gì xảy ra, vui lòng thử nộp lại. Nếu vấn đề này còn tiếp nữa, "
+"vui lòng xem https://cs50.statuspage.io để biết thêm thông tin."
+
+#: check50/_simple.py:64
+#, python-brace-format
+msgid ""
+"{} is not a valid name for a check; check names should consist only of "
+"alphanumeric characters, underscores, and spaces"
+msgstr ""
+"{} không phải là check hợp lệ; tên của check chỉ nên bao gồm "
+"ký tự chữ, số, dấu gạch dưới (_) và khoảng trắng"
+
+#: check50/_simple.py:89
+msgid "You forgot a - in front of run"
+msgstr "Bạn quên thêm dấu - phía trước run"
+
+#: check50/_simple.py:94
+#, python-brace-format
+msgid "{} is not a valid command in check {}, use only: {}"
+msgstr "{} không phải là lệnh hợp lệ trong kiểm tra {}, chỉ sử dụng: {}"
+
+#: check50/_simple.py:98
+#, python-brace-format
+msgid "Missing {} in check {}"
+msgstr "Thiếu {} trong kiểm tra {}"
+
+#: check50/c.py:43
+msgid "compile requires at least one file"
+msgstr "biên dịch yêu cầu ít nhất một tập tin"
+
+#: check50/c.py:106
+msgid "checking for valgrind errors..."
+msgstr "đang kiểm tra lỗi valgrind..."
+
+#: check50/c.py:129
+msgid "file"
+msgstr "tập tin"
+
+#: check50/c.py:129
+msgid "line"
+msgstr "dòng"
+
+#: check50/c.py:139
+msgid "valgrind tests failed; see log for more information."
+msgstr "kiểm tra valgrind thất bại; xem log để biết thêm chi tiết."
+
+#: check50/flask.py:36
+#, python-brace-format
+msgid "could not find {}"
+msgstr "không tìm thấy {}"
+
+#: check50/flask.py:44
+#, python-brace-format
+msgid "{} does not contain an app"
+msgstr "{} không chứa ứng dụng (app)"
+
+#: check50/flask.py:110
+#, python-brace-format
+msgid "checking that status code {} is returned..."
+msgstr "đang kiểm tra trả về mã trạng thái {}..."
+
+#: check50/flask.py:112
+#, python-brace-format
+msgid "expected status code {}, but got {}"
+msgstr "dự kiến mã trạng thái {}, nhưng nhận được {}"
+
+#: check50/flask.py:123
+#, python-brace-format
+msgid "expected request to return HTML, but it returned {}"
+msgstr "yêu cầu dự kiến trả về HTML, nhưng lại trả về {}"
+
+#: check50/flask.py:140
+#, python-brace-format
+msgid "sending {} request to {}"
+msgstr "đang gửi yêu cầu {} đến {}"
+
+#: check50/flask.py:144
+#, python-brace-format
+msgid "exception raised in application: {}: {}"
+msgstr "ứng dụng phát sinh ngoại lệ: {}: {}"
+
+#: check50/flask.py:145
+msgid "application raised an exception (see the log for more details)"
+msgstr "ứng dụng phát sinh ngoại lệ (xem log để biết thêm chi tiết)"
+
+#: check50/flask.py:155
+#, python-brace-format
+msgid "checking that \"{}\" is in page"
+msgstr "đang kiểm tra \"{}\" có trong trang hay không"
+
+#: check50/flask.py:161
+#, python-brace-format
+msgid "expected to find \"{}\" in page, but it wasn't found"
+msgstr "dự kiến sẽ tìm thấy \"{}\" trong trang, nhưng không tìm thấy"
+
+#: check50/internal.py:121 check50/internal.py:128
+msgid "Invalid slug for check50. Did you mean something else?"
+msgstr "Slug không hợp lệ cho check50. Có phải bạn định nhập nội dung khác?"
+
+#: check50/internal.py:190
+msgid "yes"
+msgstr "có"
+
+#: check50/internal.py:190
+#, python-brace-format
+msgid "{} [Y/n] "
+msgstr "{} [Y/n] "
+
+#: check50/py.py:43
+#, python-brace-format
+msgid "importing {}..."
+msgstr "đang import {}..."
+
+#: check50/py.py:57
+#, python-brace-format
+msgid "compiling {} into byte code..."
+msgstr "đang biên dịch {} thành mã byte..."
+
+#: check50/py.py:62
+msgid "Exception raised: "
+msgstr "Phát sinh ngoại lệ: "
+
+#: check50/py.py:66
+#, python-brace-format
+msgid "{} raised while compiling {} (see the log for more details)"
+msgstr "{} phát sinh khi biên dịch {} (xem log để biết thêm chi tiết)"
+
+#: check50/runner.py:57
+#, python-brace-format
+msgid "check timed out after {} seconds"
+msgstr "kiểm tra bị quá thời gian sau {} giây"
+
+#: check50/runner.py:152
+msgid "check50 ran into an error while running checks!"
+msgstr "check50 gặp lỗi khi thực hiện kiểm tra!"
+
+#: check50/runner.py:241
+#, python-brace-format
+msgid "Unknown check: {}"
+msgstr "Kiểm tra chưa biết: {}"
+
+#: check50/runner.py:268
+msgid "can't check until a frown turns upside down"
+msgstr "chưa thể kiểm tra cho đến khi bạn mỉm cười"
+
+#: check50/renderer/_renderers.py:74
+#, python-brace-format
+msgid "Results for {} generated by check50 v{}"
+msgstr "Kết quả cho {} được tạo bởi check50 v{}"
+
+#: check50/renderer/_renderers.py:82
+msgid "check skipped"
+msgstr "bỏ qua kiểm tra"

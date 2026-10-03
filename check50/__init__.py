@@ -23,6 +23,15 @@ def _setup_translation():
 _set_version()
 _setup_translation()
 
+# Discourage use of check50 in the interactive mode, due to a naming conflict of
+# the `_` variable. check50 uses it for translations, but Python stores the
+# result of the last expression in a variable called `_`.
+import sys
+if hasattr(sys, 'ps1') or sys.flags.interactive:
+    import warnings
+    warnings.warn(_("check50 is not intended for use in interactive mode. "
+                    "Some behavior may not function as expected."))
+
 from ._api import (
     import_checks,
     data, _data,
@@ -38,7 +47,9 @@ from ._api import (
 
 from . import regex
 from .runner import check
+from .config import config
 from pexpect import EOF
 
 __all__ = ["import_checks", "data", "exists", "hash", "include", "regex",
-           "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF"]
+           "run", "log", "Failure", "Mismatch", "Missing", "check", "EOF",
+           "config"]

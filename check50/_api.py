@@ -11,6 +11,7 @@ import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal, regex
+from .config import config
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -238,7 +239,9 @@ class run:
         :type show_timeout: bool
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
                                   process outputs matches it
-        :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
+        :raises check50.Missing: if the process times out
+        :raises check50.Failure: if the process outputs invalid UTF-8 text or \
+                                 otherwise fails to verify output
 
         Example usage::
 
@@ -422,6 +425,8 @@ class Missing(Failure):
     """
 
     def __init__(self, missing_item, collection, help=None):
+        if isinstance(collection, list):
+            collection = _process_list(collection, _raw)
         super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
 
         if missing_item == EOF:
@@ -453,15 +458,19 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
+        def _safe_truncate(x, y):
+            return _truncate(x, y) if x not in (EOF, TIMEOUT) else x
 
-        if expected == EOF:
-            expected = "EOF"
+        expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
 
-        if actual == EOF:
-            actual = "EOF"
+        rationale = _("expected: {}\n    actual:   {}").format(
+            _raw(expected),
+            _raw(actual)
+        )
 
-        self.payload.update({"expected": expected, "actual": actual})
+        super().__init__(rationale=rationale, help=help)
+
+        self.payload.update({"expected": _raw(expected), "actual": _raw(actual)})
 
 
 def hidden(failure_rationale):
@@ -493,19 +502,95 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
+def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
+    """
+    Applies a function `processor` to every element of a list.
+
+    `flatten` has 3 choices:
+        - `none`: Apply `processor` to every element of a list without flattening (e.g. `['1', '2', '[3]']`).
+        - `shallow`: Flatten by one level only and apply `processor` (e.g. `'1\\n2\\n[3]'`).
+        - `deep`: Recursively flatten and apply `processor` (e.g. `'1\\n2\\n3'`).
+
+    Example usage:
+        if isinstance(obj, list):
+            return _process_list(obj, _raw, joined_by=" ")
+
+    :param lst: A list to be modified.
+    :type lst: list
+    :param processor: The function that processes each item.
+    :type processor: callable
+    :param flatten: The level of flattening to apply. One of "none", "shallow", or "deep".
+    :type flatten: str
+    :param joined_by: If `flatten` is one of "shallow" or "deep", uses this string to join the elements of the list.
+    :param joined_by: str
+    :rtype: list | str
+    """
+    match flatten:
+        case "shallow":
+            return joined_by.join(processor(item) for item in lst)
+        case "deep":
+            def _flatten_deep(x):
+                for item in x:
+                    if isinstance(item, list):
+                        yield from _flatten_deep(item)
+                    else:
+                        yield item
+
+            return joined_by.join(processor(item) for item in _flatten_deep(lst))
+        case _:
+            # for "none" and every other case
+            return [processor(item) for item in lst]
+
+def _truncate(s, other):
+    def normalize(obj):
+        if isinstance(obj, list):
+            return _process_list(obj, str)
+        else:
+            return str(obj)
+
+    s, other = normalize(s), normalize(other)
+
+    if not config.dynamic_truncate:
+        if len(s) > config.truncate_len:
+            s = s[:config.truncate_len] + "..."
+        return s
+
+    # find the index of first difference
+    limit = min(len(s), len(other))
+    i = limit
+    for index in range(limit):
+        if s[index] != other[index]:
+            i = index
+            break
+
+    # If the diff is within the first config.truncate_len characters,
+    # start from the beginning (no need for "..." at the start)
+    if i < config.truncate_len:
+        start = 0
+        end = min(config.truncate_len, len(s))
+    else:
+        # center around diff for differences further into the string
+        start = max(i - (config.truncate_len // 2), 0)
+        end = min(start + config.truncate_len, len(s))
+
+    snippet = s[start:end]
+
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(s):
+        snippet = snippet + "..."
+
+    return snippet
+
 
 def _raw(s):
-    """Get raw representation of s, truncating if too long."""
-
-    if isinstance(s, list):
-        s = "\n".join(_raw(item) for item in s)
-
+    """Get raw representation of s."""
     if s == EOF:
         return "EOF"
+    elif s == TIMEOUT:
+        return "TIMEOUT"
 
     s = f'"{repr(str(s))[1:-1]}"'
-    if len(s) > 15:
-        s = s[:15] + "...\""  # Truncate if too long
     return s
 
 
