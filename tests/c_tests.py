@@ -16,8 +16,6 @@ class Base(unittest.TestCase):
     def setUp(self):
         if not CLANG_INSTALLED:
             raise unittest.SkipTest("clang not installed")
-        if not VALGRIND_INSTALLED:
-            raise unittest.SkipTest("valgrind not installed")
 
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
@@ -63,9 +61,12 @@ class TestCompile(Base):
 
 class TestValgrind(Base):
     def setUp(self):
-        super().setUp()
+        # Skip before Base.setUp() so no temp directory is created and left behind
+        if not VALGRIND_INSTALLED:
+            raise unittest.SkipTest("valgrind not installed")
         if not (sys.platform == "linux" or sys.platform == "linux2"):
             raise unittest.SkipTest("skipping valgrind checks under anything other than Linux due to false positives")
+        super().setUp()
 
     def test_no_leak(self):
         check50.internal.check_running = True
