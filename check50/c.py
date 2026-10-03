@@ -10,7 +10,7 @@ from . import internal
 CC = "clang"
 
 #: Default CFLAGS for :func:`check50.c.compile`
-CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
+CFLAGS = {"std": "c23", "ggdb": True, "lm": True}
 
 
 def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
@@ -28,11 +28,11 @@ def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
     file specified sans the ``.c`` extension::
 
 
-        check50.c.compile("foo.c", "bar.c") # clang foo.c bar.c -o foo -std=c11 -ggdb -lm
+        check50.c.compile("foo.c", "bar.c") # clang foo.c bar.c -o foo -std=c23 -ggdb -lm
 
     Additional CFLAGS may be passed as keyword arguments like so::
 
-        check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c11 -ggdb -lm -lcs50
+        check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c23 -ggdb -lm -lcs50
 
     In the same vein, the default CFLAGS may be overridden via keyword arguments::
 

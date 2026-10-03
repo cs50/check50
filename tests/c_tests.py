@@ -45,6 +45,22 @@ class TestCompile(Base):
         self.assertTrue(os.path.isfile("hello"))
         check50.run("./hello").stdout("hello, world!", regex=False)
 
+    def test_default_std_is_c23(self):
+        # `bool`, `true` and `false` are keywords only in C23 (no <stdbool.h>),
+        # so this source only compiles if the default -std is c23 or newer.
+        with open("c23.c", "w") as f:
+            f.write("int main(void) { bool ok = true; return ok ? 0 : 1; }\n")
+
+        self.assertEqual(check50.c.CFLAGS["std"], "c23")
+        check50.c.compile("c23.c")
+
+        self.assertTrue(os.path.isfile("c23"))
+        check50.run("./c23").exit(0)
+
+        # Overriding the default std still works and is what the docs promise
+        with self.assertRaises(check50.Failure):
+            check50.c.compile("c23.c", exe_name="c23_c11", std="c11")
+
 class TestValgrind(Base):
     def setUp(self):
         super().setUp()
