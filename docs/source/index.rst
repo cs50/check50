@@ -25,7 +25,7 @@ check50 is a tool for checking student code. As a student you can use check50 to
 Installation
 ************
 
-First make sure you have Python 3.6 or higher installed. You can download Python |download_python|.
+First make sure you have Python 3.9.10 or higher installed. You can download Python |download_python|.
 
 .. |download_python| raw:: html
 
