@@ -33,7 +33,7 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         # without needing to explicitly pass the context to run_check.
         # The same behavior can't be achieved by multiprocessing.set_start_method as that can only run once per program
         # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
-        self._get_start_method = multiprocessing.get_start_method()
+        self._get_start_method = multiprocessing.get_start_method
 
     def tearDown(self):
         self.working_directory.cleanup()
@@ -52,17 +52,20 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
 
         # For each available method
         for start_method in SUPPORTED_START_METHODS:
-            
-            # Create a multiprocessing context for that method
-            ctx = multiprocessing.get_context(start_method)
+            with self.subTest(start_method=start_method):
+                # Create a multiprocessing context for that method
+                ctx = multiprocessing.get_context(start_method)
 
-            # Monkey patch get_start_method() used by run_check to check for its method
-            multiprocessing.get_start_method = lambda: start_method
+                # Monkey patch get_start_method() used by run_check to check for its method.
+                # Python 3.13+ calls get_start_method(allow_none=True) internally while spawning,
+                # so the replacement must accept that keyword argument.
+                multiprocessing.get_start_method = lambda allow_none=False, _method=start_method: _method
 
-            # Start and join each check process
-            p = ctx.Process(target=check50.runner.run_check(check_name, spec))
-            p.start()
-            p.join()
+                # Start and join each check process
+                p = ctx.Process(target=check50.runner.run_check(check_name, spec))
+                p.start()
+                p.join()
+                self.assertEqual(p.exitcode, 0)
 
 
 if __name__ == "__main__":
