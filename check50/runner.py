@@ -13,12 +13,14 @@ import signal
 import sys
 import tempfile
 import traceback
+import time
+import resource
 
 import attr
 import lib50
 
 from . import internal, _exceptions, __version__
-from ._api import log, Failure, _copy, _log, _data
+from ._api import log, Failure, _copy, _log, _data,data
 
 _check_names = []
 
@@ -143,7 +145,14 @@ def check(dependency=None, timeout=60, max_log_lines=100):
                 # Run registered functions before/after running check and set timeout
                 with internal.register, _timeout(seconds=timeout):
                     args = (dependency_state,) if inspect.getfullargspec(check).args else ()
+                    
+                    # start the time counter for performance timing
+                    start_time = time.perf_counter()
                     state = check(*args)
+                    elapsed_ms -= (time.perf_counter() - start_time) * 1000
+                    # total ram usage for this check
+                    memory_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                    data(performance50={"time_ms": round(elapsed_ms, 2), "memory_kb": memory_usage})
             except Failure as e:
                 result.passed = False
                 result.cause = e.payload

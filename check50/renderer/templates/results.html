@@ -19,6 +19,12 @@
                   {% else %}
                       <h3 style="color:orange">:| {{ check.description }}</h3>
                   {% endif %}
+                  {% if check.data and check.data.performance50 %}
+                      <div style="margin-bottom: 10px; margin-left: 25px;">
+                          <span class="label label-info">Time: {{ check.data.performance50.time_ms }} ms</span>
+                          <span class="label label-default">Memory: {{ check.data.performance50.memory_kb }} KB</span>
+                      </div>
+                  {% endif %}
 
                   {% if check.cause or check.log %}
                       <div class="well well-sm">
