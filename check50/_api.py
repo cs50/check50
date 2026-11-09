@@ -2,6 +2,7 @@ import hashlib
 import functools
 import numbers
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -222,8 +223,9 @@ class run:
 
         :param output: optional output to be expected from stdout, raises \
                        :class:`check50.Failure` if no match \
-                       In case output is a float or int, the check50.number_regex \
-                       is used to match just that number". \
+                       In case output is a float or int, :func:`check50.regex.decimal` \
+                       is used to match just that number. The match waits for a \
+                       delimiter or end of output to confirm the number is complete. \
                        In case output is a stream its contents are used via output.read().
         :type output: str, int, float, stream
         :param str_output: what will be displayed as expected output, a human \
@@ -261,12 +263,9 @@ class run:
         if str_output is None:
             str_output = str(output)
 
-        # In case output is an int/float, use a regex to match exactly that int/float
-        if isinstance(output, numbers.Number):
-            regex = True
+        is_number = isinstance(output, numbers.Number)
+        if is_number:
             output = globals()["regex"].decimal(output)
-
-        expect = self.process.expect if regex else self.process.expect_exact
 
         if output == EOF:
             log(_("checking for EOF..."))
@@ -275,7 +274,12 @@ class run:
             log(_("checking for output \"{}\"...").format(str_output))
 
         try:
-            expect(output, timeout=timeout)
+            if is_number:
+                self._expect_number(output, timeout)
+            elif regex:
+                self.process.expect(output, timeout=timeout)
+            else:
+                self.process.expect_exact(output, timeout=timeout)
         except EOF:
             result = self.process.before + self.process.buffer
             if self.process.after != EOF:
@@ -296,6 +300,27 @@ class run:
             raise Mismatch(EOF, self.process.before.replace("\r\n", "\n"))
 
         return self
+
+    def _expect_number(self, pattern, timeout):
+        # The end of a read isn't the end of a number. A period is also
+        # ambiguous until we see whether a digit follows it.
+        try:
+            self.process.expect(pattern + r"(?=[^\d.]|\.[^\d])", timeout=timeout)
+        except EOF:
+            process = self.process
+            match = re.search(pattern, process.before)
+            if match is None:
+                raise
+
+            # Pexpect clears both buffers on EOF. Restore the unmatched
+            # suffix so chained calls can still see it (e.g. the "." in "42.").
+            remaining = process.before[match.end():]
+            process.buffer = remaining
+            process._before.write(remaining)
+            process.before = process.before[:match.start()]
+            process.after = match.group()
+            process.match = match
+            process.match_index = 0
 
     def reject(self, timeout=1):
         """
