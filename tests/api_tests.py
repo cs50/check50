@@ -228,6 +228,35 @@ class TestProcessStdout(Base):
         self.runpy()
         self.process.stdout(-1)
 
+    def test_number_rejects_suffix_in_later_read(self):
+        for output, expected in [("429", 42), ("42.9", 42), ("-1.01", -1.0)]:
+            for maxread in (1, 2000):
+                with self.subTest(output=output, expected=expected, maxread=maxread):
+                    self.write(f"print({output!r})")
+                    self.runpy()
+                    self.process.process.maxread = maxread
+                    with self.assertRaises(check50.Mismatch):
+                        self.process.stdout(expected)
+
+    def test_number_at_eof_without_newline(self):
+        self.write("print(42, end='')")
+        self.runpy()
+        self.process.process.maxread = 1
+        self.process.stdout(42).exit(0)
+
+    def test_number_leaves_final_punctuation_unread(self):
+        self.write("print('42.', end='')")
+        self.runpy()
+        self.process.process.maxread = 1
+        self.process.stdout(42).stdout(".", regex=False).exit(0)
+
+    def test_number_leaves_prompt_unread_before_input(self):
+        self.write("print('42 ready: ', end='', flush=True)\nprint(input())")
+        self.runpy()
+        self.process.process.maxread = 1
+        self.process.stdout(42).stdout(" ready: ", regex=False)
+        self.process.stdin("yes", prompt=False).stdout("yes").exit(0)
+
 
 class TestProcessStdoutFile(Base):
     def setUp(self):
