@@ -2,7 +2,7 @@ import re
 
 
 def decimal(number):
-    """
+    r"""
     Create a regular expression to match the number exactly:
 
     In case of a positive number::
@@ -13,11 +13,11 @@ def decimal(number):
 
         number(?!(\.?\d))
 
-    :code:`(?<![\d\-])` = negative lookbehind, \
-        asserts that there are no digits and no - in front of the number.
+    :code:`(?<![\d\-])` = negative lookbehind,
+    asserts that there are no digits and no - in front of the number.
 
-    :code:`(?!(\.?\d))` = negative lookahead, \
-        asserts that there are no digits and no additional . followed by digits after the number.
+    :code:`(?!(\.?\d))` = negative lookahead,
+    asserts that there are no digits and no additional . followed by digits after the number.
 
     :param number: the number to match in the regex
     :type number: any numbers.Number (such as int, float, ...)
