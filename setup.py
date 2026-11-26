@@ -9,6 +9,10 @@ setup(
     classifiers=[
         "Intended Audience :: Education",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Education",
         "Topic :: Utilities"
     ],
@@ -18,14 +22,14 @@ setup(
     message_extractors = {
         'check50': [('**.py', 'python', None),],
     },
-    install_requires=["beautifulsoup4>=0", "lib50>=3,<4", "packaging", "pexpect>=4.6", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
+    install_requires=["beautifulsoup4>=0", "lib50>=3.2,<4", "packaging", "pexpect>=4.6", "pyyaml>6,<7", "requests>=2.19", "setuptools", "termcolor>=1.1", "jinja2>=2.10"],
     extras_require = {
         "develop": ["sphinx", "sphinx-autobuild", "sphinx_rtd_theme"]
     },
     keywords=["check", "check50"],
     name="check50",
     packages=["check50", "check50.renderer", "check50.assertions"],
-    python_requires=">= 3.10",
+    python_requires=">= 3.11",
     entry_points={
         "console_scripts": ["check50=check50.__main__:main"]
     },
