@@ -57,7 +57,7 @@ class TestSingleEvaluation(Base):
             check50.Mismatch, "assert run('pwd').stdout() == 'foo'", run=run
         )
         self.assertEqual(calls, ["pwd"])
-        self.assertEqual(exc.payload["actual"], '"bar"')
+        self.assertEqual(exc.payload["actual"], "bar")
         self.assertIn("checked: run('pwd').stdout() == 'foo'", exc.payload["help"])
         self.assertIn("where run('pwd').stdout() = 'bar'", exc.payload["help"])
 
@@ -82,7 +82,7 @@ class TestSingleEvaluation(Base):
             "check()\n"
         )
         exc = self.assertCheckRaises(check50.Mismatch, source)
-        self.assertEqual(exc.payload["actual"], '"0"')
+        self.assertEqual(exc.payload["actual"], "0")
 
 
 class TestExceptionPropagation(Base):
@@ -137,17 +137,17 @@ class TestMsgOrExc(Base):
 
 class TestFalsyValues(Base):
     def test_falsy_left_values_raise_mismatch(self):
-        for value, raw in ((0, '"0"'), ("", '""'), (False, '"False"'), (None, '"None"')):
+        for value, raw in ((0, "0"), ("", ""), (False, "False"), (None, "None")):
             with self.subTest(value=value):
                 exc = self.assertCheckRaises(check50.Mismatch, "assert x == 1", x=value)
                 self.assertEqual(exc.payload["actual"], raw)
-                self.assertEqual(exc.payload["expected"], '"1"')
+                self.assertEqual(exc.payload["expected"], "1")
         # Lists are rendered by check50.Mismatch itself; only the type matters here.
         self.assertCheckRaises(check50.Mismatch, "assert x == 1", x=[])
 
     def test_none_returning_function_raises_mismatch(self):
         exc = self.assertCheckRaises(check50.Mismatch, "assert qux() == 1", qux=lambda: None)
-        self.assertEqual(exc.payload["actual"], '"None"')
+        self.assertEqual(exc.payload["actual"], "None")
         self.assertIn("where qux() = None", exc.payload["help"])
 
     def test_falsy_collections_raise_missing(self):
@@ -164,7 +164,7 @@ class TestFalsyValues(Base):
 class TestWhereText(Base):
     def test_variables_inside_matched_call_are_shown(self):
         exc = self.assertCheckRaises(check50.Mismatch, "assert len(z) == 3", z=[1, 2])
-        self.assertEqual(exc.payload["actual"], '"2"')
+        self.assertEqual(exc.payload["actual"], "2")
         self.assertEqual(exc.payload["help"], "checked: len(z) == 3\n    where z = [1, 2]")
 
     def test_variable_argument_of_user_function_is_shown(self):
@@ -254,7 +254,7 @@ class TestDirectCall(unittest.TestCase):
                 right="'foo'",
             )
         self.assertEqual(calls, ["pwd"])
-        self.assertEqual(cm.exception.payload["actual"], '"bar"')
+        self.assertEqual(cm.exception.payload["actual"], "bar")
 
 
 if __name__ == "__main__":
