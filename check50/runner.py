@@ -4,7 +4,6 @@ import concurrent.futures as futures
 import functools
 import inspect
 import importlib
-import multiprocessing
 import os
 from pathlib import Path
 import pickle
@@ -323,8 +322,8 @@ class run_check:
     This class is essentially a function that reimports the check module and runs the check.
     """
 
-    # All attributes shared between check50's main process and each checks' process
-    # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    # Required for start methods that do not inherit the parent's memory ("spawn", "forkserver"):
+    # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
@@ -341,44 +340,29 @@ class run_check:
         self._store_attributes()
 
     def _store_attributes(self):
-        """"
-        Store all values from the attributes from run_check.CROSS_PROCESS_ATTRIBUTES on this object,
-        in case multiprocessing is using spawn as its starting method. 
-        """
-
-        # Attributes only need to be passed explicitly to child processes when using spawn
-        if multiprocessing.get_start_method() != "spawn":
-           return
-
         self._attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
-        
+
         # Replace all unpickle-able values with nothing, assuming they've been set externally,
         # and will be set again upon re-importing the checks module
         # https://github.com/cs50/check50/issues/235
         for i, value in enumerate(self._attribute_values):
             try:
                 pickle.dumps(value)
-            except (pickle.PicklingError, AttributeError):
+            except (pickle.PicklingError, AttributeError, TypeError):
                 self._attribute_values[i] = None
-                
+
         self._attribute_values = tuple(self._attribute_values)
 
 
     def _set_attributes(self):
-        """
-        If the parent process set any values in self._attribute_values, 
-        restore them in the child process.
-        """
-        if not hasattr(self, "_attribute_values"):
-           return
-
         for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
-            self._set_attribute(name, val)
+            # Skip None values - these were unpicklable and should be set by module import
+            if val is not None:
+                self._set_attribute(name, val)
 
 
     @staticmethod
     def _set_attribute(name, value):
-        """Get an attribute from a name in global scope and set its value."""
         parts = name.split(".")
 
         obj = sys.modules[__name__]
@@ -389,16 +373,11 @@ class run_check:
 
 
     def __call__(self):
-        # Restore any attributes from the parent process
         self._set_attributes()
 
-        # Create the checks module
         mod = importlib.util.module_from_spec(self.spec)
-
-        # Execute (effectively import) the checks module
         self.spec.loader.exec_module(mod)
 
-        # Run just the check named self.check_name
         internal.check_running = True
         try:
             return getattr(mod, self.check_name)(internal.run_root_dir, self.state)
