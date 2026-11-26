@@ -159,7 +159,6 @@ def check(dependency=None, timeout=60, max_log_lines=100):
             finally:
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
-
             return result, state
         return wrapper
     return decorator

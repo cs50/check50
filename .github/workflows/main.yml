@@ -7,7 +7,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - name: Run tests
         run: |
@@ -31,7 +31,7 @@ jobs:
       - name: Extract program version
         id: program_version
         run: |
-          echo "version=$(check50 --version | cut --delimiter ' ' --fields 2)" >> $GITHUB_OUTPUT
+          echo "version=$(check50 --version | cut --delimiter ' ' --fields 2)" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         if: ${{ github.ref == 'refs/heads/main' }}
