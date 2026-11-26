@@ -3,7 +3,19 @@ import inspect
 import tokenize
 import types, builtins
 from io import StringIO
+import ast
+from dataclasses import dataclass
+from collections import defaultdict
 
+@dataclass(frozen=True)
+class Token:
+    kind: int                      # e.g. OP, NAME, STRING
+    text: str                      # e.g. 'foo', '(', ')'
+
+@dataclass(frozen=True)
+class KeyPattern:
+    string: str                    # key's string representation
+    tokens: tuple[Token, ...]      # normalized token sequence
 
 def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
@@ -20,7 +32,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     Used for rewriting assertion statements in check files.
 
     Note:
-        Exceptions from the check50 library are preferred, since they will be
+        Exceptions from the `check50` library are preferred, since they will be
         handled gracefully and integrated into the check output. Native Python
         exceptions are technically supported, but check50 will immediately
         terminate on the user's end if the assertion fails.
@@ -31,7 +43,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         ```
         will be converted to
         ```
-        check50_assert(x in y, "x in y", None, "in", x, y)
+        check50_assert("x in y", None, cond_type="in", context={"x": None, "y": None}, left="x", right="y")
         ```
 
     :param src: The source code string of the conditional expression \
@@ -63,70 +75,99 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     caller_globals = caller_frame.f_globals
     caller_locals = caller_frame.f_locals
 
-    # Evaluate all variables and functions within the context dict and generate
-    # a string of these values
-    context_str = None
-    if context or (left and right):
-        for expr_str in context:
-            try:
-                context[expr_str] = eval(expr_str, caller_globals, caller_locals)
-            except Exception as e:
-                context[expr_str] = f"[error evaluating: {e}]"
+    # Whether the rewriter supplied both sides of a comparison. Decide this
+    # before `left`/`right` are replaced by their values below, since a side
+    # may legitimately evaluate to None.
+    has_sides = left is not None and right is not None
 
-        # filter out modules, functions, and built-ins, which is needed to avoid
-        # overwriting function definitions in evaluaton and avoid useless string
-        # output
-        def is_irrelevant_value(v):
-            return isinstance(v, (types.ModuleType, types.FunctionType, types.BuiltinFunctionType))
+    # Build the list of candidate keys
+    candidate_keys = list(context)
 
-        def is_builtin_name(name):
-            return name in dir(builtins)
+    # Plan substitutions and learn which keys are actually used
+    eval_src, key_to_placeholder = substitute_expressions(src, candidate_keys)
 
-        filtered_context = {
-            k: v for k, v in context.items()
-            if not is_irrelevant_value(v) and not is_builtin_name(k.split("(")[0])
-        }
+    # Evaluate each matched key exactly once. Exceptions from the check50
+    # library (e.g. a Failure raised by check50.run(...).stdout() on timeout)
+    # are the real outcome of the check and must propagate exactly as they
+    # would from a plain `assert`. Other exceptions are recorded so the
+    # `where` text can show them.
+    evaluated = {}
+    for expr_str in key_to_placeholder:
+        try:
+            evaluated[expr_str] = eval(expr_str, caller_globals, caller_locals)
+        except Failure:
+            raise
+        except Exception as e:
+            evaluated[expr_str] = f"[error evaluating: {e}]"
 
-        # produces a string like "var1 = ..., var2 = ..., foo() = ..."
-        context_str = ", ".join(f"{k} = {repr(v)}" for k, v in filtered_context.items())
-    else:
-        filtered_context = {}
+    # Build the eval_context for placeholders
+    eval_context = {
+        placeholder: evaluated[key]
+        for key, placeholder in key_to_placeholder.items()
+    }
 
-    # Since we've memoized the functions and variables once, now try and
-    # evaluate the conditional by substituting the function calls/vars with
-    # their results
-    eval_src, eval_context = substitute_expressions(src, filtered_context)
-
-    # Merge globals with expression context for evaluation
-    eval_globals = caller_globals.copy()
-    eval_globals.update(eval_context)
-
-    # Merge locals with expression context for evaluation
-    eval_locals = caller_locals.copy()
-    eval_locals.update(eval_context)
-
+    # Merge locals and globals with expression context for evaluation
+    eval_globals = caller_globals.copy(); eval_globals.update(eval_context)
+    eval_locals  = caller_locals.copy();  eval_locals.update(eval_context)
     cond = eval(eval_src, eval_globals, eval_locals)
 
     # Finally, quit if the condition evaluated to True.
     if cond:
         return
 
-    # If `right` or `left` were evaluatable objects, their actual value will be stored in `context`.
-    # Otherwise, they're still just literals.
-    right = context.get(right) or right
-    left  = context.get(left) or left
+    # Variables that only appear inside a matched expression (e.g. `z` in
+    # `len(z) == 3`) were swallowed by the longest match and so were never
+    # evaluated. Look them up for the `where` text only: a bare name lookup
+    # has no side effects, so this cannot re-run anything.
+    displayed = dict(evaluated)
+    for key in candidate_keys:
+        if key in displayed:
+            continue
+        key_norm, _ = _tokenize_normalized(key)
+        if len(key_norm) == 1 and key_norm[0].kind == tokenize.NAME:
+            try:
+                displayed[key] = eval(key, caller_globals, caller_locals)
+            except Exception:
+                pass
 
-    # Since the condition didn't evaluate to True, now, we can raise special
-    # exceptions.
+    # Filter out modules, functions, and built-ins, which is needed to avoid
+    # overwriting function definitions in evaluaton and avoid useless string
+    # output
+    def is_irrelevant_value(v):
+        return isinstance(v, (
+            types.ModuleType,
+            types.FunctionType,
+            types.BuiltinFunctionType
+        ))
+    def is_builtin_name(name):
+        name = name.split("(")[0] # grab `len` from `len(...)`
+        return name in dir(builtins)
+
+    filtered_context = {
+        k: v for k, v in displayed.items()
+        if not is_irrelevant_value(v) and not is_builtin_name(k)
+    }
+
+    # Produces a string like "var1 = ..., var2 = ..., foo() = ..."
+    context_str = ", ".join(f"{k} = {repr(v)}" for k, v in filtered_context.items()) or None
+
+    # If `right` or `left` were evaluatable objects, their actual
+    # value will be stored in `evaluated`.
+    if right in evaluated:
+        right = evaluated[right]
+    if left in evaluated:
+        left = evaluated[left]
+
+    # Raise check50-specific/user-passed exceptions.
     if isinstance(msg_or_exc, str):
         raise Failure(msg_or_exc)
     elif isinstance(msg_or_exc, BaseException):
         raise msg_or_exc
-    elif cond_type == 'eq' and left and right:
+    elif cond_type == 'eq' and has_sides:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
         raise Mismatch(right, left, help=help_msg)
-    elif cond_type == 'in' and left and right:
+    elif cond_type == 'in' and has_sides:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
         raise Missing(left, right, help=help_msg)
@@ -134,50 +175,147 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         help_msg = f"\n    where {context_str}" if context_str else ""
         raise Failure(f"check did not pass: {src}" + help_msg)
 
-def substitute_expressions(src: str, context: dict) -> tuple[str, dict]:
+def _tokenize_normalized(code: str):
     """
-    Rewrites `src` by replacing each key in `context` with a placeholder variable name,
-    and builds a new context dict where those names map to pre-evaluated values.
+    Tokenize and normalize:
+      - drop ENCODING, NL, NEWLINE, INDENT, DEDENT, ENDMARKER
+      - for STRING tokens, normalize to their Python value (so "'pwd'" == "\"pwd\"")
+      - return both normalized tokens and the original raw tokens (1:1 positions)
 
-    For instance, given a `src`:
+    Outputs a normalized and raw tokenization (raw, excluding dropped) of the
+    code.
+
+    For instance, the code input "foo.bar()" might output a `norm` of `Token`s:
     ```
-    check50.run('pwd').stdout() == actual
+    [
+        Token(NAME, "foo"), Token(OP, "."), Token(NAME, "bar"),
+        Token(OP, "("), Token(OP, ")")
+    ]
     ```
-    it will create a new `eval_src` as
-    ```
-    __expr0 == __expr1
-    ```
-    and use the given context to define these variables:
-    ```
-    eval_context = {
-        '__expr0': context['check50.run('pwd').stdout()'],
-        '__expr1': context['actual']
+    In this case, there were no strings to normalize, so `raw` would
+    output the same thing.
+    """
+    drop = {
+        tokenize.ENCODING, tokenize.NL, tokenize.NEWLINE,
+        tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER
     }
-    ```
-    """
-    # Parse the src into a stream of tokens
-    tokens = tokenize.generate_tokens(StringIO(src).readline)
 
-    new_tokens = []
-    new_context = {}
-    placeholder_map = {} # used for duplicates in src (i.e. x == x => __expr0 == __expr0)
-    counter = 0
+    norm, raw = [], []
+    for tok in tokenize.generate_tokens(StringIO(code).readline):
+        # Extract type and string representation from token
+        tok_type, tok_string, *_ = tok
 
-    for tok_type, tok_string, start, end, line in tokens:
-        if tok_string in context:
-            if tok_string not in placeholder_map:
-                placeholder = f"__expr{counter}"
-                placeholder_map[tok_string] = placeholder
-                new_context[placeholder] = context[tok_string]
-                counter += 1
-            else:
-                # Avoid creating a new __expr{i} variable if it has already been seen
-                placeholder = placeholder_map[tok_string]
-            new_tokens.append((tok_type, placeholder))
+        # Skip layout/bookkeeping tokens that never take part in matching
+        if tok_type in drop:
+            continue
+
+        raw.append(Token(tok_type, tok_string))
+
+        # Normalize STRING tokens to their Python value
+        if tok_type == tokenize.STRING:
+            try:
+                val = ast.literal_eval(tok_string)
+                norm.append(Token(tok_type, repr(val)))
+            except Exception:
+                norm.append(Token(tok_type, tok_string))
         else:
-            # Anything not found in the context dictionary is placed here,
-            # including keywords, whitespace, operators, etc.
-            new_tokens.append((tok_type, tok_string))
+            norm.append(Token(tok_type, tok_string))
 
-    eval_src = tokenize.untokenize(new_tokens)
-    return eval_src, new_context
+    return norm, raw
+
+
+def substitute_expressions(src: str, keys: list[str]) -> tuple[str, dict]:
+    """
+    Rewrites `src` by replacing the longest run of tokens that matches any of
+    `keys` with a placeholder variable name `__expr{i}`. Returns the rewritten
+    source together with `key_to_placeholder`, a dict mapping each key string
+    that was actually matched to its placeholder name. This function evaluates
+    nothing: the caller evaluates the matched keys and binds the placeholders.
+
+    For instance, let `src` be
+    ```
+    check50.run('./foo.c').stdout() == 'OK'
+    ```
+    and `keys` be
+    ```
+    ["check50", "check50.run('./foo.c').stdout()"]
+    ```
+    The longest match wins, giving
+    ```
+    eval_src:           __expr0 == 'OK'
+    key_to_placeholder: {"check50.run('./foo.c').stdout()": "__expr0"}
+    ```
+    Matching is done on normalized tokens, so a key written with double quotes
+    still matches source written with single quotes.
+    """
+    # Tokenize/normalize the source once
+    src_norm, src_raw = _tokenize_normalized(src)
+
+    # Store a list of KeyPatterns
+    patterns = []
+    for key in keys:
+        key_norm, _ = _tokenize_normalized(key)
+        if key_norm:
+            patterns.append(KeyPattern(key, tuple(key_norm)))
+
+    # Stores a Token and every KeyPattern that starts with that Token
+    patterns_by_start_token = defaultdict(list)
+    for pattern in patterns:
+        start_token = pattern.tokens[0]
+        patterns_by_start_token[start_token].append(pattern)
+
+    # Prefer longest matches first (e.g. foo.bar.baz() is preferred over foo.bar)
+    for candidates in patterns_by_start_token.values():
+        candidates.sort(key=lambda p: len(p.tokens), reverse=True)
+
+    key_to_placeholder = {}
+    def get_placeholder(key_str):
+        """Return a placeholder `__expr{i}` for a given key."""
+        if key_str not in key_to_placeholder:
+            key_to_placeholder[key_str] = f"__expr{len(key_to_placeholder)}"
+        return key_to_placeholder[key_str]
+
+    def longest_match_at(i):
+        """Return the longest KeyPattern that matches `src_norm` starting at `i`"""
+        if i >= len(src_norm):
+            return None
+
+        # A NAME directly after `.` is an attribute, never a variable
+        # reference, so no key can start there (a key like `foo.x` still
+        # matches, because it starts at `foo`).
+        if i > 0 and src_raw[i - 1] == Token(tokenize.OP, "."):
+            return None
+
+        candidates = patterns_by_start_token.get(src_norm[i], [])
+
+        # Iterate through the possible candidates for the longest match
+        for pattern in candidates:
+            L = len(pattern.tokens)
+
+            # Skip if i + L would run past the end and then check for match
+            if i + L <= len(src_norm) and tuple(src_norm[i:i+L]) == pattern.tokens:
+                return pattern
+
+        # No match
+        return None
+
+    output = []
+    i = 0
+    while i < len(src_norm):
+        # Find a longest pattern, if exists
+        pattern = longest_match_at(i)
+        if pattern is not None:
+            # Create a placeholder var for this specific match
+            placeholder = get_placeholder(pattern.string)
+            output.append((tokenize.NAME, placeholder))
+            # Move forward by the number of tokens in this pattern
+            i += len(pattern.tokens)
+        else:
+            # Preserve original lex for unmatched regions
+            token = src_raw[i]
+            output.append((token.kind, token.text))
+            # Move forward by 1 token
+            i += 1
+
+    eval_src = tokenize.untokenize(output)
+    return eval_src, key_to_placeholder
