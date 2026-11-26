@@ -28,16 +28,8 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         self.working_directory = tempfile.TemporaryDirectory()
         os.chdir(self.working_directory.name)
 
-        # Keep track of get_start_method
-        # This function gets monkey patched to ensure run_check is aware of the multiprocessing context, 
-        # without needing to explicitly pass the context to run_check.
-        # The same behavior can't be achieved by multiprocessing.set_start_method as that can only run once per program
-        # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
-        self._get_start_method = multiprocessing.get_start_method()
-
     def tearDown(self):
         self.working_directory.cleanup()
-        multiprocessing.get_start_method = self._get_start_method
 
     def test_unpicklable_attribute(self):
         # Create the checks_spec and check_name needed for run_check
@@ -52,17 +44,19 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
 
         # For each available method
         for start_method in SUPPORTED_START_METHODS:
-            
-            # Create a multiprocessing context for that method
-            ctx = multiprocessing.get_context(start_method)
+            with self.subTest(start_method=start_method):
+                # Create a multiprocessing context for that method.
+                # run_check stores the cross-process attributes up front and drops the
+                # unpicklable ones, so it works under every start method without needing
+                # to know which one is in use.
+                ctx = multiprocessing.get_context(start_method)
 
-            # Monkey patch get_start_method() used by run_check to check for its method
-            multiprocessing.get_start_method = lambda: start_method
+                # Start and join each check process
+                p = ctx.Process(target=check50.runner.run_check(check_name, spec))
+                p.start()
+                p.join()
 
-            # Start and join each check process
-            p = ctx.Process(target=check50.runner.run_check(check_name, spec))
-            p.start()
-            p.join()
+                self.assertEqual(p.exitcode, 0)
 
 
 if __name__ == "__main__":
