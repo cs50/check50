@@ -425,14 +425,19 @@ class Missing(Failure):
     """
 
     def __init__(self, missing_item, collection, help=None):
-        if isinstance(collection, list):
-            collection = _process_list(collection, _raw)
-        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+        # Short, repr-style version for the terminal
+        rationale = _("Did not find {} in {}").format(
+            _display(missing_item, collection),
+            _display(collection, missing_item)
+        )
 
-        if missing_item == EOF:
-            missing_item = "EOF"
+        super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
+        # Longer (but still bounded) plain-text version for the JSON/HTML log
+        self.payload.update({
+            "missing_item": _logged(missing_item, collection),
+            "collection": _logged(collection, missing_item)
+        })
 
 
 class Mismatch(Failure):
@@ -458,19 +463,19 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        def _safe_truncate(x, y):
-            return _truncate(x, y) if x not in (EOF, TIMEOUT) else x
-
-        expected, actual = _safe_truncate(expected, actual), _safe_truncate(actual, expected)
-
+        # Short, repr-style version for the terminal
         rationale = _("expected: {}\n    actual:   {}").format(
-            _raw(expected),
-            _raw(actual)
+            _display(expected, actual),
+            _display(actual, expected)
         )
 
         super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"expected": _raw(expected), "actual": _raw(actual)})
+        # Longer (but still bounded) plain-text version for the JSON/HTML log
+        self.payload.update({
+            "expected": _logged(expected, actual),
+            "actual": _logged(actual, expected)
+        })
 
 
 def hidden(failure_rationale):
@@ -541,18 +546,45 @@ def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
             # for "none" and every other case
             return [processor(item) for item in lst]
 
-def _truncate(s, other):
+def _truncate(s, other, preserve_sentinels=True, max_len=None):
+    """
+    Truncates a string `s` to at most `max_len` characters (defaulting to
+    `config.truncate_len`), adding "..." to the end, beginning, or both if
+    truncation occurs. If `config.dynamic_truncate` is True, truncation will
+    look for the first index at which `s` and `other` differ and center the
+    truncated string around that index. If `preserve_sentinels` is True,
+    truncation will not be applied to `s` if it is equal to the sentinels `EOF`
+    or `TIMEOUT`. If `s` is a list, we process it with `_process_list`, using
+    its default arguments.
+
+    :param s: The string to be truncated
+    :type s: str | list | EOF | TIMEOUT
+    :param other: The string to compare `s` to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT
+    :param preserve_sentinels: Whether to preserve `EOF` and `TIMEOUT`.
+    :type preserve_sentinels: bool
+    :param max_len: Maximum length of the truncated string, excluding any "...".
+                    Defaults to `config.truncate_len`.
+    :type max_len: int | None
+    :rtype: str | EOF | TIMEOUT
+    """
     def normalize(obj):
         if isinstance(obj, list):
             return _process_list(obj, str)
         else:
             return str(obj)
 
+    if s in (EOF, TIMEOUT) and preserve_sentinels:
+        return s
+
+    if max_len is None:
+        max_len = config.truncate_len
+
     s, other = normalize(s), normalize(other)
 
     if not config.dynamic_truncate:
-        if len(s) > config.truncate_len:
-            s = s[:config.truncate_len] + "..."
+        if len(s) > max_len:
+            s = s[:max_len] + "..."
         return s
 
     # find the index of first difference
@@ -563,15 +595,15 @@ def _truncate(s, other):
             i = index
             break
 
-    # If the diff is within the first config.truncate_len characters,
+    # If the diff is within the first max_len characters,
     # start from the beginning (no need for "..." at the start)
-    if i < config.truncate_len:
+    if i < max_len:
         start = 0
-        end = min(config.truncate_len, len(s))
+        end = min(max_len, len(s))
     else:
         # center around diff for differences further into the string
-        start = max(i - (config.truncate_len // 2), 0)
-        end = min(start + config.truncate_len, len(s))
+        start = max(i - (max_len // 2), 0)
+        end = min(start + max_len, len(s))
 
     snippet = s[start:end]
 
@@ -589,9 +621,52 @@ def _raw(s):
         return "EOF"
     elif s == TIMEOUT:
         return "TIMEOUT"
+    elif isinstance(s, list):
+        return "[{}]".format(", ".join(_raw(item) for item in s))
 
-    s = f'"{repr(str(s))[1:-1]}"'
-    return s
+    return repr(s)
+
+
+def _display(s, other):
+    """
+    Representation of `s` for the terminal: the raw representation (see `_raw`)
+    truncated to at most `config.truncate_len` characters.
+
+    Strings are truncated *before* they are repr'd, so the quotes always stay
+    balanced and an escape sequence such as ``\\n`` is never cut in half.
+    Everything else (lists, numbers, sentinels, ...) is repr'd first and then
+    truncated as a whole, so a list reads as ``[1, 2, 3]`` and a number is not
+    mistaken for a string.
+
+    :param s: The value to be displayed
+    :type s: str | list | EOF | TIMEOUT | object
+    :param other: The value `s` is compared to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT | object
+    :rtype: str
+    """
+    if isinstance(s, str):
+        return _raw(_truncate(s, other))
+
+    return _truncate(_raw(s), _raw(other))
+
+
+def _logged(s, other):
+    """
+    Plain-text representation of `s` for the JSON/HTML log: the original text
+    (lists joined by newlines, `EOF` and `TIMEOUT` by name), truncated to at
+    most `config.log_truncate_len` characters. Unlike `_display`, nothing is
+    repr'd, so renderers receive real newlines rather than ``\\n`` escapes.
+
+    :param s: The value to be logged
+    :type s: str | list | EOF | TIMEOUT | object
+    :param other: The value `s` is compared to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT | object
+    :rtype: str
+    """
+    if s in (EOF, TIMEOUT):
+        return _raw(s)
+
+    return _truncate(s, other, max_len=config.log_truncate_len)
 
 
 def _copy(src, dst):

@@ -1,10 +1,10 @@
 import collections
 from contextlib import contextmanager
 import concurrent.futures as futures
+import dataclasses
 import functools
 import inspect
 import importlib
-import multiprocessing
 import os
 from pathlib import Path
 import pickle
@@ -14,7 +14,6 @@ import sys
 import tempfile
 import traceback
 
-import attr
 import lib50
 
 from . import internal, _exceptions, __version__
@@ -23,16 +22,16 @@ from ._api import log, Failure, _copy, _log, _data
 _check_names = []
 
 
-@attr.s(slots=True)
+@dataclasses.dataclass(slots=True)
 class CheckResult:
     """Record returned by each check"""
-    name = attr.ib()
-    description = attr.ib()
-    passed = attr.ib(default=None)
-    log = attr.ib(default=attr.Factory(list))
-    cause = attr.ib(default=None)
-    data = attr.ib(default=attr.Factory(dict))
-    dependency = attr.ib(default=None)
+    name: str
+    description: str
+    passed: bool | None = None
+    log: list[str] = dataclasses.field(default_factory=list)
+    cause: dict | None = None
+    data: dict = dataclasses.field(default_factory=dict)
+    dependency: str | None = None
 
     @classmethod
     def from_check(cls, check, *args, **kwargs):
@@ -48,8 +47,7 @@ class CheckResult:
     def from_dict(cls, d):
         """Create a CheckResult given a dict. Dict must contain at least the fields in the CheckResult.
         Throws a KeyError if not."""
-        return cls(**{field.name: d[field.name] for field in attr.fields(cls)})
-
+        return cls(**{field.name: d[field.name] for field in dataclasses.fields(cls)})
 
 
 class Timeout(Failure):
@@ -161,7 +159,8 @@ def check(dependency=None, timeout=60, max_log_lines=100):
             finally:
                 result.log = _log if len(_log) <= max_log_lines else ["..."] + _log[-max_log_lines:]
                 result.data = _data
-                return result, state
+
+            return result, state
         return wrapper
     return decorator
 
@@ -323,8 +322,8 @@ class run_check:
     This class is essentially a function that reimports the check module and runs the check.
     """
 
-    # All attributes shared between check50's main process and each checks' process
-    # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    # Required for start methods that do not inherit the parent's memory ("spawn", "forkserver"):
+    # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
@@ -341,44 +340,29 @@ class run_check:
         self._store_attributes()
 
     def _store_attributes(self):
-        """"
-        Store all values from the attributes from run_check.CROSS_PROCESS_ATTRIBUTES on this object,
-        in case multiprocessing is using spawn as its starting method. 
-        """
-
-        # Attributes only need to be passed explicitly to child processes when using spawn
-        if multiprocessing.get_start_method() != "spawn":
-           return
-
         self._attribute_values = [eval(name) for name in self.CROSS_PROCESS_ATTRIBUTES]
-        
+
         # Replace all unpickle-able values with nothing, assuming they've been set externally,
         # and will be set again upon re-importing the checks module
         # https://github.com/cs50/check50/issues/235
         for i, value in enumerate(self._attribute_values):
             try:
                 pickle.dumps(value)
-            except (pickle.PicklingError, AttributeError):
+            except (pickle.PicklingError, AttributeError, TypeError):
                 self._attribute_values[i] = None
-                
+
         self._attribute_values = tuple(self._attribute_values)
 
 
     def _set_attributes(self):
-        """
-        If the parent process set any values in self._attribute_values, 
-        restore them in the child process.
-        """
-        if not hasattr(self, "_attribute_values"):
-           return
-
         for name, val in zip(self.CROSS_PROCESS_ATTRIBUTES, self._attribute_values):
-            self._set_attribute(name, val)
+            # Skip None values - these were unpicklable and should be set by module import
+            if val is not None:
+                self._set_attribute(name, val)
 
 
     @staticmethod
     def _set_attribute(name, value):
-        """Get an attribute from a name in global scope and set its value."""
         parts = name.split(".")
 
         obj = sys.modules[__name__]
@@ -389,16 +373,11 @@ class run_check:
 
 
     def __call__(self):
-        # Restore any attributes from the parent process
         self._set_attributes()
 
-        # Create the checks module
         mod = importlib.util.module_from_spec(self.spec)
-
-        # Execute (effectively import) the checks module
         self.spec.loader.exec_module(mod)
 
-        # Run just the check named self.check_name
         internal.check_running = True
         try:
             return getattr(mod, self.check_name)(internal.run_root_dir, self.state)

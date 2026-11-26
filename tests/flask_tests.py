@@ -43,6 +43,14 @@ def root():
         with self.assertRaises(check50.Failure):
             check50.flask.app("doesnt_exist.py")
 
+    def test_file_without_app(self):
+        with open("hello.py", "w") as f:
+            f.write("from flask import Flask\n")
+
+        with self.assertRaises(check50.Failure) as cm:
+            check50.flask.app("hello.py")
+        self.assertEqual(cm.exception.payload["rationale"], "hello.py does not contain an app")
+
 
 
 class TestFlask(Base):

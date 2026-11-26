@@ -13,7 +13,12 @@ class Config:
     """
 
     def __init__(self):
+        # Max length of expected/actual output shown in the terminal rationale
         self.truncate_len = 30
+        # Max length of expected/actual output kept in the JSON/HTML log.
+        # Generous so the full results page stays useful, but bounded so a
+        # runaway program can't produce an unbounded log.
+        self.log_truncate_len = 10000
         self.dynamic_truncate = True
 
         # Create boolean validators for your variables here (if needed):
@@ -21,6 +26,8 @@ class Config:
         self._validators = {
             "truncate_len": (lambda val: isinstance(val, int) and val >= 1,
                              "truncate_len must be a positive integer"),
+            "log_truncate_len": (lambda val: isinstance(val, int) and val >= 1,
+                                 "log_truncate_len must be a positive integer"),
             "dynamic_truncate": (lambda val: isinstance(val, bool) or val in (0, 1),
                                  "dynamic_truncate must be a boolean")
         }

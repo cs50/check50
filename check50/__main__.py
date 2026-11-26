@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import dataclasses
 import enum
 import gettext
 import importlib
@@ -15,7 +16,6 @@ import sys
 import tempfile
 import time
 
-import attr
 import lib50
 import packaging
 import requests
@@ -449,7 +449,7 @@ def main():
                 check_results = check_runner.run(args.target)
                 results = {
                     "slug": internal.slug,
-                    "results": [attr.asdict(result) for result in check_results],
+                    "results": [dataclasses.asdict(result) for result in check_results],
                     "version": __version__
                 }
 

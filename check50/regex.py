@@ -2,7 +2,7 @@ import re
 
 
 def decimal(number):
-    """
+    r"""
     Create a regular expression to match the number exactly:
 
     In case of a positive number::
