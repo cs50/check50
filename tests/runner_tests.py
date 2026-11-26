@@ -35,9 +35,16 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
         self._get_start_method = multiprocessing.get_start_method
 
+        # Keep track of the module state test_parent_state_reaches_child sets, so it does not leak
+        # into the rest of the suite
+        self._run_root_dir = check50.internal.run_root_dir
+        self._check_dir = check50.internal.check_dir
+
     def tearDown(self):
         self.working_directory.cleanup()
         multiprocessing.get_start_method = self._get_start_method
+        check50.internal.run_root_dir = self._run_root_dir
+        check50.internal.check_dir = self._check_dir
 
     def test_unpicklable_attribute(self):
         # Create the checks_spec and check_name needed for run_check
