@@ -393,9 +393,47 @@ class TestMismatch(unittest.TestCase):
         self.assertIn("...", mismatch.payload['rationale'])
         self.assertLess(len(mismatch.payload['rationale']), 1000)
 
-        # The log keeps the full strings
-        self.assertEqual(mismatch.payload['expected'], repr(long_expected))
-        self.assertEqual(mismatch.payload['actual'], repr(long_actual))
+        # The log keeps the full strings, as plain text
+        self.assertEqual(mismatch.payload['expected'], long_expected)
+        self.assertEqual(mismatch.payload['actual'], long_actual)
+
+    def test_mismatch_truncation_keeps_repr_intact(self):
+        """Test that a truncated string is repr'd as a whole: balanced quotes, no split escapes."""
+        from check50._api import _truncate
+
+        # The first difference is far enough in that the snippet is centered around it
+        n = check50.config.truncate_len * 4
+        expected = "\n" * n
+        actual = "\n" * (n - 1) + "x"
+
+        mismatch = check50.Mismatch(expected, actual)
+        rationale_expected, rationale_actual = mismatch.payload['rationale'].split("\n    actual:   ")
+        rationale_expected = rationale_expected[len("expected: "):]
+
+        for rendered, s, other in ((rationale_expected, expected, actual), (rationale_actual, actual, expected)):
+            with self.subTest(rendered=rendered):
+                # Truncate the plain string first, then repr the snippet
+                self.assertEqual(rendered, repr(_truncate(s, other)))
+                self.assertTrue(rendered.startswith("'") and rendered.endswith("'"))
+                # Every backslash is followed by the "n" it escapes, so no escape was cut in half
+                self.assertEqual(rendered.count("\\"), rendered.count("\\n"))
+
+    def test_mismatch_non_string_inputs(self):
+        """Test that only strings are quoted, so a number and its string form look different (#377)."""
+        mismatch = check50.Mismatch(1, "1")
+
+        self.assertEqual(mismatch.payload['rationale'], "expected: 1\n    actual:   '1'")
+        # The log holds plain text for both
+        self.assertEqual(mismatch.payload['expected'], "1")
+        self.assertEqual(mismatch.payload['actual'], "1")
+
+    def test_mismatch_with_list(self):
+        """Test that a list is rendered as a list in the terminal and as lines in the log."""
+        mismatch = check50.Mismatch(["a", "b"], "a\nc\n")
+
+        self.assertEqual(mismatch.payload['rationale'], "expected: ['a', 'b']\n    actual:   'a\\nc\\n'")
+        self.assertEqual(mismatch.payload['expected'], "a\nb")
+        self.assertEqual(mismatch.payload['actual'], "a\nc\n")
 
     def test_mismatch_log_truncation(self):
         """Test that the log is still bounded by config.log_truncate_len."""
@@ -438,10 +476,10 @@ class TestMissing(unittest.TestCase):
         self.assertIn("...", str(missing))
         self.assertLess(len(str(missing)), len(long_collection))
 
-        # The log keeps the full collection
+        # The log keeps the full collection, as plain text with real newlines
         parsed = json.loads(json.dumps(missing.payload))
-        self.assertEqual(parsed['missing_item'], repr("hello world\n"))
-        self.assertEqual(parsed['collection'], repr(long_collection))
+        self.assertEqual(parsed['missing_item'], "hello world\n")
+        self.assertEqual(parsed['collection'], long_collection)
 
     def test_missing_log_truncation(self):
         """Test that the log is still bounded by config.log_truncate_len."""
@@ -458,7 +496,8 @@ class TestMissing(unittest.TestCase):
         missing = check50.Missing("5", "1 2 3")
 
         self.assertEqual(str(missing), "Did not find '5' in '1 2 3'")
-        self.assertEqual(missing.payload['collection'], "'1 2 3'")
+        self.assertEqual(missing.payload['missing_item'], "5")
+        self.assertEqual(missing.payload['collection'], "1 2 3")
 
     def test_missing_with_eof(self):
         """Test that EOF as the missing item is rendered as the string EOF."""
@@ -469,18 +508,25 @@ class TestMissing(unittest.TestCase):
         self.assertEqual(str(missing), "Did not find EOF in 'abc'")
         parsed = json.loads(json.dumps(missing.payload))
         self.assertEqual(parsed['missing_item'], "EOF")
-        self.assertEqual(parsed['collection'], "'abc'")
+        self.assertEqual(parsed['collection'], "abc")
 
     def test_missing_with_list(self):
-        """Test that a list collection is serializable."""
+        """Test that a list collection reads as a list in the terminal and as lines in the log."""
         import json
 
         missing = check50.Missing("z", ["a", "b"])
 
+        self.assertEqual(str(missing), "Did not find 'z' in ['a', 'b']")
         parsed = json.loads(json.dumps(missing.payload))
-        self.assertIsInstance(parsed['collection'], str)
-        self.assertIn("a", parsed['collection'])
-        self.assertIn("b", parsed['collection'])
+        self.assertEqual(parsed['collection'], "a\nb")
+
+    def test_missing_non_string_inputs(self):
+        """Test that only strings are quoted, so list items are not mistaken for strings (#377)."""
+        missing = check50.Missing("1", [1, 2, 3])
+
+        self.assertEqual(str(missing), "Did not find '1' in [1, 2, 3]")
+        self.assertEqual(missing.payload['missing_item'], "1")
+        self.assertEqual(missing.payload['collection'], "1\n2\n3")
 
 
 class TestConfig(unittest.TestCase):
