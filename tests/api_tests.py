@@ -381,22 +381,127 @@ class TestMismatch(unittest.TestCase):
         self.assertEqual(parsed['help'], "Did you forget something?")
     
     def test_mismatch_with_truncation(self):
-        """Test that long strings are truncated properly."""
-        import json
-        
-        # Create very long strings that will be truncated
+        """Test that long strings are truncated in the rationale but kept in the log."""
+        # Longer than config.truncate_len (terminal) but shorter than
+        # config.log_truncate_len (JSON/HTML log)
         long_expected = "a" * 1000
         long_actual = "b" * 1000
-        
+
         mismatch = check50.Mismatch(long_expected, long_actual)
-        
-        # Ensure payload can be serialized to JSON
-        json_str = json.dumps(mismatch.payload)
-        parsed = json.loads(json_str)
-        
-        # Verify truncation occurred (should have ellipsis)
-        self.assertIn("...", parsed['expected'])
-        self.assertIn("...", parsed['actual'])
+
+        # The terminal rationale is truncated
+        self.assertIn("...", mismatch.payload['rationale'])
+        self.assertLess(len(mismatch.payload['rationale']), 1000)
+
+        # The log keeps the full strings
+        self.assertEqual(mismatch.payload['expected'], repr(long_expected))
+        self.assertEqual(mismatch.payload['actual'], repr(long_actual))
+
+    def test_mismatch_log_truncation(self):
+        """Test that the log is still bounded by config.log_truncate_len."""
+        length = check50.config.log_truncate_len + 1000
+        long_expected = "a" * length
+        long_actual = "b" * length
+
+        mismatch = check50.Mismatch(long_expected, long_actual)
+
+        self.assertIn("...", mismatch.payload['expected'])
+        self.assertIn("...", mismatch.payload['actual'])
+        self.assertLess(len(mismatch.payload['expected']), length)
+        self.assertLess(len(mismatch.payload['actual']), length)
+
+    def test_mismatch_preserves_sentinels(self):
+        """Test that EOF and TIMEOUT are never truncated into their str() form."""
+        from pexpect.exceptions import TIMEOUT
+
+        mismatch = check50.Mismatch(check50.EOF, "x" * 100)
+        self.assertEqual(mismatch.payload['expected'], "EOF")
+        self.assertIn("expected: EOF", mismatch.payload['rationale'])
+
+        mismatch = check50.Mismatch("x" * 100, TIMEOUT)
+        self.assertEqual(mismatch.payload['actual'], "TIMEOUT")
+        self.assertIn("actual:   TIMEOUT", mismatch.payload['rationale'])
+
+
+class TestMissing(unittest.TestCase):
+    """Test Missing exception class for truncation and JSON serialization."""
+
+    def test_missing_with_truncation(self):
+        """Test that a long collection is truncated in the rationale but kept in the log."""
+        import json
+
+        long_collection = "0\n" * 500
+
+        missing = check50.Missing("hello world\n", long_collection)
+
+        # The terminal rationale is truncated
+        self.assertIn("...", str(missing))
+        self.assertLess(len(str(missing)), len(long_collection))
+
+        # The log keeps the full collection
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertEqual(parsed['missing_item'], repr("hello world\n"))
+        self.assertEqual(parsed['collection'], repr(long_collection))
+
+    def test_missing_log_truncation(self):
+        """Test that the log is still bounded by config.log_truncate_len."""
+        length = check50.config.log_truncate_len + 1000
+        long_collection = "0" * length
+
+        missing = check50.Missing("hello", long_collection)
+
+        self.assertIn("...", missing.payload['collection'])
+        self.assertLess(len(missing.payload['collection']), length)
+
+    def test_missing_short_collection(self):
+        """Test that a short collection is not truncated anywhere."""
+        missing = check50.Missing("5", "1 2 3")
+
+        self.assertEqual(str(missing), "Did not find '5' in '1 2 3'")
+        self.assertEqual(missing.payload['collection'], "'1 2 3'")
+
+    def test_missing_with_eof(self):
+        """Test that EOF as the missing item is rendered as the string EOF."""
+        import json
+
+        missing = check50.Missing(check50.EOF, "abc")
+
+        self.assertEqual(str(missing), "Did not find EOF in 'abc'")
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertEqual(parsed['missing_item'], "EOF")
+        self.assertEqual(parsed['collection'], "'abc'")
+
+    def test_missing_with_list(self):
+        """Test that a list collection is serializable."""
+        import json
+
+        missing = check50.Missing("z", ["a", "b"])
+
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertIsInstance(parsed['collection'], str)
+        self.assertIn("a", parsed['collection'])
+        self.assertIn("b", parsed['collection'])
+
+
+class TestConfig(unittest.TestCase):
+    """Test the truncation settings on check50.config."""
+
+    def test_log_truncate_len_validation(self):
+        original = check50.config.log_truncate_len
+        try:
+            check50.config.set_log_truncate_len(50)
+            self.assertEqual(check50.config.log_truncate_len, 50)
+
+            missing = check50.Missing("x", "0" * 200)
+            self.assertIn("...", missing.payload['collection'])
+            self.assertLess(len(missing.payload['collection']), 200)
+
+            with self.assertRaises(ValueError):
+                check50.config.set_log_truncate_len(0)
+            with self.assertRaises(ValueError):
+                check50.config.set_log_truncate_len("big")
+        finally:
+            check50.config.set_log_truncate_len(original)
 
 if __name__ == '__main__':
     unittest.main()

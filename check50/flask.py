@@ -41,7 +41,7 @@ class app:
         try:
             app = getattr(mod, app_name)
         except AttributeError:
-            raise Failure(_("{} does not contain an app").format(file))
+            raise Failure(_("{} does not contain an app").format(path.name))
 
         app.testing = True
         # Initialize flask client

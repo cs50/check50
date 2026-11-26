@@ -10,29 +10,32 @@ from . import internal
 CC = "clang"
 
 #: Default CFLAGS for :func:`check50.c.compile`
-CFLAGS = {"std": "c11", "ggdb": True, "lm": True}
+CFLAGS = {"std": "c23", "ggdb": True, "lm": True}
 
 
-def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
+def compile(*files, exe_name=None, cc=CC, max_log_lines=50, timeout=30, **cflags):
     """
     Compile C source files.
 
     :param files: filenames to be compiled
     :param exe_name: name of resulting executable
     :param cc: compiler to use (:data:`check50.c.CC` by default)
+    :param max_log_lines: maximum number of lines of compiler output to log when compilation fails
+    :param timeout: maximum number of seconds to wait for the compiler to finish (30 by default)
     :param cflags: additional flags to pass to the compiler
-    :raises check50.Failure: if compilation failed (i.e., if the compiler returns a non-zero exit status).
+    :raises check50.Failure: if compilation failed (i.e., if the compiler returns a non-zero exit status), \
+                             or if the compiler does not finish within ``timeout`` seconds.
     :raises RuntimeError: if no filenames are specified
 
     If ``exe_name`` is None, :func:`check50.c.compile` will default to the first
     file specified sans the ``.c`` extension::
 
 
-        check50.c.compile("foo.c", "bar.c") # clang foo.c bar.c -o foo -std=c11 -ggdb -lm
+        check50.c.compile("foo.c", "bar.c") # clang foo.c bar.c -o foo -std=c23 -ggdb -lm
 
     Additional CFLAGS may be passed as keyword arguments like so::
 
-        check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c11 -ggdb -lm -lcs50
+        check50.c.compile("foo.c", "bar.c", lcs50=True) # clang foo.c bar.c -o foo -std=c23 -ggdb -lm -lcs50
 
     In the same vein, the default CFLAGS may be overridden via keyword arguments::
 
@@ -57,7 +60,7 @@ def compile(*files, exe_name=None, cc=CC, max_log_lines=50, **cflags):
     process = run(f"{cc} {files}{out_flag}{flags}")
 
     # Strip out ANSI codes
-    stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout())
+    stdout = re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "",  process.stdout(timeout=timeout))
 
     # Log max_log_lines lines of output in case compilation fails
     if process.exitcode != 0:

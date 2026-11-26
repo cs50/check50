@@ -426,14 +426,17 @@ class Missing(Failure):
 
     def __init__(self, missing_item, collection, help=None):
         missing_item, collection = _raw(missing_item), _raw(collection)
+
+        # Short version for the terminal, longer (but still bounded) version for the log
         truncated_collection = _truncate(collection, missing_item)
+        logged_collection = _truncate(collection, missing_item, max_len=config.log_truncate_len)
 
         super().__init__(rationale=_("Did not find {} in {}").format(missing_item, truncated_collection), help=help)
 
         if missing_item == EOF:
             missing_item = "EOF"
 
-        self.payload.update({"missing_item": str(missing_item), "collection": str(truncated_collection)})
+        self.payload.update({"missing_item": str(missing_item), "collection": str(logged_collection)})
 
 
 class Mismatch(Failure):
@@ -460,6 +463,10 @@ class Mismatch(Failure):
 
     def __init__(self, expected, actual, help=None):
         expected, actual = _raw(expected), _raw(actual)
+
+        # Short version for the terminal, longer (but still bounded) version for the log
+        logged_expected = _truncate(expected, actual, max_len=config.log_truncate_len)
+        logged_actual = _truncate(actual, expected, max_len=config.log_truncate_len)
         expected, actual = _truncate(expected, actual), _truncate(actual, expected)
 
         rationale = _("expected: {}\n    actual:   {}").format(
@@ -469,7 +476,7 @@ class Mismatch(Failure):
 
         super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"expected": expected, "actual": actual})
+        self.payload.update({"expected": logged_expected, "actual": logged_actual})
 
 
 def hidden(failure_rationale):
@@ -540,15 +547,16 @@ def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
             # for "none" and every other case
             return [processor(item) for item in lst]
 
-def _truncate(s, other, preserve_sentinels=True):
+def _truncate(s, other, preserve_sentinels=True, max_len=None):
     """
-    Truncates a string `s` to at most `config.truncate_len` characters, adding
-    "..." to the end, beginning, or both if truncation occurs. If 
-    `config.dynamic_truncate` is True, truncation will look for the first index
-    at which `s` and `other` differ and center the truncated string around that
-    index. If `preserve_sentinels` is True, truncation will not be applied to 
-    `s` if it is equal to the sentinels `EOF` or `TIMEOUT`. If `s` is a list,
-    we process it with `_process_list`, using its default arguments.
+    Truncates a string `s` to at most `max_len` characters (defaulting to
+    `config.truncate_len`), adding "..." to the end, beginning, or both if
+    truncation occurs. If `config.dynamic_truncate` is True, truncation will
+    look for the first index at which `s` and `other` differ and center the
+    truncated string around that index. If `preserve_sentinels` is True,
+    truncation will not be applied to `s` if it is equal to the sentinels `EOF`
+    or `TIMEOUT`. If `s` is a list, we process it with `_process_list`, using
+    its default arguments.
 
     :param s: The string to be truncated
     :type s: str | list | EOF | TIMEOUT
@@ -556,6 +564,9 @@ def _truncate(s, other, preserve_sentinels=True):
     :type other: str | list | EOF | TIMEOUT
     :param preserve_sentinels: Whether to preserve `EOF` and `TIMEOUT`.
     :type preserve_sentinels: bool
+    :param max_len: Maximum length of the truncated string, excluding any "...".
+                    Defaults to `config.truncate_len`.
+    :type max_len: int | None
     :rtype: str | EOF | TIMEOUT
     """
     def normalize(obj):
@@ -563,15 +574,18 @@ def _truncate(s, other, preserve_sentinels=True):
             return _process_list(obj, str)
         else:
             return str(obj)
-    
+
     if s in (EOF, TIMEOUT) and preserve_sentinels:
         return s
+
+    if max_len is None:
+        max_len = config.truncate_len
 
     s, other = normalize(s), normalize(other)
 
     if not config.dynamic_truncate:
-        if len(s) > config.truncate_len:
-            s = s[:config.truncate_len] + "..."
+        if len(s) > max_len:
+            s = s[:max_len] + "..."
         return s
 
     # find the index of first difference
@@ -582,15 +596,15 @@ def _truncate(s, other, preserve_sentinels=True):
             i = index
             break
 
-    # If the diff is within the first config.truncate_len characters,
+    # If the diff is within the first max_len characters,
     # start from the beginning (no need for "..." at the start)
-    if i < config.truncate_len:
+    if i < max_len:
         start = 0
-        end = min(config.truncate_len, len(s))
+        end = min(max_len, len(s))
     else:
         # center around diff for differences further into the string
-        start = max(i - (config.truncate_len // 2), 0)
-        end = min(start + config.truncate_len, len(s))
+        start = max(i - (max_len // 2), 0)
+        end = min(start + max_len, len(s))
 
     snippet = s[start:end]
 
