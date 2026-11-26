@@ -8,14 +8,14 @@ from dataclasses import dataclass
 from collections import defaultdict
 
 @dataclass(frozen=True)
-class TokenSeq:
+class Token:
     kind: int                      # e.g. OP, NAME, STRING
     text: str                      # e.g. 'foo', '(', ')'
 
 @dataclass(frozen=True)
 class KeyPattern:
     string: str                    # key's string representation
-    tokens: tuple[TokenSeq, ...]   # normalized token sequence
+    tokens: tuple[Token, ...]      # normalized token sequence
 
 def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=None, context=None):
     """
@@ -43,7 +43,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         ```
         will be converted to
         ```
-        check50_assert(x in y, "x in y", None, "in", x, y)
+        check50_assert("x in y", None, cond_type="in", context={"x": None, "y": None}, left="x", right="y")
         ```
 
     :param src: The source code string of the conditional expression \
@@ -75,17 +75,28 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     caller_globals = caller_frame.f_globals
     caller_locals = caller_frame.f_locals
 
+    # Whether the rewriter supplied both sides of a comparison. Decide this
+    # before `left`/`right` are replaced by their values below, since a side
+    # may legitimately evaluate to None.
+    has_sides = left is not None and right is not None
+
     # Build the list of candidate keys
-    candidate_keys = list(context.keys()) if context else []
+    candidate_keys = list(context)
 
     # Plan substitutions and learn which keys are actually used
     eval_src, key_to_placeholder = substitute_expressions(src, candidate_keys)
 
-    # Only evaluate the keys that were actually matched
+    # Evaluate each matched key exactly once. Exceptions from the check50
+    # library (e.g. a Failure raised by check50.run(...).stdout() on timeout)
+    # are the real outcome of the check and must propagate exactly as they
+    # would from a plain `assert`. Other exceptions are recorded so the
+    # `where` text can show them.
     evaluated = {}
-    for expr_str in key_to_placeholder.keys():
+    for expr_str in key_to_placeholder:
         try:
             evaluated[expr_str] = eval(expr_str, caller_globals, caller_locals)
+        except Failure:
+            raise
         except Exception as e:
             evaluated[expr_str] = f"[error evaluating: {e}]"
 
@@ -104,6 +115,21 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
     if cond:
         return
 
+    # Variables that only appear inside a matched expression (e.g. `z` in
+    # `len(z) == 3`) were swallowed by the longest match and so were never
+    # evaluated. Look them up for the `where` text only: a bare name lookup
+    # has no side effects, so this cannot re-run anything.
+    displayed = dict(evaluated)
+    for key in candidate_keys:
+        if key in displayed:
+            continue
+        key_norm, _ = _tokenize_normalized(key)
+        if len(key_norm) == 1 and key_norm[0].kind == tokenize.NAME:
+            try:
+                displayed[key] = eval(key, caller_globals, caller_locals)
+            except Exception:
+                pass
+
     # Filter out modules, functions, and built-ins, which is needed to avoid
     # overwriting function definitions in evaluaton and avoid useless string
     # output
@@ -118,7 +144,7 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         return name in dir(builtins)
 
     filtered_context = {
-        k: v for k, v in evaluated.items()
+        k: v for k, v in displayed.items()
         if not is_irrelevant_value(v) and not is_builtin_name(k)
     }
 
@@ -137,11 +163,11 @@ def check50_assert(src, msg_or_exc=None, cond_type="unknown", left=None, right=N
         raise Failure(msg_or_exc)
     elif isinstance(msg_or_exc, BaseException):
         raise msg_or_exc
-    elif cond_type == 'eq' and left is not None and right is not None:
+    elif cond_type == 'eq' and has_sides:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
         raise Mismatch(right, left, help=help_msg)
-    elif cond_type == 'in' and left is not None and right is not None:
+    elif cond_type == 'in' and has_sides:
         help_msg = f"checked: {src}"
         help_msg += f"\n    where {context_str}" if context_str else ""
         raise Missing(left, right, help=help_msg)
@@ -159,11 +185,11 @@ def _tokenize_normalized(code: str):
     Outputs a normalized and raw tokenization (raw, excluding dropped) of the
     code.
 
-    For instance, the code input "foo.bar()" might output a `norm` of `TokenSeq`s:
+    For instance, the code input "foo.bar()" might output a `norm` of `Token`s:
     ```
     [
-        TokenSeq(NAME, "foo"), TokenSeq(OP, "."), TokenSeq(NAME, "bar"),
-        TokenSeq(OP, "("), TokenSeq(OP, ")")
+        Token(NAME, "foo"), Token(OP, "."), Token(NAME, "bar"),
+        Token(OP, "("), Token(OP, ")")
     ]
     ```
     In this case, there were no strings to normalize, so `raw` would
@@ -179,44 +205,48 @@ def _tokenize_normalized(code: str):
         # Extract type and string representation from token
         tok_type, tok_string, *_ = tok
 
-        # Ignore certain encoding types
+        # Skip layout/bookkeeping tokens that never take part in matching
         if tok_type in drop:
             continue
 
-        raw.append(TokenSeq(tok_type, tok_string))
+        raw.append(Token(tok_type, tok_string))
 
         # Normalize STRING tokens to their Python value
         if tok_type == tokenize.STRING:
             try:
                 val = ast.literal_eval(tok_string)
-                norm.append(TokenSeq(tok_type, repr(val)))
+                norm.append(Token(tok_type, repr(val)))
             except Exception:
-                norm.append(TokenSeq(tok_type, tok_string))
+                norm.append(Token(tok_type, tok_string))
         else:
-            norm.append(TokenSeq(tok_type, tok_string))
+            norm.append(Token(tok_type, tok_string))
 
     return norm, raw
 
 
 def substitute_expressions(src: str, keys: list[str]) -> tuple[str, dict]:
     """
-    Rewrites `src` by replacing known `keys` (from `context`) with a placeholder
-    variable name, and builds a new context dict where those names map to
-    pre-evaluated values.
+    Rewrites `src` by replacing the longest run of tokens that matches any of
+    `keys` with a placeholder variable name `__expr{i}`. Returns the rewritten
+    source together with `key_to_placeholder`, a dict mapping each key string
+    that was actually matched to its placeholder name. This function evaluates
+    nothing: the caller evaluates the matched keys and binds the placeholders.
 
-    For instance, let `src` be the string representation of
+    For instance, let `src` be
     ```
-    assert check50.run("./foo.c").stdout() == "OK"
+    check50.run('./foo.c').stdout() == 'OK'
     ```
-    The `keys` might look like
+    and `keys` be
     ```
-    ["check50.run("./foo.c")", "check50.run("./foo.c").stdout()"]
+    ["check50", "check50.run('./foo.c').stdout()"]
     ```
-    We would want to find the longest match from these keys and output:
+    The longest match wins, giving
     ```
-    expr_str:           assert __expr0 == "OK"
-    key_to_placeholder: { "check50.run("./foo.c").stdout()": "__expr0" }
+    eval_src:           __expr0 == 'OK'
+    key_to_placeholder: {"check50.run('./foo.c').stdout()": "__expr0"}
     ```
+    Matching is done on normalized tokens, so a key written with double quotes
+    still matches source written with single quotes.
     """
     # Tokenize/normalize the source once
     src_norm, src_raw = _tokenize_normalized(src)
@@ -228,7 +258,7 @@ def substitute_expressions(src: str, keys: list[str]) -> tuple[str, dict]:
         if key_norm:
             patterns.append(KeyPattern(key, tuple(key_norm)))
 
-    # Stores a TokenSeq and every KeyPattern that starts with that TokenSeq
+    # Stores a Token and every KeyPattern that starts with that Token
     patterns_by_start_token = defaultdict(list)
     for pattern in patterns:
         start_token = pattern.tokens[0]
@@ -248,6 +278,12 @@ def substitute_expressions(src: str, keys: list[str]) -> tuple[str, dict]:
     def longest_match_at(i):
         """Return the longest KeyPattern that matches `src_norm` starting at `i`"""
         if i >= len(src_norm):
+            return None
+
+        # A NAME directly after `.` is an attribute, never a variable
+        # reference, so no key can start there (a key like `foo.x` still
+        # matches, because it starts at `foo`).
+        if i > 0 and src_raw[i - 1] == Token(tokenize.OP, "."):
             return None
 
         candidates = patterns_by_start_token.get(src_norm[i], [])
