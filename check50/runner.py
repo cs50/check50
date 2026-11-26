@@ -4,7 +4,6 @@ import concurrent.futures as futures
 import functools
 import inspect
 import importlib
-import multiprocessing
 import os
 from pathlib import Path
 import pickle
@@ -324,7 +323,8 @@ class run_check:
     """
 
     # All attributes shared between check50's main process and each checks' process
-    # Required for "spawn": https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+    # Required for start methods that do not inherit the parent's memory ("spawn", "forkserver"):
+    # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
     CROSS_PROCESS_ATTRIBUTES = (
         "internal.check_dir",
         "internal.slug",
