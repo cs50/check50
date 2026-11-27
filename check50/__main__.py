@@ -354,7 +354,7 @@ def main():
                         nargs="?",
                         const="enabled",
                         choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
-                        help=_("enable or disable assertion rewriting; overrides ENABLE_CHECK50_ASSERT flag in the checks file"))
+                        help=_("enable or disable assertion rewriting for every checks file, including those imported via check50.import_checks(); overrides the per-file ENABLE_CHECK50_ASSERT flag"))
     parser.add_argument("--https",
                         action="store_true",
                         help=_("force authentication via HTTPS"))

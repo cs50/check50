@@ -238,8 +238,13 @@ def prepare_checks_file(path):
         # concurrent worker never imports a half-written file
         with tempfile.NamedTemporaryFile(dir=rewrite_dir, suffix=".partial", delete=False) as tmp:
             partial = Path(tmp.name)
-        shutil.copyfile(path, partial)
-        assertions.rewrite(str(partial))
+        try:
+            shutil.copyfile(path, partial)
+            # Report syntax errors against the original checks file, not the staging copy
+            assertions.rewrite(str(partial), filename=str(path))
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
         os.replace(partial, rewritten)
 
     return rewritten

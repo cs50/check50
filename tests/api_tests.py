@@ -216,6 +216,19 @@ class TestPrepareChecksFile(Base):
         partials = [p.name for p in check50.internal.rewrite_dir.iterdir() if p.is_file() and p.suffix != ".py"]
         self.assertEqual(partials, [])
 
+    def test_syntax_error_names_original_file_and_leaves_no_partial(self):
+        self.write(self.FLAG + "def check(:\n")
+        with self.assertRaises(SyntaxError) as cm:
+            check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(cm.exception.filename, str(pathlib.Path(self.filename).resolve()))
+        partials = [p.name for p in check50.internal.rewrite_dir.iterdir() if p.suffix == ".partial"]
+        self.assertEqual(partials, [])
+
+        # Once the file is fixed, the same path can still be prepared
+        self.write(self.FLAG + "assert 1 == 2\n")
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertIn("check50_assert", path.read_text())
+
 
 class TestRun(Base):
     def test_returns_process(self):

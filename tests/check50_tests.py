@@ -497,6 +497,8 @@ class TestAssertionsRewrite(Base):
     def test_assertions_rewrite_enabled(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_enabled")
         process.expect_exact(":)")
+        # Let check50 exit on its own so its atexit cleanup removes the rewritten copy
+        process.expect(pexpect.EOF)
 
     def test_assertions_rewrite_disabled(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_disabled")

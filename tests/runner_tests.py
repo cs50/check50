@@ -112,6 +112,7 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("checks", checks_path)
 
         self.addCleanup(setattr, check50.internal, "assertion_rewrite", check50.internal.assertion_rewrite)
+        self.addCleanup(setattr, check50.internal, "rewrite_dir", check50.internal.rewrite_dir)
 
         for start_method in SUPPORTED_START_METHODS:
             with self.subTest(start_method=start_method):
@@ -120,14 +121,23 @@ class TestMultiprocessingStartMethods(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as run_root:
                     run_root = pathlib.Path(run_root)
                     (run_root / "-").mkdir()
+                    # Give the parent a rewrite_dir so the child must reuse it rather than
+                    # create (and, exiting via os._exit, never clean up) its own
+                    rewrite_dir = run_root / "rewrite"
+                    rewrite_dir.mkdir()
                     check50.internal.run_root_dir = run_root
                     check50.internal.check_dir = check_dir
                     check50.internal.assertion_rewrite = True
+                    check50.internal.rewrite_dir = rewrite_dir
 
                     with ctx.Pool(1) as pool:
                         result, _ = pool.apply(check50.runner.run_check("imported", spec))
 
+                    copies = [p.name for p in rewrite_dir.iterdir()]
+
                 self.assertTrue(result.passed, msg=f"imported check not rewritten under {start_method}: {result.cause}")
+                self.assertTrue(any(name.endswith(".py") for name in copies),
+                                msg=f"child did not write its rewritten copy into the parent's rewrite_dir under {start_method}: {copies}")
 
 
 if __name__ == "__main__":
