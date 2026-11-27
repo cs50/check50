@@ -87,6 +87,149 @@ class TestImportChecks(Base):
         self.assertEqual(mod.qux, 0)
 
 
+class TestImportChecksAssertionRewrite(Base):
+    """
+    Regression tests for https://github.com/cs50/check50/issues/393:
+    checks pulled in via import_checks() must follow the same assertion rewriting rules
+    as the main checks file.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._old_check_dir = check50.internal.check_dir
+        self._old_assertion_rewrite = check50.internal.assertion_rewrite
+        check50.internal.check_dir = pathlib.Path(".").absolute()
+        check50.internal.assertion_rewrite = None
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.check_dir = self._old_check_dir
+        check50.internal.assertion_rewrite = self._old_assertion_rewrite
+
+    def write_checks(self, name, source):
+        os.mkdir(name)
+        with open(f"./{name}/.cs50.yaml", "w") as f:
+            f.write("check50:\n")
+            f.write("  checks: __init__.py")
+        with open(f"./{name}/__init__.py", "w") as f:
+            f.write(source)
+
+    FLAG = "# ENABLE_CHECK50_ASSERT = 1\n"
+    CHECK = (
+        "def check():\n"
+        "    actual = 'foo'\n"
+        "    assert actual == 'bar'\n"
+    )
+
+    def test_flag_in_imported_file_rewrites(self):
+        self.write_checks("less", self.FLAG + self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(check50.Mismatch):
+            mod.check()
+
+    def test_no_flag_in_imported_file_does_not_rewrite(self):
+        self.write_checks("less", self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(AssertionError):
+            mod.check()
+
+    def test_rewrite_leaves_imported_file_untouched(self):
+        self.write_checks("less", self.FLAG + self.CHECK)
+        check50.import_checks("./less")
+        with open("./less/__init__.py") as f:
+            self.assertEqual(f.read(), self.FLAG + self.CHECK)
+
+    def test_override_enabled_rewrites_without_flag(self):
+        check50.internal.assertion_rewrite = True
+        self.write_checks("less", self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(check50.Mismatch):
+            mod.check()
+
+    def test_override_disabled_ignores_flag(self):
+        check50.internal.assertion_rewrite = False
+        self.write_checks("less", self.FLAG + self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(AssertionError):
+            mod.check()
+
+    def test_nested_import_rewrites_each_file_by_its_own_flag(self):
+        # more imports less; only less opts in to rewriting
+        self.write_checks("less", self.FLAG + self.CHECK.replace("check", "less_check"))
+        self.write_checks("more",
+            "import check50\n"
+            "less = check50.import_checks('./less')\n"
+            "from less import *\n"
+            + self.CHECK.replace("check", "more_check"))
+        mod = check50.import_checks("./more")
+        with self.assertRaises(check50.Mismatch):
+            mod.less_check()
+        with self.assertRaises(AssertionError):
+            mod.more_check()
+
+
+class TestPrepareChecksFile(Base):
+    FLAG = "# ENABLE_CHECK50_ASSERT = 1\n"
+
+    def setUp(self):
+        super().setUp()
+        self._old_assertion_rewrite = check50.internal.assertion_rewrite
+        check50.internal.assertion_rewrite = None
+        self.write(self.FLAG + "assert 1 == 2\n")
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.assertion_rewrite = self._old_assertion_rewrite
+
+    def test_no_rewrite_returns_original(self):
+        self.write("assert 1 == 2\n")
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(path, pathlib.Path(self.filename).resolve())
+
+    def test_rewritten_copy_lives_in_rewrite_dir(self):
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertNotEqual(path, pathlib.Path(self.filename).resolve())
+        self.assertEqual(path.parent, check50.internal.rewrite_dir)
+        self.assertIn("check50_assert", path.read_text())
+
+    def test_same_file_rewritten_once(self):
+        first = check50.internal.prepare_checks_file(self.filename)
+        stat = first.stat()
+        second = check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(first, second)
+        self.assertEqual(second.stat().st_mtime_ns, stat.st_mtime_ns)
+        self.assertEqual(second.stat().st_ino, stat.st_ino)
+
+    def test_different_files_get_different_copies(self):
+        os.mkdir("other")
+        with open("other/foo.py", "w") as f:
+            f.write(self.FLAG + "assert 1 == 3\n")
+        first = check50.internal.prepare_checks_file(self.filename)
+        second = check50.internal.prepare_checks_file("other/foo.py")
+        self.assertNotEqual(first, second)
+        self.assertIn("1 == 2", first.read_text())
+        self.assertIn("1 == 3", second.read_text())
+
+    def test_no_partial_files_left_in_rewrite_dir(self):
+        check50.internal.prepare_checks_file(self.filename)
+        check50.internal.prepare_checks_file(self.filename)
+        partials = [p.name for p in check50.internal.rewrite_dir.iterdir() if p.is_file() and p.suffix != ".py"]
+        self.assertEqual(partials, [])
+
+    def test_syntax_error_names_original_file_and_leaves_no_partial(self):
+        self.write(self.FLAG + "def check(:\n")
+        with self.assertRaises(SyntaxError) as cm:
+            check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(cm.exception.filename, str(pathlib.Path(self.filename).resolve()))
+        partials = [p.name for p in check50.internal.rewrite_dir.iterdir() if p.suffix == ".partial"]
+        self.assertEqual(partials, [])
+
+        # Once the file is fixed, the same path can still be prepared
+        self.write(self.FLAG + "assert 1 == 2\n")
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertIn("check50_assert", path.read_text())
+
+
 class TestRun(Base):
     def test_returns_process(self):
         self.process = check50.run("python3 ./{self.filename}")
@@ -293,6 +436,261 @@ class TestProcessReject(Base):
         self.runpy()
         with self.assertRaises(check50.Failure):
             self.process.reject()
+
+class TestMismatch(unittest.TestCase):
+    """Test Mismatch exception class for proper JSON serialization."""
+    
+    def test_json_serialization_with_strings(self):
+        """Test that regular strings are properly escaped for JSON."""
+        import json
+        
+        test_cases = [
+            # Regular strings
+            ("hello", "world"),
+            # Strings with quotes
+            ('Hello "World"', 'Goodbye "World"'),
+            # Strings with newlines
+            ("First\nSecond", "First\nDifferent"),
+            # Strings with backslashes
+            ("Path\\to\\file", "Path\\to\\other"),
+            # JSON-like strings
+            ('{"key": "value"}', '{"key": "different"}'),
+            # Mixed special characters
+            ('Line with \\ and " and \n', 'Another \\ line " with \n'),
+        ]
+        
+        for expected, actual in test_cases:
+            with self.subTest(expected=expected, actual=actual):
+                mismatch = check50.Mismatch(expected, actual)
+                
+                # Ensure payload can be serialized to JSON
+                json_str = json.dumps(mismatch.payload)
+                
+                # Ensure it can be parsed back
+                parsed = json.loads(json_str)
+                
+                # Verify expected fields are present
+                self.assertIn('rationale', parsed)
+                self.assertIn('expected', parsed)
+                self.assertIn('actual', parsed)
+                self.assertIsNone(parsed.get('help'))
+    
+    def test_json_serialization_with_special_values(self):
+        """Test that special values like EOF and class types are handled."""
+        import json
+        from pexpect.exceptions import EOF, TIMEOUT
+        
+        test_cases = [
+            # EOF and TIMEOUT constants
+            (check50.EOF, "some output"),
+            ("some input", check50.EOF),
+            (check50.EOF, check50.EOF),
+            # Class types (simulating the error case)
+            (EOF, "output"),
+            ("input", EOF),
+            (EOF, TIMEOUT),
+        ]
+        
+        for expected, actual in test_cases:
+            with self.subTest(expected=expected, actual=actual):
+                mismatch = check50.Mismatch(expected, actual)
+                
+                # Ensure payload can be serialized to JSON
+                json_str = json.dumps(mismatch.payload)
+                
+                # Ensure it can be parsed back
+                parsed = json.loads(json_str)
+                
+                # Verify expected fields are present and are strings
+                self.assertIn('rationale', parsed)
+                self.assertIn('expected', parsed)
+                self.assertIn('actual', parsed)
+                
+                # Ensure values in payload are strings, not class types
+                self.assertIsInstance(parsed['expected'], str)
+                self.assertIsInstance(parsed['actual'], str)
+    
+    def test_mismatch_with_help(self):
+        """Test that help messages are included in the payload."""
+        import json
+        
+        mismatch = check50.Mismatch("expected", "actual", help="Did you forget something?")
+        
+        # Ensure payload can be serialized to JSON
+        json_str = json.dumps(mismatch.payload)
+        parsed = json.loads(json_str)
+        
+        # Verify help is in the payload
+        self.assertEqual(parsed['help'], "Did you forget something?")
+    
+    def test_mismatch_with_truncation(self):
+        """Test that long strings are truncated in the rationale but kept in the log."""
+        # Longer than config.truncate_len (terminal) but shorter than
+        # config.log_truncate_len (JSON/HTML log)
+        long_expected = "a" * 1000
+        long_actual = "b" * 1000
+
+        mismatch = check50.Mismatch(long_expected, long_actual)
+
+        # The terminal rationale is truncated
+        self.assertIn("...", mismatch.payload['rationale'])
+        self.assertLess(len(mismatch.payload['rationale']), 1000)
+
+        # The log keeps the full strings, as plain text
+        self.assertEqual(mismatch.payload['expected'], long_expected)
+        self.assertEqual(mismatch.payload['actual'], long_actual)
+
+    def test_mismatch_truncation_keeps_repr_intact(self):
+        """Test that a truncated string is repr'd as a whole: balanced quotes, no split escapes."""
+        from check50._api import _truncate
+
+        # The first difference is far enough in that the snippet is centered around it
+        n = check50.config.truncate_len * 4
+        expected = "\n" * n
+        actual = "\n" * (n - 1) + "x"
+
+        mismatch = check50.Mismatch(expected, actual)
+        rationale_expected, rationale_actual = mismatch.payload['rationale'].split("\n    actual:   ")
+        rationale_expected = rationale_expected[len("expected: "):]
+
+        for rendered, s, other in ((rationale_expected, expected, actual), (rationale_actual, actual, expected)):
+            with self.subTest(rendered=rendered):
+                # Truncate the plain string first, then repr the snippet
+                self.assertEqual(rendered, repr(_truncate(s, other)))
+                self.assertTrue(rendered.startswith("'") and rendered.endswith("'"))
+                # Every backslash is followed by the "n" it escapes, so no escape was cut in half
+                self.assertEqual(rendered.count("\\"), rendered.count("\\n"))
+
+    def test_mismatch_non_string_inputs(self):
+        """Test that only strings are quoted, so a number and its string form look different (#377)."""
+        mismatch = check50.Mismatch(1, "1")
+
+        self.assertEqual(mismatch.payload['rationale'], "expected: 1\n    actual:   '1'")
+        # The log holds plain text for both
+        self.assertEqual(mismatch.payload['expected'], "1")
+        self.assertEqual(mismatch.payload['actual'], "1")
+
+    def test_mismatch_with_list(self):
+        """Test that a list is rendered as a list in the terminal and as lines in the log."""
+        mismatch = check50.Mismatch(["a", "b"], "a\nc\n")
+
+        self.assertEqual(mismatch.payload['rationale'], "expected: ['a', 'b']\n    actual:   'a\\nc\\n'")
+        self.assertEqual(mismatch.payload['expected'], "a\nb")
+        self.assertEqual(mismatch.payload['actual'], "a\nc\n")
+
+    def test_mismatch_log_truncation(self):
+        """Test that the log is still bounded by config.log_truncate_len."""
+        length = check50.config.log_truncate_len + 1000
+        long_expected = "a" * length
+        long_actual = "b" * length
+
+        mismatch = check50.Mismatch(long_expected, long_actual)
+
+        self.assertIn("...", mismatch.payload['expected'])
+        self.assertIn("...", mismatch.payload['actual'])
+        self.assertLess(len(mismatch.payload['expected']), length)
+        self.assertLess(len(mismatch.payload['actual']), length)
+
+    def test_mismatch_preserves_sentinels(self):
+        """Test that EOF and TIMEOUT are never truncated into their str() form."""
+        from pexpect.exceptions import TIMEOUT
+
+        mismatch = check50.Mismatch(check50.EOF, "x" * 100)
+        self.assertEqual(mismatch.payload['expected'], "EOF")
+        self.assertIn("expected: EOF", mismatch.payload['rationale'])
+
+        mismatch = check50.Mismatch("x" * 100, TIMEOUT)
+        self.assertEqual(mismatch.payload['actual'], "TIMEOUT")
+        self.assertIn("actual:   TIMEOUT", mismatch.payload['rationale'])
+
+
+class TestMissing(unittest.TestCase):
+    """Test Missing exception class for truncation and JSON serialization."""
+
+    def test_missing_with_truncation(self):
+        """Test that a long collection is truncated in the rationale but kept in the log."""
+        import json
+
+        long_collection = "0\n" * 500
+
+        missing = check50.Missing("hello world\n", long_collection)
+
+        # The terminal rationale is truncated
+        self.assertIn("...", str(missing))
+        self.assertLess(len(str(missing)), len(long_collection))
+
+        # The log keeps the full collection, as plain text with real newlines
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertEqual(parsed['missing_item'], "hello world\n")
+        self.assertEqual(parsed['collection'], long_collection)
+
+    def test_missing_log_truncation(self):
+        """Test that the log is still bounded by config.log_truncate_len."""
+        length = check50.config.log_truncate_len + 1000
+        long_collection = "0" * length
+
+        missing = check50.Missing("hello", long_collection)
+
+        self.assertIn("...", missing.payload['collection'])
+        self.assertLess(len(missing.payload['collection']), length)
+
+    def test_missing_short_collection(self):
+        """Test that a short collection is not truncated anywhere."""
+        missing = check50.Missing("5", "1 2 3")
+
+        self.assertEqual(str(missing), "Did not find '5' in '1 2 3'")
+        self.assertEqual(missing.payload['missing_item'], "5")
+        self.assertEqual(missing.payload['collection'], "1 2 3")
+
+    def test_missing_with_eof(self):
+        """Test that EOF as the missing item is rendered as the string EOF."""
+        import json
+
+        missing = check50.Missing(check50.EOF, "abc")
+
+        self.assertEqual(str(missing), "Did not find EOF in 'abc'")
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertEqual(parsed['missing_item'], "EOF")
+        self.assertEqual(parsed['collection'], "abc")
+
+    def test_missing_with_list(self):
+        """Test that a list collection reads as a list in the terminal and as lines in the log."""
+        import json
+
+        missing = check50.Missing("z", ["a", "b"])
+
+        self.assertEqual(str(missing), "Did not find 'z' in ['a', 'b']")
+        parsed = json.loads(json.dumps(missing.payload))
+        self.assertEqual(parsed['collection'], "a\nb")
+
+    def test_missing_non_string_inputs(self):
+        """Test that only strings are quoted, so list items are not mistaken for strings (#377)."""
+        missing = check50.Missing("1", [1, 2, 3])
+
+        self.assertEqual(str(missing), "Did not find '1' in [1, 2, 3]")
+        self.assertEqual(missing.payload['missing_item'], "1")
+        self.assertEqual(missing.payload['collection'], "1\n2\n3")
+
+
+class TestConfig(unittest.TestCase):
+    """Test the truncation settings on check50.config."""
+
+    def test_log_truncate_len_validation(self):
+        original = check50.config.log_truncate_len
+        try:
+            check50.config.set_log_truncate_len(50)
+            self.assertEqual(check50.config.log_truncate_len, 50)
+
+            missing = check50.Missing("x", "0" * 200)
+            self.assertIn("...", missing.payload['collection'])
+            self.assertLess(len(missing.payload['collection']), 200)
+
+            with self.assertRaises(ValueError):
+                check50.config.set_log_truncate_len(0)
+            with self.assertRaises(ValueError):
+                check50.config.set_log_truncate_len("big")
+        finally:
+            check50.config.set_log_truncate_len(original)
 
 if __name__ == '__main__':
     unittest.main()

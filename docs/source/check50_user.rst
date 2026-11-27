@@ -125,16 +125,11 @@ check50 can provide machine readable output in the form of :code:`json`. By defa
                 "description": "caesar.c compiles.",
                 "passed": false,
                 "log": [
-                    "running clang caesar.c -o caesar -std=c11 -ggdb -lm -lcs50...",
-                    "caesar.c:24:5: warning: implicit declaration of function 'f' is invalid in C99",
-                    "      [-Wimplicit-function-declaration]",
-                    "    f (argc != 2)",
-                    "    ^",
-                    "caesar.c:24:18: error: expected ';' after expression",
-                    "    f (argc != 2)",
-                    "                 ^",
-                    "                 ;",
-                    "1 warning and 1 error generated."
+                    "running clang caesar.c -o caesar -std=c23 -ggdb -lm -lcs50...",
+                    "caesar.c:24:5: error: use of undeclared identifier 'f'",
+                    "   24 |     f (argc != 2)",
+                    "      |     ^",
+                    "1 error generated."
                 ],
                 "cause": {
                     "rationale": "code failed to compile",

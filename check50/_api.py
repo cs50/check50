@@ -11,6 +11,7 @@ import pexpect
 from pexpect.exceptions import EOF, TIMEOUT
 
 from . import internal, regex
+from .config import config
 
 _log = []
 internal.register.before_every(_log.clear)
@@ -127,10 +128,15 @@ def import_checks(path):
         the ``__name__`` of the imported module is given by the basename
         of the specified path (``less`` in the above example).
 
+    .. note::
+        assertion rewriting is applied to the imported checks file under the same rules
+        as the main checks file: the ``# ENABLE_CHECK50_ASSERT = 1`` comment flag on the
+        imported file's first line, unless overridden by ``--assertion-rewrite``.
+
     """
     dir = internal.check_dir / path
     file = internal.load_config(dir)["checks"]
-    mod = internal.import_file(dir.name, (dir / file).resolve())
+    mod = internal.import_file(dir.name, internal.prepare_checks_file(dir / file))
     sys.modules[dir.name] = mod
     return mod
 
@@ -238,7 +244,9 @@ class run:
         :type show_timeout: bool
         :raises check50.Mismatch: if ``output`` is specified and nothing that the \
                                   process outputs matches it
-        :raises check50.Failure: if process times out or if it outputs invalid UTF-8 text.
+        :raises check50.Missing: if the process times out
+        :raises check50.Failure: if the process outputs invalid UTF-8 text or \
+                                 otherwise fails to verify output
 
         Example usage::
 
@@ -422,12 +430,19 @@ class Missing(Failure):
     """
 
     def __init__(self, missing_item, collection, help=None):
-        super().__init__(rationale=_("Did not find {} in {}").format(_raw(missing_item), _raw(collection)), help=help)
+        # Short, repr-style version for the terminal
+        rationale = _("Did not find {} in {}").format(
+            _display(missing_item, collection),
+            _display(collection, missing_item)
+        )
 
-        if missing_item == EOF:
-            missing_item = "EOF"
+        super().__init__(rationale=rationale, help=help)
 
-        self.payload.update({"missing_item": str(missing_item), "collection": str(collection)})
+        # Longer (but still bounded) plain-text version for the JSON/HTML log
+        self.payload.update({
+            "missing_item": _logged(missing_item, collection),
+            "collection": _logged(collection, missing_item)
+        })
 
 
 class Mismatch(Failure):
@@ -453,15 +468,19 @@ class Mismatch(Failure):
     """
 
     def __init__(self, expected, actual, help=None):
-        super().__init__(rationale=_("expected {}, not {}").format(_raw(expected), _raw(actual)), help=help)
+        # Short, repr-style version for the terminal
+        rationale = _("expected: {}\n    actual:   {}").format(
+            _display(expected, actual),
+            _display(actual, expected)
+        )
 
-        if expected == EOF:
-            expected = "EOF"
+        super().__init__(rationale=rationale, help=help)
 
-        if actual == EOF:
-            actual = "EOF"
-
-        self.payload.update({"expected": expected, "actual": actual})
+        # Longer (but still bounded) plain-text version for the JSON/HTML log
+        self.payload.update({
+            "expected": _logged(expected, actual),
+            "actual": _logged(actual, expected)
+        })
 
 
 def hidden(failure_rationale):
@@ -493,20 +512,166 @@ def hidden(failure_rationale):
         return wrapper
     return decorator
 
+def _process_list(lst, processor, flatten="shallow", joined_by="\n"):
+    """
+    Applies a function `processor` to every element of a list.
+
+    `flatten` has 3 choices:
+        - `none`: Apply `processor` to every element of a list without flattening (e.g. `['1', '2', '[3]']`).
+        - `shallow`: Flatten by one level only and apply `processor` (e.g. `'1\\n2\\n[3]'`).
+        - `deep`: Recursively flatten and apply `processor` (e.g. `'1\\n2\\n3'`).
+
+    Example usage:
+        if isinstance(obj, list):
+            return _process_list(obj, _raw, joined_by=" ")
+
+    :param lst: A list to be modified.
+    :type lst: list
+    :param processor: The function that processes each item.
+    :type processor: callable
+    :param flatten: The level of flattening to apply. One of "none", "shallow", or "deep".
+    :type flatten: str
+    :param joined_by: If `flatten` is one of "shallow" or "deep", uses this string to join the elements of the list.
+    :param joined_by: str
+    :rtype: list | str
+    """
+    match flatten:
+        case "shallow":
+            return joined_by.join(processor(item) for item in lst)
+        case "deep":
+            def _flatten_deep(x):
+                for item in x:
+                    if isinstance(item, list):
+                        yield from _flatten_deep(item)
+                    else:
+                        yield item
+
+            return joined_by.join(processor(item) for item in _flatten_deep(lst))
+        case _:
+            # for "none" and every other case
+            return [processor(item) for item in lst]
+
+def _truncate(s, other, preserve_sentinels=True, max_len=None):
+    """
+    Truncates a string `s` to at most `max_len` characters (defaulting to
+    `config.truncate_len`), adding "..." to the end, beginning, or both if
+    truncation occurs. If `config.dynamic_truncate` is True, truncation will
+    look for the first index at which `s` and `other` differ and center the
+    truncated string around that index. If `preserve_sentinels` is True,
+    truncation will not be applied to `s` if it is equal to the sentinels `EOF`
+    or `TIMEOUT`. If `s` is a list, we process it with `_process_list`, using
+    its default arguments.
+
+    :param s: The string to be truncated
+    :type s: str | list | EOF | TIMEOUT
+    :param other: The string to compare `s` to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT
+    :param preserve_sentinels: Whether to preserve `EOF` and `TIMEOUT`.
+    :type preserve_sentinels: bool
+    :param max_len: Maximum length of the truncated string, excluding any "...".
+                    Defaults to `config.truncate_len`.
+    :type max_len: int | None
+    :rtype: str | EOF | TIMEOUT
+    """
+    def normalize(obj):
+        if isinstance(obj, list):
+            return _process_list(obj, str)
+        else:
+            return str(obj)
+
+    if s in (EOF, TIMEOUT) and preserve_sentinels:
+        return s
+
+    if max_len is None:
+        max_len = config.truncate_len
+
+    s, other = normalize(s), normalize(other)
+
+    if not config.dynamic_truncate:
+        if len(s) > max_len:
+            s = s[:max_len] + "..."
+        return s
+
+    # find the index of first difference
+    limit = min(len(s), len(other))
+    i = limit
+    for index in range(limit):
+        if s[index] != other[index]:
+            i = index
+            break
+
+    # If the diff is within the first max_len characters,
+    # start from the beginning (no need for "..." at the start)
+    if i < max_len:
+        start = 0
+        end = min(max_len, len(s))
+    else:
+        # center around diff for differences further into the string
+        start = max(i - (max_len // 2), 0)
+        end = min(start + max_len, len(s))
+
+    snippet = s[start:end]
+
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(s):
+        snippet = snippet + "..."
+
+    return snippet
+
 
 def _raw(s):
-    """Get raw representation of s, truncating if too long."""
-
-    if isinstance(s, list):
-        s = "\n".join(_raw(item) for item in s)
-
+    """Get raw representation of s."""
     if s == EOF:
         return "EOF"
+    elif s == TIMEOUT:
+        return "TIMEOUT"
+    elif isinstance(s, list):
+        return "[{}]".format(", ".join(_raw(item) for item in s))
 
-    s = f'"{repr(str(s))[1:-1]}"'
-    if len(s) > 15:
-        s = s[:15] + "...\""  # Truncate if too long
-    return s
+    return repr(s)
+
+
+def _display(s, other):
+    """
+    Representation of `s` for the terminal: the raw representation (see `_raw`)
+    truncated to at most `config.truncate_len` characters.
+
+    Strings are truncated *before* they are repr'd, so the quotes always stay
+    balanced and an escape sequence such as ``\\n`` is never cut in half.
+    Everything else (lists, numbers, sentinels, ...) is repr'd first and then
+    truncated as a whole, so a list reads as ``[1, 2, 3]`` and a number is not
+    mistaken for a string.
+
+    :param s: The value to be displayed
+    :type s: str | list | EOF | TIMEOUT | object
+    :param other: The value `s` is compared to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT | object
+    :rtype: str
+    """
+    if isinstance(s, str):
+        return _raw(_truncate(s, other))
+
+    return _truncate(_raw(s), _raw(other))
+
+
+def _logged(s, other):
+    """
+    Plain-text representation of `s` for the JSON/HTML log: the original text
+    (lists joined by newlines, `EOF` and `TIMEOUT` by name), truncated to at
+    most `config.log_truncate_len` characters. Unlike `_display`, nothing is
+    repr'd, so renderers receive real newlines rather than ``\\n`` escapes.
+
+    :param s: The value to be logged
+    :type s: str | list | EOF | TIMEOUT | object
+    :param other: The value `s` is compared to when determining where to truncate.
+    :type other: str | list | EOF | TIMEOUT | object
+    :rtype: str
+    """
+    if s in (EOF, TIMEOUT):
+        return _raw(s)
+
+    return _truncate(s, other, max_len=config.log_truncate_len)
 
 
 def _copy(src, dst):

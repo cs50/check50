@@ -86,7 +86,7 @@
                                               {% else %}
                                                   {% set expected = check.cause.expected | e %}
                                               {% endif %}
-                                              {{ expected | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                              {{ fmt_special_chars(expected, color) }}
                                           {% endautoescape %}
                                       </samp>
                                       </div>
@@ -102,12 +102,13 @@
                                               {% else %}
                                                   {% set actual = check.cause.actual | e %}
                                               {% endif %}
-                                              {{ actual | replace(" ", "&nbsp;") | replace("\n", "<br/>") }}
+                                              {{ fmt_special_chars(actual, color) }}
                                           {% endautoescape %}
                                       </samp>
                                       </div>
                                   </div>
                               </div>
+                              <br/>
                           {% endif %}
 
                           {# Missing if there was one #}

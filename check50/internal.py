@@ -3,11 +3,16 @@ Additional check50 internals exposed to extension writers in addition to the sta
 """
 
 from pathlib import Path
+import atexit
+import hashlib
 import importlib
+import os
+import shutil
+import tempfile
 
 import lib50
 
-from . import _simple, _exceptions
+from . import _simple, _exceptions, assertions
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -26,6 +31,15 @@ check_running = False
 
 #: The user specified slug used to indentifies the set of checks
 slug = None
+
+#: Whether to rewrite ``assert`` statements in checks files to ``check50_assert``.
+#: ``None`` means "decide per file" via the ``# ENABLE_CHECK50_ASSERT = 1`` comment flag,
+#: ``True``/``False`` force rewriting on/off for every checks file (set by ``--assertion-rewrite``).
+assertion_rewrite = None
+
+#: Temporary directory holding the rewritten copies of checks files for this run.
+#: Created on first use and removed when check50 exits.
+rewrite_dir = None
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
@@ -180,6 +194,60 @@ def import_file(name, path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def prepare_checks_file(path):
+    """
+    Return the path of the checks file that should actually be imported.
+
+    If assertion rewriting applies to ``path`` (see :data:`check50.internal.assertion_rewrite`),
+    a copy of the file with every ``assert`` rewritten to ``check50_assert`` is placed in
+    :data:`check50.internal.rewrite_dir` and the copy's path is returned; ``path`` is left untouched.
+    Otherwise ``path`` is returned as is.
+
+    Each checks file is rewritten at most once per run: worker processes, which re-import the
+    checks module, find and reuse the copy made by the parent.
+
+    :param path: Path to the checks file
+    :type path: str / Path
+    :rtype: Path
+    """
+    global rewrite_dir
+
+    path = Path(path).resolve()
+
+    if assertion_rewrite is None:
+        enabled = assertions.rewrite_enabled(str(path))
+    else:
+        enabled = assertion_rewrite
+
+    if not enabled:
+        return path
+
+    if rewrite_dir is None:
+        rewrite_dir = Path(tempfile.mkdtemp(prefix="check50_rewrite_"))
+        atexit.register(shutil.rmtree, rewrite_dir, ignore_errors=True)
+
+    # One deterministic name per source file, so re-imports reuse the same copy.
+    # Keep the directory and file name for readable tracebacks; the hash disambiguates.
+    digest = hashlib.sha1(str(path).encode()).hexdigest()[:8]
+    rewritten = rewrite_dir / f"{path.parent.name}-{path.stem}-{digest}.py"
+
+    if not rewritten.exists():
+        # Build the copy under a unique name, then move it into place atomically so that a
+        # concurrent worker never imports a half-written file
+        with tempfile.NamedTemporaryFile(dir=rewrite_dir, suffix=".partial", delete=False) as tmp:
+            partial = Path(tmp.name)
+        try:
+            shutil.copyfile(path, partial)
+            # Report syntax errors against the original checks file, not the staging copy
+            assertions.rewrite(str(partial), filename=str(path))
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+        os.replace(partial, rewritten)
+
+    return rewritten
 
 
 def _yes_no_prompt(prompt):

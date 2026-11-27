@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import dataclasses
 import enum
 import gettext
 import importlib
@@ -14,7 +15,6 @@ import sys
 import tempfile
 import time
 
-import attr
 import lib50
 import packaging
 import requests
@@ -25,6 +25,8 @@ from .contextmanagers import nullcontext
 from .runner import CheckRunner
 
 LOGGER = logging.getLogger("check50")
+
+gettext.install("check50", str(importlib.resources.files("check50").joinpath("locale")))
 
 lib50.set_local_path(os.environ.get("CHECK50_PATH", "~/.local/share/check50"))
 
@@ -258,6 +260,20 @@ def process_args(args):
     if args.ansi_log and "ansi" not in seen_output:
         LOGGER.warning(_("--ansi-log has no effect when ansi is not among the output formats"))
 
+    if args.https or args.ssh:
+        if args.offline:
+            LOGGER.warning(_("Using either --https and --ssh will have no effect when running offline"))
+            args.auth_method = None
+        elif args.https and args.ssh:
+            LOGGER.warning(_("--https and --ssh have no effect when used together"))
+            args.auth_method = None
+        elif args.https:
+            args.auth_method = "https"
+        else:
+            args.auth_method = "ssh"
+    else:
+        args.auth_method = None
+
 
 class LoggerWriter:
     def __init__(self, logger, level):
@@ -273,10 +289,10 @@ class LoggerWriter:
 
 
 def check_version(package_name=__package__, timeout=1):
-    """Check for newer version of the package on PyPI"""    
+    """Check for newer version of the package on PyPI"""
     if not __version__:
         return
-    
+
     try:
         current = packaging.version.parse(__version__)
         latest = max(requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=timeout).json()["releases"], key=packaging.version.parse)
@@ -333,6 +349,18 @@ def main():
     parser.add_argument("--no-install-dependencies",
                         action="store_true",
                         help=_("do not install dependencies (only works with --local)"))
+    parser.add_argument("--assertion-rewrite",
+                        action="store",
+                        nargs="?",
+                        const="enabled",
+                        choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
+                        help=_("enable or disable assertion rewriting for every checks file, including those imported via check50.import_checks(); overrides the per-file ENABLE_CHECK50_ASSERT flag"))
+    parser.add_argument("--https",
+                        action="store_true",
+                        help=_("force authentication via HTTPS"))
+    parser.add_argument("--ssh",
+                        action="store_true",
+                        help=_("force authentication via SSH"))
     parser.add_argument("-V", "--version",
                         action="version",
                         version=f"%(prog)s {__version__}")
@@ -387,7 +415,13 @@ def main():
             if not args.no_install_dependencies:
                 install_dependencies(config["dependencies"])
 
-            checks_file = (internal.check_dir / config["checks"]).resolve()
+            # The --assertion-rewrite flag overrides the per-file ENABLE_CHECK50_ASSERT comment flag
+            if args.assertion_rewrite is not None:
+                internal.assertion_rewrite = args.assertion_rewrite.lower() in ("true", "1", "enabled", "on")
+
+            # Rewrite assert statements into a temporary copy if applicable, leaving the original as is.
+            # Checks pulled in via check50.import_checks() go through the same logic.
+            checks_file = internal.prepare_checks_file(internal.check_dir / config["checks"])
 
             # Have lib50 decide which files to include
             included_files = lib50.files(config.get("files"))[0]
@@ -400,7 +434,7 @@ def main():
                 check_results = check_runner.run(args.target)
                 results = {
                     "slug": internal.slug,
-                    "results": [attr.asdict(result) for result in check_results],
+                    "results": [dataclasses.asdict(result) for result in check_results],
                     "version": __version__
                 }
 
