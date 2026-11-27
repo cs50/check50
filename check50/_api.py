@@ -128,10 +128,15 @@ def import_checks(path):
         the ``__name__`` of the imported module is given by the basename
         of the specified path (``less`` in the above example).
 
+    .. note::
+        assertion rewriting is applied to the imported checks file under the same rules
+        as the main checks file: the ``# ENABLE_CHECK50_ASSERT = 1`` comment flag on the
+        imported file's first line, unless overridden by ``--assertion-rewrite``.
+
     """
     dir = internal.check_dir / path
     file = internal.load_config(dir)["checks"]
-    mod = internal.import_file(dir.name, (dir / file).resolve())
+    mod = internal.import_file(dir.name, internal.prepare_checks_file(dir / file))
     sys.modules[dir.name] = mod
     return mod
 

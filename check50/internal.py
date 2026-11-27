@@ -4,10 +4,12 @@ Additional check50 internals exposed to extension writers in addition to the sta
 
 from pathlib import Path
 import importlib
+import shutil
+import tempfile
 
 import lib50
 
-from . import _simple, _exceptions
+from . import _simple, _exceptions, assertions
 
 #: Directory containing the check and its associated files
 check_dir = None
@@ -26,6 +28,11 @@ check_running = False
 
 #: The user specified slug used to indentifies the set of checks
 slug = None
+
+#: Whether to rewrite ``assert`` statements in checks files to ``check50_assert``.
+#: ``None`` means "decide per file" via the ``# ENABLE_CHECK50_ASSERT = 1`` comment flag,
+#: ``True``/``False`` force rewriting on/off for every checks file (set by ``--assertion-rewrite``).
+assertion_rewrite = None
 
 #: ``lib50`` config loader
 CONFIG_LOADER = lib50.config.Loader("check50")
@@ -180,6 +187,36 @@ def import_file(name, path):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def prepare_checks_file(path):
+    """
+    Return the path of the checks file that should actually be imported.
+
+    If assertion rewriting applies to ``path`` (see :data:`check50.internal.assertion_rewrite`),
+    the file is copied to a temporary location and every ``assert`` in the copy is
+    rewritten to ``check50_assert``; the copy's path is returned and ``path`` is left untouched.
+    Otherwise ``path`` is returned as is.
+
+    :param path: Path to the checks file
+    :type path: str / Path
+    :rtype: Path
+    """
+    path = Path(path).resolve()
+
+    if assertion_rewrite is None:
+        enabled = assertions.rewrite_enabled(str(path))
+    else:
+        enabled = assertion_rewrite
+
+    if not enabled:
+        return path
+
+    with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
+        rewritten = Path(tmp.name)
+    shutil.copyfile(path, rewritten)
+    assertions.rewrite(str(rewritten))
+    return rewritten
 
 
 def _yes_no_prompt(prompt):

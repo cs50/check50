@@ -497,10 +497,30 @@ class TestAssertionsRewrite(Base):
     def test_assertions_rewrite_enabled(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_enabled")
         process.expect_exact(":)")
-    
+
     def test_assertions_rewrite_disabled(self):
         process = pexpect.spawn(f"check50 --dev {CHECKS_DIRECTORY}/assertions_rewrite_disabled")
         process.expect_exact(":)")
+
+    def test_assertions_rewrite_imported(self):
+        # https://github.com/cs50/check50/issues/393
+        # The imported checks file opts in via its own comment flag; the importer does not.
+        pexpect.run(f"check50 --dev -o json --output-file foo.json {CHECKS_DIRECTORY}/assertions_rewrite_imported")
+        with open("foo.json", "r") as f:
+            results = {r["name"]: r for r in json.load(f)["results"]}
+        self.assertTrue(results["imported_rewritten"]["passed"], results["imported_rewritten"]["cause"])
+        self.assertTrue(results["importer_not_rewritten"]["passed"], results["importer_not_rewritten"]["cause"])
+
+    def test_assertions_rewrite_flag_applies_to_imported(self):
+        # --assertion-rewrite overrides the comment flag for every checks file, imported ones included.
+        # The importer's own check catches AssertionError only, so once rewriting is forced its
+        # assert raises check50.Mismatch instead and the check fails cleanly.
+        pexpect.run(f"check50 --dev --assertion-rewrite 1 -o json --output-file foo.json {CHECKS_DIRECTORY}/assertions_rewrite_imported")
+        with open("foo.json", "r") as f:
+            results = {r["name"]: r for r in json.load(f)["results"]}
+        self.assertTrue(results["imported_rewritten"]["passed"], results["imported_rewritten"]["cause"])
+        self.assertFalse(results["importer_not_rewritten"]["passed"])
+        self.assertIn("expected", results["importer_not_rewritten"]["cause"]["rationale"])
 
 
 if __name__ == "__main__":

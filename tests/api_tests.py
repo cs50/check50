@@ -87,6 +87,87 @@ class TestImportChecks(Base):
         self.assertEqual(mod.qux, 0)
 
 
+class TestImportChecksAssertionRewrite(Base):
+    """
+    Regression tests for https://github.com/cs50/check50/issues/393:
+    checks pulled in via import_checks() must follow the same assertion rewriting rules
+    as the main checks file.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._old_check_dir = check50.internal.check_dir
+        self._old_assertion_rewrite = check50.internal.assertion_rewrite
+        check50.internal.check_dir = pathlib.Path(".").absolute()
+        check50.internal.assertion_rewrite = None
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.check_dir = self._old_check_dir
+        check50.internal.assertion_rewrite = self._old_assertion_rewrite
+
+    def write_checks(self, name, source):
+        os.mkdir(name)
+        with open(f"./{name}/.cs50.yaml", "w") as f:
+            f.write("check50:\n")
+            f.write("  checks: __init__.py")
+        with open(f"./{name}/__init__.py", "w") as f:
+            f.write(source)
+
+    FLAG = "# ENABLE_CHECK50_ASSERT = 1\n"
+    CHECK = (
+        "def check():\n"
+        "    actual = 'foo'\n"
+        "    assert actual == 'bar'\n"
+    )
+
+    def test_flag_in_imported_file_rewrites(self):
+        self.write_checks("less", self.FLAG + self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(check50.Mismatch):
+            mod.check()
+
+    def test_no_flag_in_imported_file_does_not_rewrite(self):
+        self.write_checks("less", self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(AssertionError):
+            mod.check()
+
+    def test_rewrite_leaves_imported_file_untouched(self):
+        self.write_checks("less", self.FLAG + self.CHECK)
+        check50.import_checks("./less")
+        with open("./less/__init__.py") as f:
+            self.assertEqual(f.read(), self.FLAG + self.CHECK)
+
+    def test_override_enabled_rewrites_without_flag(self):
+        check50.internal.assertion_rewrite = True
+        self.write_checks("less", self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(check50.Mismatch):
+            mod.check()
+
+    def test_override_disabled_ignores_flag(self):
+        check50.internal.assertion_rewrite = False
+        self.write_checks("less", self.FLAG + self.CHECK)
+        mod = check50.import_checks("./less")
+        with self.assertRaises(AssertionError):
+            mod.check()
+
+    def test_nested_import_rewrites_each_file_by_its_own_flag(self):
+        # more imports less; only less opts in to rewriting
+        self.write_checks("less", self.FLAG + self.CHECK.replace("check", "less_check"))
+        self.write_checks("more",
+            "import check50\n"
+            "less = check50.import_checks('./less')\n"
+            "from less import *\n"
+            + self.CHECK.replace("check", "more_check"))
+        mod = check50.import_checks("./more")
+        with self.assertRaises(check50.Mismatch):
+            mod.less_check()
+        with self.assertRaises(AssertionError):
+            mod.more_check()
+
+
 class TestRun(Base):
     def test_returns_process(self):
         self.process = check50.run("python3 ./{self.filename}")
