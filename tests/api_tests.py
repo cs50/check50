@@ -168,6 +168,55 @@ class TestImportChecksAssertionRewrite(Base):
             mod.more_check()
 
 
+class TestPrepareChecksFile(Base):
+    FLAG = "# ENABLE_CHECK50_ASSERT = 1\n"
+
+    def setUp(self):
+        super().setUp()
+        self._old_assertion_rewrite = check50.internal.assertion_rewrite
+        check50.internal.assertion_rewrite = None
+        self.write(self.FLAG + "assert 1 == 2\n")
+
+    def tearDown(self):
+        super().tearDown()
+        check50.internal.assertion_rewrite = self._old_assertion_rewrite
+
+    def test_no_rewrite_returns_original(self):
+        self.write("assert 1 == 2\n")
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(path, pathlib.Path(self.filename).resolve())
+
+    def test_rewritten_copy_lives_in_rewrite_dir(self):
+        path = check50.internal.prepare_checks_file(self.filename)
+        self.assertNotEqual(path, pathlib.Path(self.filename).resolve())
+        self.assertEqual(path.parent, check50.internal.rewrite_dir)
+        self.assertIn("check50_assert", path.read_text())
+
+    def test_same_file_rewritten_once(self):
+        first = check50.internal.prepare_checks_file(self.filename)
+        stat = first.stat()
+        second = check50.internal.prepare_checks_file(self.filename)
+        self.assertEqual(first, second)
+        self.assertEqual(second.stat().st_mtime_ns, stat.st_mtime_ns)
+        self.assertEqual(second.stat().st_ino, stat.st_ino)
+
+    def test_different_files_get_different_copies(self):
+        os.mkdir("other")
+        with open("other/foo.py", "w") as f:
+            f.write(self.FLAG + "assert 1 == 3\n")
+        first = check50.internal.prepare_checks_file(self.filename)
+        second = check50.internal.prepare_checks_file("other/foo.py")
+        self.assertNotEqual(first, second)
+        self.assertIn("1 == 2", first.read_text())
+        self.assertIn("1 == 3", second.read_text())
+
+    def test_no_partial_files_left_in_rewrite_dir(self):
+        check50.internal.prepare_checks_file(self.filename)
+        check50.internal.prepare_checks_file(self.filename)
+        partials = [p.name for p in check50.internal.rewrite_dir.iterdir() if p.is_file() and p.suffix != ".py"]
+        self.assertEqual(partials, [])
+
+
 class TestRun(Base):
     def test_returns_process(self):
         self.process = check50.run("python3 ./{self.filename}")

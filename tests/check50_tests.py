@@ -522,6 +522,17 @@ class TestAssertionsRewrite(Base):
         self.assertFalse(results["importer_not_rewritten"]["passed"])
         self.assertIn("expected", results["importer_not_rewritten"]["cause"]["rationale"])
 
+    def test_assertions_rewrite_cleans_up_temporary_files(self):
+        # Rewritten copies (slug file and imported files, in the parent and in every worker)
+        # must all be gone once check50 exits
+        with tempfile.TemporaryDirectory() as tmpdir:
+            env = dict(os.environ, TMPDIR=tmpdir)
+            pexpect.run(f"check50 --dev --assertion-rewrite 1 -o json --output-file foo.json {CHECKS_DIRECTORY}/assertions_rewrite_imported", env=env)
+            with open("foo.json", "r") as f:
+                results = json.load(f)["results"]
+            self.assertTrue(all(r["passed"] is not None for r in results), results)
+            self.assertEqual(os.listdir(tmpdir), [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -329,6 +329,7 @@ class run_check:
         "internal.student_dir",
         "internal.run_root_dir",
         "internal.assertion_rewrite",
+        "internal.rewrite_dir",
         "sys.excepthook",
         "__version__"
     )
