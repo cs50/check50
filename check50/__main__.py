@@ -8,7 +8,6 @@ from json import JSONDecodeError
 import logging
 import os
 import platform
-import shutil
 import site
 from pathlib import Path
 import subprocess
@@ -21,7 +20,7 @@ import packaging
 import requests
 import termcolor
 
-from . import _exceptions, internal, renderer, assertions, __version__
+from . import _exceptions, internal, renderer, __version__
 from .contextmanagers import nullcontext
 from .runner import CheckRunner
 
@@ -355,7 +354,7 @@ def main():
                         nargs="?",
                         const="enabled",
                         choices=["true", "enabled", "1", "on", "false", "disabled", "0", "off"],
-                        help=_("enable or disable assertion rewriting; overrides ENABLE_CHECK50_ASSERT flag in the checks file"))
+                        help=_("enable or disable assertion rewriting for every checks file, including those imported via check50.import_checks(); overrides the per-file ENABLE_CHECK50_ASSERT flag"))
     parser.add_argument("--https",
                         action="store_true",
                         help=_("force authentication via HTTPS"))
@@ -416,27 +415,13 @@ def main():
             if not args.no_install_dependencies:
                 install_dependencies(config["dependencies"])
 
-            # Store the original checks file and leave as is
-            original_checks_file = (internal.check_dir / config["checks"]).resolve()
-
-            # If the user has enabled the rewrite feature
-            assertion_rewrite_enabled = False
+            # The --assertion-rewrite flag overrides the per-file ENABLE_CHECK50_ASSERT comment flag
             if args.assertion_rewrite is not None:
-                assertion_rewrite_enabled = args.assertion_rewrite.lower() in ("true", "1", "enabled", "on")
-            else:
-                assertion_rewrite_enabled = assertions.rewrite_enabled(str(original_checks_file))
+                internal.assertion_rewrite = args.assertion_rewrite.lower() in ("true", "1", "enabled", "on")
 
-            if assertion_rewrite_enabled:
-                # Create a temporary copy of the checks file
-                with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as tmp:
-                    checks_file = Path(tmp.name)
-                    shutil.copyfile(original_checks_file, checks_file)
-
-                # Rewrite all assert statements in the copied checks file to check50_assert
-                assertions.rewrite(str(checks_file))
-            else:
-                # Don't rewrite any assert statements and continue
-                checks_file = original_checks_file
+            # Rewrite assert statements into a temporary copy if applicable, leaving the original as is.
+            # Checks pulled in via check50.import_checks() go through the same logic.
+            checks_file = internal.prepare_checks_file(internal.check_dir / config["checks"])
 
             # Have lib50 decide which files to include
             included_files = lib50.files(config.get("files"))[0]

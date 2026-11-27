@@ -1,19 +1,22 @@
 import ast
 import re
 
-def rewrite(path: str):
+def rewrite(path: str, filename: str = None):
     """
     A function that rewrites all instances of `assert` in a file to our own
     `check50_assert` function that raises our own exceptions.
 
     :param path: The path to the file you wish to rewrite.
     :type path: str
+    :param filename: The file name to report in syntax errors, when ``path`` is a
+        temporary copy of the file the user actually wrote. Defaults to ``path``.
+    :type filename: str
     """
     with open(path) as f:
         source = f.read()
 
     # Parse the tree and replace all instance of `assert`.
-    tree = ast.parse(source, filename=path)
+    tree = ast.parse(source, filename=filename or path)
     transformer = _AssertionRewriter()
     new_tree = transformer.visit(tree)
     ast.fix_missing_locations(new_tree)
